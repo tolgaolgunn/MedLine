@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedLine Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-heartbeat"></i>
+                <span>MedLine</span>
+            </div>
+            <nav>
+                <ul>
+                    <li class="active">
+                        <a href="#">
+                            <i class="fas fa-home"></i>
+                            <span>Anasayfa</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-user-md"></i>
+                            <span>Hasta Takibi</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Randevular</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-file-medical"></i>
+                            <span>Dosyalar</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-cog"></i>
+                            <span>Ayarlar</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="logout">
+                <a href="login.html">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Çıkış Yap</span>
+                </a>
+            </div>
+        </div>
+
+
+        <div class="main-content">
+            <div class="topbar">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Ara...">
+                </div>
+                <div class="user-profile">
+                    <div class="notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="badge">3</span>
+                    </div>
+                    <div class="user-info">
+                        <img src="https://via.placeholder.com/40" alt="Profile">
+                        <span class="username">Admin Kullanıcı</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-content">
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Toplam Hasta</h3>
+                            <p>1,245</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Bugünkü Randevular</h3>
+                            <p>15</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-file-medical-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Yeni Dosyalar</h3>
+                            <p>7</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Toplam Randevu</h3>
+                            <p>548</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Appointments -->
+                <div class="appointments-section">
+                    <h2>Son Randevular</h2>
+                    <div class="appointments-grid">
+                        <div class="appointment-card">
+                            <div class="appointment-info">
+                                <h3>Ali Veli</h3>
+                                <p class="date">10 Temmuz 2025, 14:00</p>
+                                <p class="status pending">Bekliyor</p>
+                            </div>
+                        </div>
+                        <div class="appointment-card">
+                            <div class="appointment-info">
+                                <h3>Ayşe Yılmaz</h3>
+                                <p class="date">10 Temmuz 2025, 15:00</p>
+                                <p class="status completed">Tamamlandı</p>
+                            </div>
+                        </div>
+                        <div class="appointment-card">
+                            <div class="appointment-info">
+                                <h3>Hasan Uğur</h3>
+                                <p class="date">11 Temmuz 2025, 10:00</p>
+                                <p class="status pending">Bekliyor</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="dashboard.js"></script>
+</body>
+</html>
