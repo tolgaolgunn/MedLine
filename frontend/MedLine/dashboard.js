@@ -1,35 +1,27 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Update user name in the dashboard
     const usernameElement = document.querySelector('.username');
     const user = JSON.parse(localStorage.getItem('user')) || { name: 'Admin', surname: 'Kullanıcı' };
     usernameElement.textContent = `${user.name} ${user.surname}`;
 
-    // Handle sidebar navigation
     const navLinks = document.querySelectorAll('nav ul li a');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            // Add your navigation logic here
             console.log(`Navigating to: ${link.textContent.trim()}`);
         });
     });
 
-    // Handle search functionality
     const searchInput = document.querySelector('.search-bar input');
     searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        // Add your search logic here
         console.log(`Searching for: ${searchTerm}`);
     });
 
-    // Handle notifications
     const notifications = document.querySelector('.notifications');
     notifications.addEventListener('click', () => {
-        // Add your notification logic here
         console.log('Notifications clicked');
     });
 
-    // Handle logout
     const logoutLink = document.querySelector('.logout a');
     logoutLink.addEventListener('click', (e) => {
         e.preventDefault();
@@ -37,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'login.html';
     });
 
-    // Update statistics (in a real app, this would come from an API)
     const stats = {
         totalPatients: 1245,
         todayAppointments: 15,
@@ -52,7 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Update appointments (in a real app, this would come from an API)
     const appointments = [
         {
             name: 'Ali Veli',

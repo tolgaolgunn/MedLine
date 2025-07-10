@@ -22,17 +22,6 @@ app.get('/register', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/MedLine/register.html'));
 });
 
-app.get('/styles.css', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/MedLine/styles.css'));
-});
-
-app.get('/script.js', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/MedLine/script.js'));
-});
-
-app.get('/register.js', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/MedLine/register.js'));
-});
 
 const users = [];
 
