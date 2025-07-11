@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch('http://localhost:3004/api/login', {
+            const response = await fetch('http://localhost:3005/api/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -32,8 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
 
-            if (data.success) {
-                alert('Giriş başarılı!');
+
+            if (response.ok) { 
+                alert(data.message || 'Giriş başarılı!');
+                localStorage.setItem('token', data.token);
                 window.location.href = 'dashboard.html';
             } else {
                 alert(data.message || 'Giriş başarısız!');
