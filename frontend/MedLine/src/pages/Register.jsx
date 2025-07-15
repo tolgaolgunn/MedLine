@@ -89,7 +89,6 @@ const Register = () => {
               <option value="patient">Patient</option>
               <option value="doctor">Doctor</option>
               <option value="admin">Admin</option>
-              <option value="courier">Courier</option>
             </select>
           </div>
           <div className="form-group">
