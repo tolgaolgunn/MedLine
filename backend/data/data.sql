@@ -1,8 +1,11 @@
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    surname VARCHAR(255) NOT NULL,
+    user_id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
-)
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20),
+    role VARCHAR(20) NOT NULL CHECK (role IN ('patient', 'doctor', 'admin', 'courier')),
+    is_approved BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
