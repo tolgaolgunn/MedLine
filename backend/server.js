@@ -18,8 +18,7 @@ app.use('/api', userRoutes);
 
 initializeDatabase().then(() => {
     const PORT = process.env.PORT || 3005;
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-        console.log('http://localhost:' + PORT);
+    app.listen(3004, () => {
+        console.log('Server is running on port 3004');
     });
 });
