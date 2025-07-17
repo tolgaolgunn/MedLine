@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { getUserByEmail, createUser, getUserById, updateUserProfile, updateUserPassword } = require("../models/userModel");
+const { sendResetMail } = require('../services/mailService'); 
 
 exports.register = async (req, res) => {
   const { full_name, email, password, phone_number, role } = req.body;
@@ -113,4 +114,44 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-  
+
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await getUserByEmail(email);
+    if (user) {
+      const token = jwt.sign(
+        { user_id: user.user_id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+      const resetLink = `http://localhost:5173/reset-password?token=${token}`;
+      await sendResetMail(user.email, "Password Reset", resetLink);
+    }
+    return res.json({ message: "If this email exists, a reset link has been sent." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ message: "Token and password are required." });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await getUserByEmail(decoded.email);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await updateUserPassword(user.user_id, hashedPassword);
+
+    return res.json({ message: "Password reset successful." });
+  } catch (error) {
+    console.error(error);
+    return res.status(400).json({ message: error.message || "Password reset failed." });
+  }
+};

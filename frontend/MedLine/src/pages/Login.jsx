@@ -128,7 +128,7 @@ const Login = () => {
               />
               Beni Hatırla
             </label>
-            <a href="#" className="forgot-password" style={{ color: '#1976d2', fontSize: 15, textDecoration: 'underline', fontWeight: 500, marginLeft: 10, marginRight: 0 }}>Şifremi unuttum</a>
+            <a href="/forgot-password" className="forgot-password" style={{ color: '#1976d2', fontSize: 15, textDecoration: 'underline', fontWeight: 500, marginLeft: 10, marginRight: 0 }}>Şifremi unuttum</a>
           </div>
           <button type="submit" className="login-btn" disabled={loading} style={{...inputStyle, width: '100%', marginBottom: 0, background: 'linear-gradient(90deg, #2196f3 0%, #21cbf3 100%)', color: 'white', fontWeight: 'bold', border: 'none', cursor: 'pointer'}}>{loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}</button>
           <div style={{textAlign: 'center', marginTop: '32px'}}>

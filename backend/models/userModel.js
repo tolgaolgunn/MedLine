@@ -26,13 +26,12 @@ const updateUserProfile = async (user_id, { full_name, email, phone_number }) =>
   return result.rows[0];
 };
 
-const updateUserPassword = async (user_id, password_hash) => {
-  const result = await db.query(
-    "UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 RETURNING *",
+async function updateUserPassword(user_id, password_hash) {
+  return db.query(
+    "UPDATE users SET password_hash = $1 WHERE user_id = $2",
     [password_hash, user_id]
   );
-  return result.rows[0];
-};
+}
 
 module.exports = {
   getUserByEmail,
