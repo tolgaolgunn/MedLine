@@ -2,14 +2,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { getUserByEmail, createUser, getUserById, updateUserProfile, updateUserPassword } = require("../models/userModel");
 const { sendResetMail } = require('../services/mailService'); 
+const { createPatientProfile, updatePatientProfile, getPatientProfileByUserId } = require("../models/patientProfileModel");
 
 exports.register = async (req, res) => {
-  const { full_name, email, password, phone_number, role } = req.body;
+  const { full_name, email, password, phone_number, role, birth_date, gender, address } = req.body;
 
   try {
     const existingUser = await getUserByEmail(email);
     if (existingUser) {
-      return res.status(400).json({ message: "A user with this email already exists." });
+      return res.status(400).json({ message: "Bu e-posta ile kayıtlı kullanıcı zaten var." });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -17,7 +18,16 @@ exports.register = async (req, res) => {
 
     const user = await createUser(full_name, email, password_hash, phone_number, role || "patient");
 
-    res.status(201).json({ message: "Registration successful.", user: user });
+    if ((role || "patient") === "patient") {
+      await createPatientProfile(
+        user.user_id,
+        birth_date || null,
+        gender || null,
+        address || null
+      );
+    }
+
+    res.status(201).json({ message: "Kayıt başarılı, yönetici onayı bekleniyor.", user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -31,17 +41,17 @@ exports.login = async (req, res) => {
     const user = await getUserByEmail(email);
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid email or password." });
+      return res.status(400).json({ message: "Geçersiz e-posta veya şifre." });
     }
 
     if ((user.role === "doctor" || user.role === "admin") && !user.is_approved) {
-      return res.status(403).json({ message: "Your account has not been approved by the admin yet." });
+      return res.status(403).json({ message: "Hesabınız henüz yönetici tarafından onaylanmamıştır." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid email or password." });
+      return res.status(400).json({ message: "Geçersiz e-posta veya şifre." });
     }
 
     const token = jwt.sign(
@@ -50,7 +60,11 @@ exports.login = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    res.json({ message: "Login successful", token, user: { user_id: user.user_id, full_name: user.full_name, role: user.role } });
+    res.json({
+      message: "Giriş başarılı",
+      token,
+      user: { user_id: user.user_id, full_name: user.full_name, role: user.role }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -58,15 +72,16 @@ exports.login = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const user_id = req.user.user_id;
-    const user = await getUserById(user_id);
-
+    const userId = req.user.user_id;
+    const user = await getUserById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
-
-    const { password_hash, ...userData } = user;
-    res.json(userData);
+    let profile = {};
+    if (user.role === "patient") {
+      profile = await getPatientProfileByUserId(userId) || {};
+    }
+    res.json({ ...user, ...profile });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -75,15 +90,17 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const user_id = req.user.user_id;
-    const { full_name, email, phone_number } = req.body;
+    const { full_name, email, phone_number, birth_date, gender, address } = req.body;
 
+    // users tablosunu güncelle
     const updatedUser = await updateUserProfile(user_id, { full_name, email, phone_number });
 
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found." });
+    // patient_profiles tablosunu güncelle (sadece patient ise)
+    if (req.user.role === "patient") {
+      await updatePatientProfile(user_id, { birth_date, gender, address });
     }
 
-    res.json({ message: "Profile updated", user: updatedUser });
+    res.json({ message: "Profil güncellendi", user: updatedUser });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -96,12 +113,12 @@ exports.changePassword = async (req, res) => {
 
     const user = await getUserById(user_id);
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
 
     const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
     if (!isMatch) {
-      return res.status(400).json({ message: "Old password is incorrect." });
+      return res.status(400).json({ message: "Eski şifre yanlış." });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -109,7 +126,7 @@ exports.changePassword = async (req, res) => {
 
     await updateUserPassword(user_id, password_hash);
 
-    res.json({ message: "Password changed successfully." });
+    res.json({ message: "Şifre başarıyla değiştirildi." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -128,7 +145,7 @@ exports.forgotPassword = async (req, res) => {
       const resetLink = `http://localhost:5173/reset-password?token=${token}`;
       await sendResetMail(user.email, "Password Reset", resetLink);
     }
-    return res.json({ message: "If this email exists, a reset link has been sent." });
+    return res.json({ message: "Eğer bu e-posta sistemde kayıtlıysa, bir şifre sıfırlama bağlantısı gönderildi." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -137,21 +154,21 @@ exports.resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
     if (!token || !password) {
-      return res.status(400).json({ message: "Token and password are required." });
+      return res.status(400).json({ message: "Token ve şifre gereklidir." });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await getUserByEmail(decoded.email);
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await updateUserPassword(user.user_id, hashedPassword);
 
-    return res.json({ message: "Password reset successful." });
+    return res.json({ message: "Şifre sıfırlandı." });
   } catch (error) {
     console.error(error);
-    return res.status(400).json({ message: error.message || "Password reset failed." });
+    return res.status(400).json({ message: error.message || "Şifre sıfırlama başarısız." });
   }
 };

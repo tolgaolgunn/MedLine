@@ -46,7 +46,11 @@ const Login = () => {
       });
       const data = await response.json();
       if (response.ok) {
+        alert(data.message || 'Login successful!');
         localStorage.setItem('token', data.token);
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
         if (form.remember) {
           localStorage.setItem('rememberEmail', form.email);
         } else {

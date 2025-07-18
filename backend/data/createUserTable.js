@@ -5,6 +5,7 @@ async function initializeDatabase() {
         const client = await pool.connect();
         console.log('Connected to PostgreSQL');
 
+        // USERS TABLOSU
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 user_id SERIAL PRIMARY KEY,
@@ -19,21 +20,21 @@ async function initializeDatabase() {
             )
         `);
 
-        // Varsayılan admin kullanıcısı ekle (şifre: admin123)
+        // PATIENT_PROFILES TABLOSU
         await client.query(`
-            INSERT INTO users (full_name, email, password_hash, role, is_approved)
-            VALUES (
-                'Admin User',
-                'admin@example.com',
-                '$2b$10$9hWz3X4Y5Z6a7b8c9d0e1f2g3h4i5j6k7l8m9n0o1p2q3r4s5t6u7v8w9x0y1z2', -- bcrypt hash
-                'admin',
-                TRUE
+            CREATE TABLE IF NOT EXISTS patient_profiles (
+                user_id INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+                birth_date DATE,
+                gender VARCHAR(10) CHECK (gender IN ('male', 'female', 'other')),
+                address TEXT,
+                medical_history TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-            ON CONFLICT (email) DO NOTHING
         `);
 
         client.release();
-        console.log('Users table ensured and admin created');
+        console.log('Users and patient_profiles tables ensured');
     } catch (error) {
         console.error('Database initialization error:', error);
         process.exit(1);

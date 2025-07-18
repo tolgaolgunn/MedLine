@@ -5,12 +5,20 @@ import ChangePassword from './ChangePassword';
 import '../../dashboard.css';
 import '../../styles.css';
 
-const Dashboard = () => {
-  const navigate = useNavigate();
+export default function Dashboard() {
+
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem('user'));
+  } catch {}
+  const role = user?.role || 'patient';
+
   const [selectedMenu, setSelectedMenu] = useState('home');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSubMenu, setSettingsSubMenu] = useState('');
   const [accountOpen, setAccountOpen] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -48,35 +56,47 @@ const Dashboard = () => {
     <div className="dashboard-container">
       <div className="sidebar">
         <div className="logo">
-          <i className="fas fa-heartbeat"></i>
           <span>MedLine</span>
+        </div>
+        <div className="sidebar-welcome" style={{margin: '16px 0', color: '#e67e22', fontWeight: 600, textAlign: 'center'}}>
+          Hoş geldin, {user?.full_name || 'Kullanıcı'}
         </div>
         <nav>
           <ul>
-            <li className={selectedMenu === 'home' ? 'active' : ''}>
-              <a href="#" onClick={() => handleMenuClick('home')}>
-                <span role="img" aria-label="home" style={{fontSize: '1.2em'}}>🏠</span>
-                <span>Home</span>
-              </a>
-            </li>
-            <li className={selectedMenu === 'patients' ? 'active' : ''}>
-              <a href="#" onClick={() => handleMenuClick('patients')}>
-                <span role="img" aria-label="doctor" style={{fontSize: '1.2em'}}>🩺</span>
-                <span>Patient Tracking</span>
-              </a>
-            </li>
-            <li className={selectedMenu === 'appointments' ? 'active' : ''}>
-              <a href="#" onClick={() => handleMenuClick('appointments')}>
-                <span role="img" aria-label="calendar" style={{fontSize: '1.2em'}}>📅</span>
-                <span>Appointments</span>
-              </a>
-            </li>
-            <li className={selectedMenu === 'files' ? 'active' : ''}>
-              <a href="#" onClick={() => handleMenuClick('files')}>
-                <span role="img" aria-label="files" style={{fontSize: '1.2em'}}>📁</span>
-                <span>Files</span>
-              </a>
-            </li>
+            {/* Hasta (patient) menüleri */}
+            {role === 'patient' && <>
+              <li className={selectedMenu === 'home' ? 'active' : ''}>
+                <a href="#" onClick={() => handleMenuClick('home')}>
+                  <span role="img" aria-label="home" style={{fontSize: '1.2em'}}>🏠</span>
+                  <span>Ana Sayfa</span>
+                </a>
+              </li>
+              <li className={selectedMenu === 'appointments' ? 'active' : ''}>
+                <a href="#" onClick={() => handleMenuClick('appointments')}>
+                  <span role="img" aria-label="calendar" style={{fontSize: '1.2em'}}>📅</span>
+                  <span>Randevularım</span>
+                </a>
+              </li>
+              <li className={selectedMenu === 'ai-diagnosis' ? 'active' : ''}>
+                <a href="#" onClick={() => handleMenuClick('ai-diagnosis')}>
+                  <span role="img" aria-label="ai" style={{fontSize: '1.2em'}}>🤖</span>
+                  <span>AI Ön Tanı</span>
+                </a>
+              </li>
+              <li className={selectedMenu === 'profile' ? 'active' : ''}>
+                <a href="#" onClick={() => handleMenuClick('profile')}>
+                  <span role="img" aria-label="profile" style={{fontSize: '1.2em'}}>👤</span>
+                  <span>Profilim</span>
+                </a>
+              </li>
+              <li className={selectedMenu === 'prescriptions' ? 'active' : ''}>
+                <a href="#" onClick={() => handleMenuClick('prescriptions')}>
+                  <span role="img" aria-label="prescriptions" style={{fontSize: '1.2em'}}>💊</span>
+                  <span>Reçetelerim</span>
+                </a>
+              </li>
+            </>}
+            {/* Settings menüsü ve altı olduğu gibi kalsın */}
             <li className={selectedMenu === 'settings' ? 'active' : ''}>
               <a href="#" onClick={handleSettingsClick}>
                 <span role="img" aria-label="settings" style={{fontSize: '1.2em'}}>⚙️</span>
@@ -113,42 +133,25 @@ const Dashboard = () => {
         </div>
       </div>
       <div className="main-content">
-        <div className="topbar" style={{position:'sticky',top:0,background:'#fff',zIndex:10,display:'flex',justifyContent:'flex-end',alignItems:'center',padding:'18px 32px 0 0'}}>
-          <div className="user-profile" style={{display:'flex',alignItems:'center',gap:24}}>
+        <div className="topbar">
+          <div className="search-bar">
+            <span role="img" aria-label="search" style={{fontSize: '1.2em'}}>🔍</span>
+            <input type="text" placeholder="Ara..." />
+          </div>
+          <div className="user-profile">
             <div className="notifications">
               <span role="img" aria-label="bell" style={{fontSize: '1.3em'}}>🔔</span>
               <span className="badge">3</span>
             </div>
             <div className="user-info">
-              <span
-                role="img"
-                aria-label="user"
-                style={{
-                  display: 'inline-block',
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  background: '#fff',
-                  border: '2.5px solid #e67e22',
-                  fontSize: '1.7em',
-                  textAlign: 'center',
-                  lineHeight: '40px'
-                }}
-              >
-                👤
-              </span>
-              <span className="username">Admin User</span>
+              <span role="img" aria-label="user" style={{display: 'inline-block', width: 40, height: 40, borderRadius: '50%', background: '#fff', border: '2.5px solid #e67e22', fontSize: '1.7em', textAlign: 'center', lineHeight: '40px'}}>👤</span>
+              <span className="username">{user?.full_name || 'Kullanıcı'}</span>
             </div>
           </div>
         </div>
         <div className="dashboard-content">
-          {selectedMenu === 'settings' && settingsSubMenu === 'profile' && (
-            <UpdateProfile />
-          )}
-          {selectedMenu === 'settings' && settingsSubMenu === 'account-password' && (
-            <ChangePassword />
-          )}
-          {selectedMenu === 'home' && !settingsOpen && (
+          {/* Ana içerik: seçili menüye göre göster */}
+          {role === 'patient' && selectedMenu === 'home' && (
             <div className="dashboard-row">
               <div className="stats-grid">
                 <div className="stat-card">
@@ -216,16 +219,28 @@ const Dashboard = () => {
               </div>
             </div>
           )}
-          {selectedMenu !== 'settings' && selectedMenu !== 'home' && (
-            <div className="coming-soon-message" style={{textAlign:'center',marginTop:40}}>
-              <h2>Coming Soon</h2>
-              <p>This section is under construction.</p>
-            </div>
+          {/* Diğer menüler için örnek içerik */}
+          {role === 'patient' && selectedMenu === 'appointments' && (
+            <div style={{ color: '#1976d2', fontWeight: 600 }}>Randevularım sayfası (yakında)</div>
+          )}
+          {role === 'patient' && selectedMenu === 'ai-diagnosis' && (
+            <div style={{ color: '#1976d2', fontWeight: 600 }}>AI Ön Tanı sayfası (yakında)</div>
+          )}
+          {role === 'patient' && selectedMenu === 'profile' && (
+            <div style={{ color: '#1976d2', fontWeight: 600 }}>Profilim sayfası (yakında)</div>
+          )}
+          {role === 'patient' && selectedMenu === 'prescriptions' && (
+            <div style={{ color: '#1976d2', fontWeight: 600 }}>Reçetelerim sayfası (yakında)</div>
+          )}
+          {/* Settings içeriği ve alt menüleri olduğu gibi kalsın */}
+          {selectedMenu === 'settings' && settingsSubMenu === 'profile' && (
+            <UpdateProfile />
+          )}
+          {selectedMenu === 'settings' && settingsSubMenu === 'account-password' && (
+            <ChangePassword />
           )}
         </div>
       </div>
     </div>
   );
-};
-
-export default Dashboard; 
+} 

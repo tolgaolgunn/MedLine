@@ -45,7 +45,10 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    terms: false
+    terms: false,
+    birth_date: '',
+    gender: '',
+    address: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -110,7 +113,10 @@ const Register = () => {
           phone_number: fullPhoneNumber,
           role: form.role,
           email: form.email,
-          password: form.password
+          password: form.password,
+          birth_date: form.birth_date,
+          gender: form.gender,
+          address: form.address,
         })
       });
       const data = await response.json();
@@ -184,6 +190,23 @@ const Register = () => {
           <div className="form-group" style={{width: '100%'}}>
             <label htmlFor="full_name">Ad Soyad</label>
             <input type="text" id="full_name" name="full_name" value={form.full_name} onChange={handleChange} required style={inputStyle} autoComplete="off" onInput={e => e.target.value = e.target.value.replace(/[^a-zA-ZğüşöçıİĞÜŞÖÇ\s]/g, '')} />
+          </div>
+          <div className="form-group" style={{width: '100%'}}>
+            <label htmlFor="birth_date">Doğum Tarihi</label>
+            <input type="date" id="birth_date" name="birth_date" value={form.birth_date} onChange={handleChange} required style={inputStyle} />
+          </div>
+          <div className="form-group" style={{width: '100%'}}>
+            <label htmlFor="gender">Cinsiyet</label>
+            <select id="gender" name="gender" value={form.gender} onChange={handleChange} required style={selectStyle}>
+              <option value="">Seçiniz</option>
+              <option value="male">Erkek</option>
+              <option value="female">Kadın</option>
+              <option value="other">Diğer</option>
+            </select>
+          </div>
+          <div className="form-group" style={{width: '100%'}}>
+            <label htmlFor="address">Adres</label>
+            <textarea id="address" name="address" value={form.address} onChange={handleChange} required style={{...inputStyle, minHeight: 60}} />
           </div>
           <div className="form-group" style={{width: '100%'}}>
             <label htmlFor="phone_number">Telefon Numarası</label>

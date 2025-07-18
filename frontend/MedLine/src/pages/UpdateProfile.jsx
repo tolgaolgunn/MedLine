@@ -5,7 +5,10 @@ const UpdateProfile = () => {
   const [form, setForm] = useState({
     full_name: '',
     email: '',
-    phone_number: ''
+    phone_number: '',
+    birth_date: '',
+    gender: '',
+    address: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,7 +26,10 @@ const UpdateProfile = () => {
           setForm({
             full_name: data.full_name || '',
             email: data.email || '',
-            phone_number: data.phone_number || ''
+            phone_number: data.phone_number || '',
+            birth_date: data.birth_date || '',
+            gender: data.gender || '',
+            address: data.address || '',
           });
         } else {
           setError(data.message || 'Failed to fetch profile.');
@@ -76,6 +82,40 @@ const UpdateProfile = () => {
           <div className="form-group">
             <label htmlFor="full_name">Full Name</label>
             <input type="text" id="full_name" name="full_name" value={form.full_name} onChange={handleChange} required />
+          </div>
+          <div className="form-group">
+            <label htmlFor="birth_date">Birth Date</label>
+            <input type="date" id="birth_date" name="birth_date" value={form.birth_date} onChange={handleChange} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="gender">Gender</label>
+            <select id="gender" name="gender" value={form.gender} onChange={handleChange}>
+              <option value="">Select</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="address">Address</label>
+            <textarea
+              id="address"
+              name="address"
+              value={form.address}
+              onChange={handleChange}
+              style={{
+                minHeight: 60,
+                width: '100%',
+                borderRadius: 6,
+                padding: '10px 12px',
+                fontSize: '1rem',
+                border: '1px solid #d1d5db',
+                background: '#222',
+                color: '#fff',
+                resize: 'vertical',
+                marginBottom: 0
+              }}
+            />
           </div>
           <div className="form-group">
             <label htmlFor="email">Email</label>
