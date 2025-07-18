@@ -12,7 +12,7 @@ const ForgotPassword = () => {
     setError('');
     setSuccess('');
     if (!email) {
-      setError('Please enter your email address!');
+      setError('Lütfen e-mail adresinizi giriniz!');
       return;
     }
     setLoading(true);
@@ -24,12 +24,12 @@ const ForgotPassword = () => {
       });
       const data = await response.json();
       if (response.ok) {
-        setSuccess(data.message || 'If this email exists, a reset link has been sent.');
+        setSuccess(data.message || 'Eğer e-mail mevcutsa bir sıfırlama bağlantısı gönderilmiştir.');
       } else {
         setError(data.error || data.message);
       }
     } catch {
-      setError('Could not connect to the server!');
+      setError('Sunucuya bağlanılamadı!');
     } finally {
       setLoading(false);
     }
@@ -37,11 +37,14 @@ const ForgotPassword = () => {
 
   return (
     <div className="login-container">
-      <div className="login-box">
-        <h1>Forgot Password</h1>
+      <div className="login-box" style={{width: '600px', boxSizing: 'border-box', padding: '50px 55px', borderRadius: '18px', boxShadow: '0 4px 32px 0 rgba(60,60,100,0.10)', marginTop: '100px', marginBottom: '160px', background: 'white', overflow: 'visible'}}>
+        <div style={{display: 'flex', alignItems: 'center', marginBottom: 30}}>
+          <span style={{fontSize: '1.2rem', color: '#145a8a',
+             fontWeight: 400, letterSpacing: 1 , fontStyle: 'italic'}}>Şifremi Unuttum</span>
+        </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">E-mail</label>
             <input
               type="email"
               id="email"
@@ -51,9 +54,9 @@ const ForgotPassword = () => {
               required
             />
           </div>
-          <button type="submit" className="login-btn" disabled={loading}>{loading ? 'Sending...' : 'Send Reset Link'}</button>
+          <button type="submit" className="login-btn" disabled={loading}>{loading ? 'Gönderiliyor...' : 'Sıfırlama e-postasını gönder'}</button>
           <div className="register-link">
-            <a href="/login">Back to Login</a>
+            <a href="/login">Giriş Yap</a>
           </div>
           {error && <div style={{color:'red',marginTop:10}}>{error}</div>}
           {success && <div style={{color:'green',marginTop:10}}>{success}</div>}

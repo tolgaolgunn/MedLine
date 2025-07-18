@@ -10,6 +10,7 @@ const Dashboard = () => {
   const [selectedMenu, setSelectedMenu] = useState('home');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSubMenu, setSettingsSubMenu] = useState('');
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -21,6 +22,7 @@ const Dashboard = () => {
     setSelectedMenu(menu);
     setSettingsSubMenu('');
     setSettingsOpen(false);
+    setAccountOpen(false);
   };
 
   const handleSettingsClick = (e) => {
@@ -28,10 +30,18 @@ const Dashboard = () => {
     setSettingsOpen((prev) => !prev);
     setSelectedMenu('settings');
     setSettingsSubMenu('');
+    setAccountOpen(false);
   };
 
   const handleSettingsSubMenu = (submenu) => {
     setSettingsSubMenu(submenu);
+    setAccountOpen(false);
+  };
+
+  const handleAccountClick = (e) => {
+    e.preventDefault();
+    setAccountOpen((prev) => !prev);
+    setSettingsSubMenu('');
   };
 
   return (
@@ -78,8 +88,17 @@ const Dashboard = () => {
                   <li className={settingsSubMenu === 'profile' ? 'active' : ''}>
                     <a href="#" onClick={() => handleSettingsSubMenu('profile')}>Update Profile</a>
                   </li>
-                  <li className={settingsSubMenu === 'password' ? 'active' : ''}>
-                    <a href="#" onClick={() => handleSettingsSubMenu('password')}>Change Password</a>
+                  <li>
+                    <a href="#" onClick={handleAccountClick}>
+                      Hesap Ayarları <span style={{marginLeft: 8, fontSize: 12}}>{accountOpen ? '▲' : '▼'}</span>
+                    </a>
+                    {accountOpen && (
+                      <ul className="sidebar-submenu">
+                        <li className={settingsSubMenu === 'account-password' ? 'active' : ''}>
+                          <a href="#" onClick={() => setSettingsSubMenu('account-password')}>Change Password</a>
+                        </li>
+                      </ul>
+                    )}
                   </li>
                 </ul>
               )}
@@ -94,12 +113,8 @@ const Dashboard = () => {
         </div>
       </div>
       <div className="main-content">
-        <div className="topbar">
-          <div className="search-bar">
-            <i className="fas fa-search"></i>
-            <input type="text" placeholder="Search..." />
-          </div>
-          <div className="user-profile">
+        <div className="topbar" style={{position:'sticky',top:0,background:'#fff',zIndex:10,display:'flex',justifyContent:'flex-end',alignItems:'center',padding:'18px 32px 0 0'}}>
+          <div className="user-profile" style={{display:'flex',alignItems:'center',gap:24}}>
             <div className="notifications">
               <span role="img" aria-label="bell" style={{fontSize: '1.3em'}}>🔔</span>
               <span className="badge">3</span>
@@ -130,7 +145,7 @@ const Dashboard = () => {
           {selectedMenu === 'settings' && settingsSubMenu === 'profile' && (
             <UpdateProfile />
           )}
-          {selectedMenu === 'settings' && settingsSubMenu === 'password' && (
+          {selectedMenu === 'settings' && settingsSubMenu === 'account-password' && (
             <ChangePassword />
           )}
           {selectedMenu === 'home' && !settingsOpen && (
