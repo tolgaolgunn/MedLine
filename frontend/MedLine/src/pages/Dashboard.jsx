@@ -4,7 +4,16 @@ import UpdateProfile from './UpdateProfile';
 import ChangePassword from './ChangePassword';
 import '../../dashboard.css';
 import '../../styles.css';
-import { FiBell, FiLogOut } from 'react-icons/fi';
+
+import BellIcon from '@mui/icons-material/Notifications';
+import LogoutIcon from '@mui/icons-material/Logout';
+import HomeIcon from '@mui/icons-material/Home';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import MedicationIcon from '@mui/icons-material/Medication';
+import SettingsIcon from '@mui/icons-material/Settings';
+import SearchIcon from '@mui/icons-material/Search';
+import PersonIcon from '@mui/icons-material/Person';
 
 export default function Dashboard() {
 
@@ -85,9 +94,6 @@ export default function Dashboard() {
         <div className="logo">
           <span>MedLine</span>
         </div>
-        <div className="sidebar-welcome">
-          Hoş geldin, {user?.full_name || 'Kullanıcı'}
-        </div>
         <nav style={{marginTop: '0'}}>
           <ul>
             {/* Admin menüsü */}
@@ -103,25 +109,25 @@ export default function Dashboard() {
             {role === 'patient' && <>
               <li className={selectedMenu === 'home' ? 'active' : ''}>
                 <a href="#" onClick={() => handleMenuClick('home')}>
-                  <span role="img" aria-label="home" style={{fontSize: '1.2em'}}>🏠</span>
+                  <HomeIcon style={{fontSize: '1.2em', color: '#9ea3b0'}} />
                   <span>Ana Sayfa</span>
                 </a>
               </li>
               <li className={selectedMenu === 'appointments' ? 'active' : ''}>
                 <a href="#" onClick={() => handleMenuClick('appointments')}>
-                  <span role="img" aria-label="calendar" style={{fontSize: '1.2em'}}>📅</span>
+                  <CalendarMonthIcon style={{fontSize: '1.2em', color: '#9ea3b0'}} />
                   <span>Randevularım</span>
                 </a>
               </li>
               <li className={selectedMenu === 'ai-diagnosis' ? 'active' : ''}>
                 <a href="#" onClick={() => handleMenuClick('ai-diagnosis')}>
-                  <span role="img" aria-label="ai" style={{fontSize: '1.2em'}}>🤖</span>
+                  <SmartToyIcon style={{fontSize: '1.2em', color: '#9ea3b0'}} />
                   <span>AI Ön Tanı</span>
                 </a>
               </li>
               <li className={selectedMenu === 'prescriptions' ? 'active' : ''}>
                 <a href="#" onClick={() => handleMenuClick('prescriptions')}>
-                  <span role="img" aria-label="prescriptions" style={{fontSize: '1.2em'}}>💊</span>
+                  <MedicationIcon style={{fontSize: '1.2em', color: '#9ea3b0'}} />
                   <span>Reçetelerim</span>
                 </a>
               </li>
@@ -129,7 +135,7 @@ export default function Dashboard() {
             {/* Settings menüsü ve altı olduğu gibi kalsın */}
             <li className={selectedMenu === 'settings' ? 'active' : ''}>
               <a href="#" onClick={handleSettingsClick}>
-                <span role="img" aria-label="settings" style={{fontSize: '1.2em'}}>⚙️</span>
+                <SettingsIcon style={{fontSize: '1.2em', color: '#9ea3b0'}} />
                 <span>Ayarlar</span>
                 <span style={{marginLeft: 8, fontSize: 12}}>{settingsOpen ? '▲' : '▼'}</span>
               </a>
@@ -157,9 +163,9 @@ export default function Dashboard() {
         </nav>
       </div>
       <div className="main-content">
-        <div className="topbar">
+        <div className="topbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
           <div className="search-bar" style={{ minWidth: 120, maxWidth: 180, width: '18vw', marginRight: 18 }}>
-            <span role="img" aria-label="search" style={{fontSize: '1.2em'}}>🔍</span>
+            <SearchIcon style={{fontSize: '1.2em', color: '#9ea3b0'}} />
             <input
               type="text"
               placeholder="Ara..."
@@ -171,26 +177,31 @@ export default function Dashboard() {
           <div className="user-profile" style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
             {/* Bildirim */}
             <div className="notifications" title="Bildirimler">
-              <FiBell size={24} style={{ color: '#222', cursor: 'pointer' }} />
+              <BellIcon size={24} style={{ color: '#222', cursor: 'pointer' }} />
               <span className="badge">3</span>
             </div>
          
             {/* Hasta Profili */}
             <div className="profile-topbar" title="Profilim">
-              <span role="img" aria-label="user" style={{display: 'inline-block', width: 36, height: 36, borderRadius: '50%', background: '#fff', border: '2.5px solid #fff', fontSize: '1.3em', textAlign: 'center', lineHeight: '36px', color: '#e67e22', cursor: 'pointer'}} onClick={() => { setSelectedMenu('profile'); setSettingsOpen(false); }}>
-                👤
-              </span>
+              <PersonIcon size={24} style={{ color: '#222', cursor: 'pointer' }} onClick={() => { setSelectedMenu('profile'); setSettingsOpen(false); }}    />
             </div>
             {/* Logout */}
             <div className="logout-topbar" title="Çıkış Yap">
-              <FiLogOut size={24} style={{ color: '#222', cursor: 'pointer' }} onClick={handleLogout} />
+              <LogoutIcon size={24} style={{ color: '#222', cursor: 'pointer' }} onClick={handleLogout} />
             </div>
           </div>
         </div>
+
+
         <div className="dashboard-content">
           {/* Ana içerik: seçili menüye göre göster */}
           {role === 'patient' && selectedMenu === 'home' && (
+            
             <div className="dashboard-row">
+              <div className="dashboard-welcome" style={{color:'#000000', fontWeight:600, marginBottom:12, fontSize:18,textAlign:'center'}}>
+              Hoş geldin, {user?.full_name || 'Kullanıcı'}
+                 </div>
+                 
               {/* Doktorlar Tablosu */}
               <div style={{marginBottom: 32}}>
                 <h2 style={{color:'#1976d2', fontWeight:600, marginBottom:12}}>Doktorlar</h2>

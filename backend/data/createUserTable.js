@@ -6,6 +6,9 @@ async function initializeDatabase() {
         const client = await pool.connect();
         console.log('Connected to PostgreSQL');
 
+        // Şema ayarı
+        await client.query('SET search_path TO public');
+
         // USERS TABLOSU
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
