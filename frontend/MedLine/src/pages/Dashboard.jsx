@@ -4,6 +4,7 @@ import UpdateProfile from './UpdateProfile';
 import ChangePassword from './ChangePassword';
 import '../../dashboard.css';
 import '../../styles.css';
+import { FiBell, FiLogOut } from 'react-icons/fi';
 
 export default function Dashboard() {
 
@@ -58,10 +59,10 @@ export default function Dashboard() {
         <div className="logo">
           <span>MedLine</span>
         </div>
-        <div className="sidebar-welcome" style={{margin: '16px 0', color: '#e67e22', fontWeight: 600, textAlign: 'center'}}>
+        <div className="sidebar-welcome">
           Hoş geldin, {user?.full_name || 'Kullanıcı'}
         </div>
-        <nav>
+        <nav style={{marginTop: '0'}}>
           <ul>
             {/* Hasta (patient) menüleri */}
             {role === 'patient' && <>
@@ -83,12 +84,6 @@ export default function Dashboard() {
                   <span>AI Ön Tanı</span>
                 </a>
               </li>
-              <li className={selectedMenu === 'profile' ? 'active' : ''}>
-                <a href="#" onClick={() => handleMenuClick('profile')}>
-                  <span role="img" aria-label="profile" style={{fontSize: '1.2em'}}>👤</span>
-                  <span>Profilim</span>
-                </a>
-              </li>
               <li className={selectedMenu === 'prescriptions' ? 'active' : ''}>
                 <a href="#" onClick={() => handleMenuClick('prescriptions')}>
                   <span role="img" aria-label="prescriptions" style={{fontSize: '1.2em'}}>💊</span>
@@ -100,13 +95,13 @@ export default function Dashboard() {
             <li className={selectedMenu === 'settings' ? 'active' : ''}>
               <a href="#" onClick={handleSettingsClick}>
                 <span role="img" aria-label="settings" style={{fontSize: '1.2em'}}>⚙️</span>
-                <span>Settings</span>
+                <span>Ayarlar</span>
                 <span style={{marginLeft: 8, fontSize: 12}}>{settingsOpen ? '▲' : '▼'}</span>
               </a>
               {settingsOpen && (
                 <ul className="sidebar-submenu">
                   <li className={settingsSubMenu === 'profile' ? 'active' : ''}>
-                    <a href="#" onClick={() => handleSettingsSubMenu('profile')}>Update Profile</a>
+                    <a href="#" onClick={() => handleSettingsSubMenu('profile')}>Hesap Güncelleme</a>
                   </li>
                   <li>
                     <a href="#" onClick={handleAccountClick}>
@@ -115,7 +110,7 @@ export default function Dashboard() {
                     {accountOpen && (
                       <ul className="sidebar-submenu">
                         <li className={settingsSubMenu === 'account-password' ? 'active' : ''}>
-                          <a href="#" onClick={() => setSettingsSubMenu('account-password')}>Change Password</a>
+                          <a href="#" onClick={() => setSettingsSubMenu('account-password')}>Şifre Değiştirme</a>
                         </li>
                       </ul>
                     )}
@@ -125,27 +120,29 @@ export default function Dashboard() {
             </li>
           </ul>
         </nav>
-        <div className="logout">
-          <a href="/login" onClick={handleLogout}>
-            <span role="img" aria-label="logout" style={{fontSize: '1.2em', marginRight: 8}}>🚶‍</span>
-            <span>Logout</span>
-          </a>
-        </div>
       </div>
       <div className="main-content">
         <div className="topbar">
-          <div className="search-bar">
+          <div className="search-bar" style={{ minWidth: 120, maxWidth: 180, width: '18vw', marginRight: 18 }}>
             <span role="img" aria-label="search" style={{fontSize: '1.2em'}}>🔍</span>
-            <input type="text" placeholder="Ara..." />
+            <input type="text" placeholder="Ara..." style={{ width: '80%', minWidth: 60, maxWidth: 120, fontSize: '1em', padding: '4px 8px', borderRadius: 6, border: '1px solid #e3e8f0' }} />
           </div>
-          <div className="user-profile">
-            <div className="notifications">
-              <span role="img" aria-label="bell" style={{fontSize: '1.3em'}}>🔔</span>
+          <div className="user-profile" style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
+            {/* Bildirim */}
+            <div className="notifications" title="Bildirimler">
+              <FiBell size={24} style={{ color: '#222', cursor: 'pointer' }} />
               <span className="badge">3</span>
             </div>
-            <div className="user-info">
-              <span role="img" aria-label="user" style={{display: 'inline-block', width: 40, height: 40, borderRadius: '50%', background: '#fff', border: '2.5px solid #e67e22', fontSize: '1.7em', textAlign: 'center', lineHeight: '40px'}}>👤</span>
-              <span className="username">{user?.full_name || 'Kullanıcı'}</span>
+         
+            {/* Hasta Profili */}
+            <div className="profile-topbar" title="Profilim">
+              <span role="img" aria-label="user" style={{display: 'inline-block', width: 36, height: 36, borderRadius: '50%', background: '#fff', border: '2.5px solid #fff', fontSize: '1.3em', textAlign: 'center', lineHeight: '36px', color: '#e67e22', cursor: 'pointer'}} onClick={() => { setSelectedMenu('profile'); setSettingsOpen(false); }}>
+                👤
+              </span>
+            </div>
+            {/* Logout */}
+            <div className="logout-topbar" title="Çıkış Yap">
+              <FiLogOut size={24} style={{ color: '#222', cursor: 'pointer' }} onClick={handleLogout} />
             </div>
           </div>
         </div>
@@ -225,6 +222,9 @@ export default function Dashboard() {
           )}
           {role === 'patient' && selectedMenu === 'ai-diagnosis' && (
             <div style={{ color: '#1976d2', fontWeight: 600 }}>AI Ön Tanı sayfası (yakında)</div>
+          )}
+          {selectedMenu === 'update-profile' && (
+            <UpdateProfile />
           )}
           {role === 'patient' && selectedMenu === 'profile' && (
             <div style={{ color: '#1976d2', fontWeight: 600 }}>Profilim sayfası (yakında)</div>

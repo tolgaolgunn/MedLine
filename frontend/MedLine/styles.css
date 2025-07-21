@@ -2,7 +2,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
-  background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+  background: #fff;
   min-height: 100vh;
 }
 
@@ -20,12 +20,11 @@ body {
 
 /* login-container ve login-box'u ortala */
 .login-container {
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  width: 100vw;
+  
 }
 
 .login-box {
@@ -377,4 +376,263 @@ input:-webkit-autofill:active {
   -webkit-text-fill-color: #111 !important;
   color: #111 !important;
   transition: background-color 5000s ease-in-out 0s;
+} 
+
+/* Topbar settings & logout button styles */
+.settings-topbar button, .logout-topbar button {
+  transition: background 0.15s, color 0.15s;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.settings-topbar button:hover, .logout-topbar button:hover {
+  background: #f6e9d7;
+  color: #f7f5f3;
+}
+.settings-topbar .settings-dropdown, .settings-topbar .account-dropdown {
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid #e3e8f0;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(52,152,219,0.10);
+  z-index: 1000;
+  padding: 8px 0;
+}
+.settings-topbar .settings-dropdown button,
+.settings-topbar .account-dropdown button {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 18px;
+  color: #217dbb;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.settings-topbar .settings-dropdown button:hover,
+.settings-topbar .account-dropdown button:hover {
+  background: #eaf6fb;
+  color: #145a8a;
+}
+
+/* Dashboard ana içerik daha geniş ve responsive */
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  background: #fff;
+}
+.sidebar {
+  width: 230px;
+  min-width: 180px;
+  background: #fff;
+  color: #222;
+  min-height: 100vh;
+  box-shadow: 2px 0 12px rgba(52,152,219,0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  position: relative;
+}
+.sidebar .logo {
+  margin-bottom: 0;
+}
+.sidebar-welcome {
+  margin: 8px 0 4px 0 !important;
+  padding: 0 !important;
+  line-height: 1.2;
+  color: #fff;
+  font-weight: 500;
+  font-size: 1.08rem;
+  text-align: center;
+}
+.sidebar nav ul {
+  margin-top: 8px;
+}
+.main-content {
+  flex: 1 1 0;
+  padding: 0 0 0 0;
+  background: #fff;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-content {
+  background: #fff;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0px 0px 0px 0px;
+  margin: 0px 0px 0px 0px;
+  background: #fff;
+  border-bottom: 1px solid #e3e8f0;
+  min-height: 64px;
+  position: relative;
+  z-index: 10;
+}
+@media (max-width: 900px) {
+  .sidebar { width: 60px; min-width: 48px; }
+  .main-content { padding: 0; }
+  .topbar { padding: 12px 8px 12px 8px; }
+}
+.dashboard-row {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.stats-grid {
+  flex: 2 1 0;
+  min-width: 260px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(52,152,219,0.07);
+  padding: 22px 18px;
+  min-width: 180px;
+  flex: 1 1 180px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+@media (max-width: 1100px) {
+  .dashboard-row { flex-direction: column; gap: 0; }
+  .dashboard-appointments-inline { max-width: 100%; margin-top: 32px; }
+  .stats-grid { flex-wrap: wrap; gap: 12px; }
+}
+@media (max-width: 700px) {
+  .dashboard-row { flex-direction: column; gap: 0; }
+  .main-content { padding: 0; }
+  .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+} 
+
+/* Sidebar menu düzeni */
+.sidebar nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-direction: column;
+  display: flex;
+  
+
+}
+.sidebar nav ul li {
+  margin: 0;
+  width: 100%;
+}
+.sidebar nav ul li a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 1.08rem;
+  font-weight: 500;
+  transition: background 0.18s, color 0.18s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sidebar nav ul li a:hover {
+  background: #3498db;
+  color: #fff;
+} 
+
+/* Topbar ikonları ve açılır menü stilleri */
+.topbar .user-profile > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.topbar .user-profile span[role="img"] {
+  font-size: 1.4em;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border-radius: 50%;
+  padding: 4px;
+}
+.topbar .user-profile span[role="img"]:hover {
+  background: #010102;
+}
+.settings-topbar button, .logout-topbar button {
+  color: #fff;
+  font-size: 1.4em;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  margin: 0;
+  border-radius: 50%;
+}
+.settings-topbar button:hover, .logout-topbar button:hover {
+  background: #273142;
+}
+.settings-topbar > div, .settings-topbar .settings-dropdown, .settings-topbar .account-dropdown {
+  background: #222c36 !important;
+}
+.settings-topbar .settings-dropdown button,
+.settings-topbar .account-dropdown button {
+  color: #fff !important;
+  font-size: 1.2em;
+  font-weight: 500;
+  border-radius: 0;
+  text-align: left;
+  padding: 10px 18px;
+  background: none;
+  border: none;
+  width: 100%;
+  display: block;
+}
+.settings-topbar .settings-dropdown button:hover,
+.settings-topbar .account-dropdown button:hover {
+  background: #273142;
+  color: #f1f0f0 !important;
+}
+.profile-topbar span[role="img"] {
+  background: #fff;
+  color: #ebe6e2;
+  border: 2.5px solid #f7f4f3;
+  width: 36px;
+  height: 36px;
+  display: inline-block;
+  text-align: center;
+  line-height: 36px;
+  font-size: 1.3em;
+}
+.profile-topbar span[role="img"]:hover {
+  background: #f1f0f0;
+  color: #fff;
+}
+/* Küçük search bar */
+.topbar .search-bar {
+  min-width: 100px;
+  max-width: 160px;
+  width: 16vw;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.topbar .search-bar input {
+  width: 80%;
+  min-width: 50px;
+  max-width: 100px;
+  font-size: 1em;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e3e8f0;
+} 
+html, body {
+  overflow: hidden !important;
 } 
