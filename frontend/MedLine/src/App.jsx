@@ -4,9 +4,11 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import NotFound from './pages/NotFound';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute, { AdminRoute } from './components/ProtectedRoute';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './ResetPassword';
+import AddDoctor from './pages/admin/AddDoctor';
+import Appointment from './pages/Appointment';
 
 const App = () => {
   return (
@@ -21,6 +23,12 @@ const App = () => {
             <Dashboard />
           </ProtectedRoute>
         } />
+        <Route path="/admin/add-doctor" element={
+          <AdminRoute>
+            <AddDoctor />
+          </AdminRoute>
+        } />
+        <Route path="/appointment/:doctorId" element={<Appointment />} />
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

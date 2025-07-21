@@ -75,9 +75,9 @@ const UpdateProfile = () => {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-box">
-        <h1>Update Profile</h1>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.08)', padding: '32px 20px', maxWidth: 400, minWidth: 0, width: '100%' }}>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: 24, textAlign: 'center' }}>Update Profile</h1>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="full_name">Full Name</label>

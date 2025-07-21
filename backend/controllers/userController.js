@@ -3,9 +3,10 @@ const jwt = require("jsonwebtoken");
 const { getUserByEmail, createUser, getUserById, updateUserProfile, updateUserPassword } = require("../models/userModel");
 const { sendResetMail } = require('../services/mailService'); 
 const { createPatientProfile, updatePatientProfile, getPatientProfileByUserId } = require("../models/patientProfileModel");
+const { createDoctorProfile, getAllDoctorsWithUser } = require("../models/doctorProfileModel");
 
 exports.register = async (req, res) => {
-  const { full_name, email, password, phone_number, role, birth_date, gender, address } = req.body;
+  const { full_name, email, password, phone_number, role, birth_date, gender, address, specialty, license_number, experience_years, biography, city, district, hospital_name } = req.body;
 
   try {
     const existingUser = await getUserByEmail(email);
@@ -16,9 +17,22 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    const user = await createUser(full_name, email, password_hash, phone_number, role || "patient");
-
-    if ((role || "patient") === "patient") {
+    let user;
+    if ((role || "patient") === "doctor") {
+      user = await createUser(full_name, email, password_hash, phone_number, "doctor", true);
+      await createDoctorProfile(
+        user.user_id,
+        specialty,
+        license_number,
+        experience_years || 0,
+        biography || null,
+        city,
+        district,
+        hospital_name || null,
+        true
+      );
+    } else {
+      user = await createUser(full_name, email, password_hash, phone_number, role || "patient");
       await createPatientProfile(
         user.user_id,
         birth_date || null,
@@ -92,10 +106,9 @@ exports.updateProfile = async (req, res) => {
     const user_id = req.user.user_id;
     const { full_name, email, phone_number, birth_date, gender, address } = req.body;
 
-    // users tablosunu güncelle
+
     const updatedUser = await updateUserProfile(user_id, { full_name, email, phone_number });
 
-    // patient_profiles tablosunu güncelle (sadece patient ise)
     if (req.user.role === "patient") {
       await updatePatientProfile(user_id, { birth_date, gender, address });
     }
@@ -170,5 +183,14 @@ exports.resetPassword = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(400).json({ message: error.message || "Şifre sıfırlama başarısız." });
+  }
+};
+
+exports.getAllDoctors = async (req, res) => {
+  try {
+    const doctors = await getAllDoctorsWithUser();
+    res.json(doctors);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };

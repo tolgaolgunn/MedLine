@@ -138,7 +138,7 @@ const ChangePassword = () => {
             <label htmlFor="confirmPassword">Şifreyi doğrula</label>
             <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
               <input
-                type={showConfirmPassword ? 'text' : 'password'}
+                type={showConfirmPassword ? 'text' : 'password'}zz
                 id="confirmPassword"
                 name="confirmPassword"
                 value={form.confirmPassword}
