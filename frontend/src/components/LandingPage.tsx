@@ -1,15 +1,29 @@
 import React from 'react';
-import { Activity, Stethoscope, Shield, Brain, Users } from 'lucide-react';
+import { Activity, Stethoscope, Shield, Brain, Users, Sun, Moon } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { useNavigate } from 'react-router-dom';
 import { MedLineLogo } from './ui/MedLineLogo';
+import { useTheme } from "./ThemeProvider";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   
   return (
     <div className="min-h-screen flex">
+      {/* Sağ üst köşe tema switcher (Topbar ile aynı) */}
+      <div className="absolute top-6 right-8 z-50 flex gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          title={theme === "dark" ? "Açık Tema" : "Koyu Tema"}
+        >
+          {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </Button>
+      </div>
+      
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 dark:from-slate-950 dark:via-blue-950 dark:to-slate-900 relative overflow-hidden">
         {/* Background Pattern */}
