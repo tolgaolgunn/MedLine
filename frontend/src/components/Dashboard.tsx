@@ -130,7 +130,9 @@ function DashboardHome({ theme, upcomingAppointments, healthMetrics, getGreeting
     const userStr = localStorage.getItem('user');
     if (userStr) {
       const userObj = JSON.parse(userStr);
-      if (userObj.firstName && userObj.lastName) {
+      if (userObj.full_name) {
+        userName = userObj.full_name;
+      } else if (userObj.firstName && userObj.lastName) {
         userName = userObj.firstName + ' ' + userObj.lastName;
       } else if (userObj.firstName) {
         userName = userObj.firstName;

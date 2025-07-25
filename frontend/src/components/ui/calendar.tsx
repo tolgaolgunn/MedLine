@@ -3,6 +3,7 @@
 import * as React from "react";
 // import { ChevronLeft, ChevronRight } from "lucide-react"; 
 import { DayPicker } from "react-day-picker";
+import { tr } from "react-day-picker/locale";
 
 import { cn } from "./utils";
 import { buttonVariants } from "./button";
@@ -17,6 +18,7 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
+      locale={tr}
       classNames={{
         months: "flex flex-col sm:flex-row gap-2",
         month: "flex flex-col gap-4",
@@ -66,3 +68,20 @@ function Calendar({
 }
 
 export { Calendar };
+
+// CalendarDemo örneği
+"use client";
+
+export function CalendarDemo() {
+  const [date, setDate] = React.useState<Date | undefined>(new Date());
+  return (
+    <Calendar
+      mode="single"
+      selected={date}
+      onSelect={setDate}
+      className="rounded-md border shadow-sm"
+      captionLayout="dropdown"
+    />
+  );
+}
+

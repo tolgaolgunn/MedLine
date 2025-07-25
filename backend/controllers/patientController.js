@@ -16,4 +16,22 @@ exports.createAppointment = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+};
+
+exports.getAppointmentsByUser = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const result = await db.query(
+      `SELECT a.*, u.full_name AS doctor_name, d.specialty AS doctor_specialty
+       FROM appointments a
+       JOIN users u ON a.doctor_id = u.user_id
+       JOIN doctor_profiles d ON u.user_id = d.user_id
+       WHERE a.patient_id = $1
+       ORDER BY a.datetime DESC`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 }; 
