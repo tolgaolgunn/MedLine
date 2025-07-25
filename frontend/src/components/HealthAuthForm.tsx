@@ -7,10 +7,40 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { Checkbox } from "./ui/checkbox";
-import { Eye, EyeOff, Mail, Lock, Shield, Users, Phone, Calendar, ArrowLeft, CheckCircle, Activity, Stethoscope, Brain } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Shield, Users, Phone, Calendar, ArrowLeft, CheckCircle, Activity, Stethoscope, Brain, AlertCircle } from "lucide-react";
 import { MedLineLogo } from "./ui/MedLineLogo"
 
 type AuthMode = "login" | "register" | "forgot-password" | "reset-success";
+
+// Password validation helper
+function isPasswordValid(password: string) {
+  return (
+    /[A-Z]/.test(password) && // at least one uppercase
+    /[a-z]/.test(password) && // at least one lowercase
+    /[0-9]/.test(password) && // at least one digit
+    /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password) // at least one punctuation
+  );
+}
+
+// Password validation helper
+function getPasswordErrors(password: string): Record<'upper' | 'lower' | 'digit' | 'punct', boolean> {
+  return {
+    upper: !/[A-Z]/.test(password),
+    lower: !/[a-z]/.test(password),
+    digit: !/[0-9]/.test(password),
+    punct: !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)
+  };
+}
+
+// Helper to allow only letters and spaces (including Turkish)
+function filterNameInput(value: string) {
+  return value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '');
+}
+
+// Helper to allow only digits and spaces for phone
+function filterPhoneInput(value: string) {
+  return value.replace(/[^0-9\s]/g, '');
+}
 
 export function HealthAuthForm() {
   const navigate = useNavigate();
@@ -26,10 +56,16 @@ export function HealthAuthForm() {
     lastName: "",
     email: "",
     phone: "",
+    phoneCountry: "+90",
     birthDate: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    address: "",
+    gender: ""
   });
+  const [passwordError, setPasswordError] = useState<string>("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
+  const [birthDateError, setBirthDateError] = useState<string>("");
 
   // URL'ye göre mod'u ayarla
   useEffect(() => {
@@ -47,6 +83,35 @@ export function HealthAuthForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // 18 yaş kontrolü
+    if (isRegister && formData.birthDate) {
+      const today = new Date();
+      const birthDate = new Date(formData.birthDate);
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      const d = today.getDate() - birthDate.getDate();
+      const isUnder18 = age < 18 || (age === 18 && (m < 0 || (m === 0 && d < 0)));
+      if (isUnder18) {
+        setBirthDateError("18 yaş altı üyeler kayıt olamaz.");
+        return;
+      } else {
+        setBirthDateError("");
+      }
+    }
+    // Check password match for register
+    if (isRegister && formData.password !== formData.confirmPassword) {
+      setConfirmPasswordError("Şifreler uyuşmamaktadır.");
+      return;
+    } else {
+      setConfirmPasswordError("");
+    }
+    // Password validation for both login and register
+    if (!isPasswordValid(formData.password)) {
+      setPasswordError("Şifre en az 1 büyük harf, 1 küçük harf, 1 sayı ve 1 noktalama işareti içermelidir.");
+      return;
+    } else {
+      setPasswordError("");
+    }
     console.log("Form submitted:", formData);
     
     // Login veya Register modunda ise geçici olarak dashboard'a yönlendir
@@ -82,6 +147,13 @@ export function HealthAuthForm() {
   const isRegister = mode === "register";
   const isForgotPassword = mode === "forgot-password";
   const isResetSuccess = mode === "reset-success";
+
+  const passwordRequirements: { key: 'upper' | 'lower' | 'digit' | 'punct'; label: string }[] = [
+    { key: 'upper', label: 'En az 1 büyük harf içermelidir' },
+    { key: 'lower', label: 'En az 1 küçük harf içermelidir' },
+    { key: 'digit', label: 'En az 1 sayı içermelidir' },
+    { key: 'punct', label: 'En az 1 noktalama işareti içermelidir' }
+  ];
 
   return (
     <div className="min-h-screen flex">
@@ -252,7 +324,7 @@ export function HealthAuthForm() {
             {/* Login/Register Form */}
             {(isLogin || isRegister) && (
               <>
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-5 min-h-[650px]">
                   {isRegister && (
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -263,7 +335,7 @@ export function HealthAuthForm() {
                             type="text"
                             placeholder="Adınız"
                             value={formData.firstName}
-                            onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                            onChange={(e) => setFormData(prev => ({ ...prev, firstName: filterNameInput(e.target.value) }))}
                             className="h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
                             required
                           />
@@ -277,7 +349,7 @@ export function HealthAuthForm() {
                             type="text"
                             placeholder="Soyadınız"
                             value={formData.lastName}
-                            onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                            onChange={(e) => setFormData(prev => ({ ...prev, lastName: filterNameInput(e.target.value) }))}
                             className="h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
                             required
                           />
@@ -303,22 +375,47 @@ export function HealthAuthForm() {
                   </div>
 
                   {isRegister && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-gray-700 dark:text-gray-300">Telefon</Label>
-                        <div className="relative">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-gray-700 dark:text-gray-300">Telefon</Label>
+                      <div className="flex gap-2">
+                        <select
+                          id="phoneCountry"
+                          value={formData.phoneCountry}
+                          onChange={e => setFormData(prev => ({ ...prev, phoneCountry: e.target.value }))}
+                          className="h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 rounded-md px-2 min-w-[80px] font-medium text-base"
+                          required
+                        >
+                          <option value="+90">🇹🇷 +90</option>
+                          <option value="+1">🇺🇸 +1</option>
+                          <option value="+44">🇬🇧 +44</option>
+                          <option value="+49">🇩🇪 +49</option>
+                          <option value="+33">🇫🇷 +33</option>
+                          <option value="+7">🇷🇺 +7</option>
+                          <option value="+39">🇮🇹 +39</option>
+                          <option value="+34">🇪🇸 +34</option>
+                          <option value="+61">🇦🇺 +61</option>
+                          <option value="+81">🇯🇵 +81</option>
+                          <option value="+86">🇨🇳 +86</option>
+                        </select>
+                        <div className="relative flex-1">
                           <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
                             id="phone"
                             type="tel"
-                            placeholder="0555 555 55 55"
+                            placeholder="555 555 55 55"
                             value={formData.phone}
-                            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                            onChange={e => setFormData(prev => ({ ...prev, phone: filterPhoneInput(e.target.value) }))}
                             className="pl-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
                             required
                           />
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {isRegister && (
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Birth date and gender side by side */}
                       <div className="space-y-2">
                         <Label htmlFor="birthDate" className="text-gray-700 dark:text-gray-300">Doğum Tarihi</Label>
                         <div className="relative">
@@ -332,32 +429,73 @@ export function HealthAuthForm() {
                             required
                           />
                         </div>
+                        {birthDateError && (
+                          <div className="flex items-center gap-1 text-xs text-red-600 mt-1">{birthDateError}</div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gender" className="text-gray-700 dark:text-gray-300">Cinsiyet</Label>
+                        <select
+                          id="gender"
+                          value={formData.gender}
+                          onChange={e => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                          className="h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 rounded-md px-3 w-full"
+                          required
+                        >
+                          <option value="">Seçiniz</option>
+                          <option value="Erkek">Erkek</option>
+                          <option value="Kadın">Kadın</option>
+                          <option value="Belirtmek istemiyorum">Belirtmek istemiyorum</option>
+                        </select>
+                      </div>
+                      {/* Address full width, less height */}
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="address" className="text-gray-700 dark:text-gray-300">Adres</Label>
+                        <textarea
+                          id="address"
+                          placeholder="Adresiniz"
+                          value={formData.address}
+                          onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                          className="h-16 min-h-[48px] w-full border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 rounded-md px-3 py-2 resize-none"
+                          required
+                        />
                       </div>
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">Şifre</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                        className="pl-9 pr-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 dark:hover:text-slate-300"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
+                  {isRegister && (
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">Şifre</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={formData.password}
+                          onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                          className={`pl-9 pr-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800`}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 dark:hover:text-slate-300"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <ul className="text-xs mt-1 ml-4 list-disc space-y-1">
+                        {passwordRequirements.map(req => {
+                          const errors = getPasswordErrors(formData.password);
+                          if (!errors[req.key]) return null; // Only show missing requirements
+                          return (
+                            <li key={req.key} className="text-red-600">{req.label}</li>
+                          );
+                        })}
+                      </ul>
                     </div>
-                  </div>
+                  )}
 
                   {isRegister && (
                     <div className="space-y-2">
@@ -381,6 +519,9 @@ export function HealthAuthForm() {
                           {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
+                      {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                        <div className="flex items-center gap-1 text-xs text-red-600 mt-1">Şifreler uyuşmamaktadır.</div>
+                      )}
                     </div>
                   )}
 
@@ -393,7 +534,7 @@ export function HealthAuthForm() {
                       className="border-slate-300 data-[state=checked]:bg-slate-800 data-[state=checked]:border-slate-800"
                       />
                       <Label htmlFor="terms" className="text-sm text-gray-600 dark:text-gray-400">
-                      <span className="text-slate-800 dark:text-slate-300 hover:underline cursor-pointer">Kullanım Koşulları</span> ve{" "}
+                      <span className="text-slate-800 dark:text-slate-300 hover:underline cursor-pointer">Kullanım Koşulları</span> ve
                       <span className="text-slate-800 dark:text-slate-300 hover:underline cursor-pointer">Gizlilik Politikası</span>'nı okudum ve kabul ediyorum.
                       </Label>
                     </div>
@@ -419,46 +560,6 @@ export function HealthAuthForm() {
                     </div>
                   )}
                 </form>
-
-                {/* Google Sign In */}
-                <div className="mt-6">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <Separator className="w-full border-gray-300 dark:border-gray-600" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">
-                        veya
-                      </span>
-                    </div>
-                  </div>
-
-                  <Button 
-                    variant="outline" 
-                    className="w-full mt-4 h-11 border-gray-300 dark:border-gray-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-gray-900 dark:text-white hover:border-slate-400 dark:hover:border-slate-500"
-                    onClick={handleGoogleSignIn}
-                  >
-                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                    Google ile {isLogin ? "Giriş Yap" : "Devam Et"}
-                  </Button>
-                </div>
 
                 {/* Switch Mode */}
                 <div className="mt-6 text-center">
