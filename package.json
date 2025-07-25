@@ -14,7 +14,9 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.2.0",
     "@mui/material": "^7.2.0",
+    "@types/react-toastify": "^4.0.2",
     "react-icons": "^5.5.0",
-    "react-select": "^5.10.2"
+    "react-select": "^5.10.2",
+    "react-toastify": "^11.0.5"
   }
 }
