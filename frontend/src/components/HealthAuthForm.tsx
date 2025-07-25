@@ -9,6 +9,8 @@ import { Separator } from "./ui/separator";
 import { Checkbox } from "./ui/checkbox";
 import { Eye, EyeOff, Mail, Lock, Shield, Users, Phone, Calendar, ArrowLeft, CheckCircle, Activity, Stethoscope, Brain } from "lucide-react";
 import { MedLineLogo } from "./ui/MedLineLogo"
+import { Password } from "@mui/icons-material";
+import { toast } from 'react-toastify';
 
 type AuthMode = "login" | "register" | "forgot-password" | "reset-success";
 
@@ -45,22 +47,78 @@ export function HealthAuthForm() {
     }
   }, [location.pathname]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const API_URL="http://localhost:3005/api"
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Form submitted:", formData);
     
-    // Login veya Register modunda ise geçici olarak dashboard'a yönlendir
-    if (mode === "login" || mode === "register") {
-      // Geçici olarak localStorage'a token ekle
-      localStorage.setItem('token', 'temp-token-123');
-      localStorage.setItem('user', JSON.stringify({
-        email: formData.email,
-        role: 'user'
-      }));
-      
-      // Dashboard'a yönlendir
-      navigate('/dashboard');
+    if (mode === "login") {
+      try {
+        const response= await fetch(`${API_URL}/login`,{
+          method: 'POST',
+          headers:{
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email:formData.email,
+            password:formData.password
+          })
+        });
+
+        const data = await response.json();
+
+        if(!response.ok){
+          toast.error(data.message||"Giriş Başarısız.");
+          return;
+        }
+
+        localStorage.setItem("token",data.token);
+        localStorage.setItem("user",JSON.stringify(data.user));
+        toast.success("Giriş Başarılı");
+        navigate("/dashboard");
+
+      } catch (err) {
+        toast.error("Sunucu Hatası:"+err.message);
+      }
     }
+
+    if (mode === "register") {
+      if (formData.password !== formData.confirmPassword) {
+        toast.error("Şifreler Eşleşmiyor.");
+        return;
+      }
+    
+      try {
+        const response = await fetch(`${API_URL}/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            full_name: `${formData.firstName} ${formData.lastName}`,
+            email: formData.email,
+            password: formData.password,
+            phone_number: formData.phone,
+            birth_date: formData.birthDate,
+            role: "patient" 
+          })
+        });
+    
+        const data = await response.json();
+    
+        if (!response.ok) {
+          toast.error(data.message || "Kayıt başarısız.");
+          return;
+        }
+    
+        toast.success("Kayıt Başarılı");  
+        navigate("/login");
+      } catch (err: any) {
+        toast.error("Sunucu Hatası: " + err.message);
+      }
+    }
+    
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

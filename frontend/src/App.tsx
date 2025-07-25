@@ -5,13 +5,15 @@ import LandingPage from "./components/LandingPage";
 import { HealthAuthForm } from "./components/HealthAuthForm";
 import { Dashboard } from "./components/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
-
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css"; // Toast için stil
 
 function App(): React.ReactElement {
   return (
     <ThemeProvider defaultTheme="system" storageKey="medicare-ui-theme">
       <Router>
-        <Routes>
+        <>
+          <Routes>
             <Route path="/" element={<LandingPage />} />    
             <Route path="/login" element={<HealthAuthForm />} />    
             <Route path="/register" element={<HealthAuthForm />} /> 
@@ -19,17 +21,19 @@ function App(): React.ReactElement {
             <Route path="/reset-password" element={<HealthAuthForm />} />
             <Route path="/reset-success" element={<HealthAuthForm />} />
 
-          {/* Korumalı kullanıcı sayfası */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Korumalı kullanıcı sayfası */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
 
-        </Routes>
+          <ToastContainer position="top-right" autoClose={3000} />
+        </>
       </Router>
     </ThemeProvider>
   );
