@@ -9,6 +9,19 @@ import { Checkbox } from "./ui/checkbox";
 import { Eye, EyeOff, Mail, Lock, Phone, Calendar, ArrowLeft, CheckCircle, Stethoscope, Users, Shield, Brain, Activity } from "lucide-react";
 import { MedLineLogo } from "./ui/MedLineLogo";
 import { toast } from 'react-toastify';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { toast as sonnerToast } from 'sonner';
+import {
+  Form as ShadForm,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from './ui/form'  ;
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 type AuthMode = "login" | "register" | "forgot-password" | "reset-success";
 
@@ -174,6 +187,24 @@ export function HealthAuthForm() {
   const isForgotPassword = mode === "forgot-password";
   const isResetSuccess = mode === "reset-success";
 
+  // Forgot password modern form schema
+  const forgotFormSchema = z.object({
+    email: z.string().email('Geçerli bir e-posta adresi giriniz.'),
+  });
+  type ForgotFormType = z.infer<typeof forgotFormSchema>;
+  const forgotForm = useForm<ForgotFormType>({
+    resolver: zodResolver(forgotFormSchema),
+    defaultValues: { email: '' },
+  });
+  async function onForgotSubmit(values: ForgotFormType) {
+    try {
+      // Burada API çağrısı yapılabilir
+      sonnerToast.success('Şifre sıfırlama e-postası gönderildi. Lütfen e-posta kutunuzu kontrol edin.');
+    } catch (error) {
+      sonnerToast.error('Şifre sıfırlama e-postası gönderilemedi. Lütfen tekrar deneyin.');
+    }
+  }
+
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Branding */}
@@ -276,13 +307,13 @@ export function HealthAuthForm() {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 {isLogin && "Hesabınıza Giriş Yapın"}
                 {isRegister && "Yeni Hesabınızı Oluşturun"}
-                {isForgotPassword && "Şifremi Unuttum"}
+                {/* {isForgotPassword && "Şifremi Unuttum"} */}
                 {isResetSuccess && "E-posta Gönderildi"}
               </h2>
               <p className="text-gray-600 dark:text-gray-400">
                 {isLogin && "Sağlıklı yaşamınıza devam edin"}
                 {isRegister && "Sağlıklı yaşam yolculuğunuza başlayın"}
-                {isForgotPassword && "E-posta adresinizi girin, size şifre sıfırlama bağlantısı gönderelim"}
+                {/* {isForgotPassword && "E-posta adresinizi girin, size şifre sıfırlama bağlantısı gönderelim"} */}
                 {isResetSuccess && "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi"}
               </p>
             </div>
@@ -313,31 +344,46 @@ export function HealthAuthForm() {
 
             {/* Forgot Password Form */}
             {isForgotPassword && (
-              <form onSubmit={handleForgotPassword} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="resetEmail" className="text-gray-700 dark:text-gray-300">E-posta Adresi</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="resetEmail"
-                      type="email"
-                      placeholder="ornek@email.com"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      className="pl-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl font-semibold transition-colors"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Gönderiliyor..." : "Şifre Sıfırlama Bağlantısı Gönder"}
-                </Button>
-              </form>
+              <div className="flex min-h-[40vh] h-full w-full items-center justify-center px-4">
+                <Card className="mx-auto max-w-sm w-full bg-blue-900/90 dark:bg-gray-900">
+                  <CardHeader>
+                    <CardTitle className="text-2xl text-center text-white">Şifremi Unuttum</CardTitle>
+                    <CardDescription className="text-center text-white">
+                      Şifre sıfırlama bağlantısı almak için e-posta adresinizi girin.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ShadForm {...forgotForm}>
+                      <form onSubmit={forgotForm.handleSubmit(onForgotSubmit)} className="space-y-8">
+                        <div className="grid gap-4">
+                          <FormField
+                            control={forgotForm.control}
+                            name="email"
+                            render={({ field }: { field: any }) => (
+                              <FormItem className="grid gap-2">
+                                <FormLabel htmlFor="email" className="text-white">E-posta</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    id="email"
+                                    placeholder="ornek@email.com"
+                                    type="email"
+                                    autoComplete="email"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button type="submit" className="w-full text-white bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl font-semibold transition-colors">
+                            Sıfırlama Bağlantısı Gönder
+                          </Button>
+                        </div>
+                      </form>
+                    </ShadForm>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             {/* Login/Register Form */}
@@ -355,7 +401,7 @@ export function HealthAuthForm() {
                             placeholder="Adınız"
                             value={formData.firstName}
                             onChange={e => setFormData(prev => ({ ...prev, firstName: filterNameInput(e.target.value) }))}
-                            className="h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
+                            className="h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             required
                           />
                         </div>
@@ -369,7 +415,7 @@ export function HealthAuthForm() {
                             placeholder="Soyadınız"
                             value={formData.lastName}
                             onChange={e => setFormData(prev => ({ ...prev, lastName: filterNameInput(e.target.value) }))}
-                            className="h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
+                            className="h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             required
                           />
                         </div>
@@ -386,7 +432,7 @@ export function HealthAuthForm() {
                         placeholder="ornek@email.com"
                         value={formData.email}
                         onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        className="pl-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
+                        className="pl-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         required
                       />
                     </div>
@@ -401,7 +447,7 @@ export function HealthAuthForm() {
                             id="phoneCountry"
                             value={formData.phoneCountry}
                             onChange={e => setFormData(prev => ({ ...prev, phoneCountry: e.target.value }))}
-                            className="h-14 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 rounded-md px-2 min-w-[80px] font-medium text-base"
+                            className="appearance-none outline-none h-14 border border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 rounded-md px-2 min-w-[80px] font-medium text-base text-gray-900 dark:text-white"
                             required
                           >
                             <option value="+90">🇹🇷 +90</option>
@@ -424,7 +470,7 @@ export function HealthAuthForm() {
                               placeholder="555 555 55 55"
                               value={formData.phone}
                               onChange={e => setFormData(prev => ({ ...prev, phone: filterPhoneInput(e.target.value) }))}
-                              className="pl-9 h-14 text-lg border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
+                              className="pl-9 h-14 text-lg border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                               required
                             />
                           </div>
@@ -440,7 +486,7 @@ export function HealthAuthForm() {
                             type="date"
                             value={formData.birthDate}
                             onChange={e => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
-                            className="pl-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
+                            className="pl-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             required
                           />
                         </div>
@@ -454,7 +500,7 @@ export function HealthAuthForm() {
                           id="gender"
                           value={formData.gender}
                           onChange={e => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-                          className="h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 rounded-md px-3 w-full"
+                          className="appearance-none outline-none h-11 border border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 rounded-md px-3 w-full text-gray-900 dark:text-white"
                           required
                         >
                           <option value="">Seçiniz</option>
@@ -462,7 +508,7 @@ export function HealthAuthForm() {
                           <option value="Kadın">Kadın</option>
                           <option value="Belirtmek istemiyorum">Belirtmek istemiyorum</option>
                         </select>
-                      </div>
+                      </div>  
                       {/* Adres geniş ve kısa, alta */}
                       <div className="space-y-2 col-span-2">
                         <Label htmlFor="address" className="text-gray-700 dark:text-gray-300">Adres</Label>
@@ -471,7 +517,7 @@ export function HealthAuthForm() {
                           placeholder="Adresiniz"
                           value={formData.address}
                           onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                          className="h-16 min-h-[48px] w-full border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 rounded-md px-3 py-2 resize-none"
+                          className="appearance-none outline-none h-16 min-h-[48px] w-full border border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 rounded-md px-3 py-2 resize-none text-gray-900 dark:text-white"
                           required
                         />
                       </div>
@@ -488,7 +534,7 @@ export function HealthAuthForm() {
                         placeholder="••••••••"
                         value={formData.password}
                         onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                        className="pl-9 pr-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
+                        className="pl-9 pr-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         required
                       />
                       <button
@@ -501,7 +547,7 @@ export function HealthAuthForm() {
                     </div>
                     {/* Şifre gereksinimleri */}
                     {isRegister && (
-                      <ul className="text-xs mt-1 ml-4 list-disc space-y-1">
+                      <ul className="text-xs mt-1 ml-4 list-disc space-y-1 text-white">
                         {passwordRequirements.map(req => {
                           const errors = getPasswordErrors(formData.password);
                           if (!errors[req.key]) return null;
@@ -524,7 +570,7 @@ export function HealthAuthForm() {
                           placeholder="••••••••"
                           value={formData.confirmPassword}
                           onChange={e => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                          className="pl-9 pr-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800"
+                          className="pl-9 pr-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                           required
                         />
                         <button
