@@ -56,6 +56,7 @@ export function HealthAuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [formData, setFormData] = useState({
@@ -71,6 +72,18 @@ export function HealthAuthForm() {
     confirmPassword: ""
   });
   const [birthDateError, setBirthDateError] = useState("");
+
+  // Sayfa yüklendiğinde localStorage'dan "Beni Hatırla" durumunu kontrol et
+  useEffect(() => {
+    const savedRememberMe = localStorage.getItem('rememberMe');
+    if (savedRememberMe === 'true') {
+      setRememberMe(true);
+      const savedEmail = localStorage.getItem('rememberedEmail');
+      if (savedEmail) {
+        setFormData(prev => ({ ...prev, email: savedEmail }));
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const pathname = location.pathname;
@@ -104,6 +117,16 @@ export function HealthAuthForm() {
           toast.error(data.message || "Giriş Başarısız.");
           return;
         }
+        
+        // "Beni Hatırla" işlemi
+        if (rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+          localStorage.setItem('rememberedEmail', formData.email);
+        } else {
+          localStorage.removeItem('rememberMe');
+          localStorage.removeItem('rememberedEmail');
+        }
+        
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         toast.success("Giriş Başarılı");
@@ -558,6 +581,22 @@ export function HealthAuthForm() {
                       </ul>
                     )}
                   </div>
+                  
+                  {/* Beni Hatırla - Sadece login modunda göster */}
+                  {isLogin && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="rememberMe"
+                        checked={rememberMe}
+                        onCheckedChange={(checked: boolean | "indeterminate") => setRememberMe(checked as boolean)}
+                        className="border-slate-300 data-[state=checked]:bg-slate-800 data-[state=checked]:border-slate-800"
+                      />
+                      <Label htmlFor="rememberMe" className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                        Beni Hatırla
+                      </Label>
+                    </div>
+                  )}
+                  
                   {/* Şifre tekrar ve hata */}
                   {isRegister && (
                     <div className="space-y-2">

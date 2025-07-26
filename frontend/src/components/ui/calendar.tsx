@@ -8,6 +8,15 @@ import { tr } from "react-day-picker/locale";
 import { cn } from "./utils";
 import { buttonVariants } from "./button";
 
+// Haftanın ilk günü Pazartesi olacak şekilde locale'ı override et
+const customTr = {
+  ...tr,
+  options: {
+    ...tr.options,
+    weekStartsOn: 1 as const, // Pazartesi
+  },
+};
+
 function Calendar({
   className,
   classNames,
@@ -18,7 +27,7 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
-      locale={tr}
+      locale={customTr}
       classNames={{
         months: "flex flex-col sm:flex-row gap-2",
         month: "flex flex-col gap-4",
@@ -32,9 +41,9 @@ function Calendar({
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-x-1",
-        head_row: "flex",
+        head_row: "flex w-full justify-between",
         head_cell:
-          "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+          "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] text-center",
         row: "flex w-full mt-2",
         cell: cn(
           "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-range-end)]:rounded-r-md",

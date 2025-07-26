@@ -57,22 +57,7 @@ export function Dashboard() {
   };
 
   const upcomingAppointments: Appointment[] = [
-    {
-      id: 1,
-      doctor: 'Dr. Ayşe Kaya',
-      specialty: 'Kardiyoloji',
-      date: '25 Temmuz 2025',
-      time: '14:00',
-      type: 'Online'
-    },
-    {
-      id: 2,
-      doctor: 'Dr. Mehmet Öz',
-      specialty: 'Genel Dahiliye',
-      date: '28 Temmuz 2025',
-      time: '10:30',
-      type: 'Yüz Yüze'
-    }
+  //buraya yaklaşan randevularınızı ekleyeceksiniz dinamik olarak
   ];
 
   const healthMetrics: HealthMetric[] = [
