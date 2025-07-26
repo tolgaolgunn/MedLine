@@ -83,10 +83,15 @@ export function Profile() {
 
         const userData = await response.json();
         
+        // Backend'den gelen full_name'i ad ve soyada ayır
+        const nameParts = (userData.full_name || "").split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+        
         // Backend'den gelen veriyi formData'ya uyarla
         setFormData({
-          firstName: userData.first_name || "",
-          lastName: userData.last_name || "",
+          firstName: firstName,
+          lastName: lastName,
           email: userData.email || "",
           phone: userData.phone_number || "",
           gender: userData.gender || "",
@@ -133,7 +138,7 @@ export function Profile() {
 
       // Backend'e gönderilecek veriyi hazırla
       const updateData = {
-        first_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
         phone_number: formData.phone,
         gender: formData.gender,
@@ -141,7 +146,7 @@ export function Profile() {
         birth_date: birthDate ? birthDate.toISOString().split('T')[0] : null
       };
 
-      const response = await fetch('http://localhost:3005/api/profile/update', {
+      const response = await fetch('http://localhost:3005/api/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -151,40 +156,91 @@ export function Profile() {
       });
 
       if (!response.ok) {
-        throw new Error('Profil güncellenemedi');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Profil güncellenemedi');
       }
 
-      toast.success("Profil bilgileri başarıyla güncellendi!");
+      toast.success("✅ Profil bilgileriniz başarıyla güncellendi!", {
+        duration: 3000,
+        description: "Değişiklikleriniz kaydedildi."
+      });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Profil güncellenirken hata:', error);
-      toast.error('Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.');
+      toast.error(error.message || 'Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.', {
+        duration: 4000
+      });
     }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Şifreler eşleşmiyor!");
+      toast.error("❌ Şifreler eşleşmiyor!", {
+        duration: 3000,
+        description: "Lütfen yeni şifrenizi tekrar kontrol edin."
+      });
       return;
     }
     if(passwordData.currentPassword === passwordData.newPassword) {
-      toast.error("Mevcut şifre yeni şifre ile aynı olamaz!");
+      toast.error("❌ Mevcut şifre yeni şifre ile aynı olamaz!", {
+        duration: 3000,
+        description: "Farklı bir şifre seçin."
+      });
       return;
     }
     
     // Şifre gereksinimleri kontrolü (register ile aynı)
     const errors = getPasswordErrors(passwordData.newPassword);
     if (Object.values(errors).some(Boolean)) {
-      toast.error("Şifre gereksinimlerini karşılayınız.");
+      toast.error("❌ Şifre gereksinimlerini karşılayınız.", {
+        duration: 4000,
+        description: "Şifreniz tüm gereksinimleri karşılamalıdır."
+      });
       return;
     }
-    
-    toast.success("Şifre başarıyla değiştirildi!");
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: ""
-    });
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('❌ Oturum bulunamadı. Lütfen tekrar giriş yapın.', {
+          duration: 4000
+        });
+        return;
+      }
+
+      const response = await fetch('http://localhost:3005/api/change-password', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          oldPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Şifre değiştirilemedi');
+      }
+
+      toast.success("✅ Şifreniz başarıyla değiştirildi!", {
+        duration: 3000,
+        description: "Yeni şifrenizle giriş yapabilirsiniz."
+      });
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+      
+    } catch (error: any) {
+      console.error('Şifre değiştirilirken hata:', error);
+      toast.error(error.message || '❌ Şifre değiştirilemedi. Lütfen tekrar deneyin.', {
+        duration: 4000
+      });
+    }
   };
 
   return (
