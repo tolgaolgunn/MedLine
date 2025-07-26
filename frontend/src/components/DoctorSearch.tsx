@@ -43,6 +43,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import "dayjs/locale/tr"; 
 import React from "react"; // Added missing import
+import { toast } from "react-toastify";
 
 // Dayjs plugins
 dayjs.extend(utc);
@@ -138,14 +139,38 @@ export function DoctorSearch() {
     return matchesSearch && matchesSpecialty;
   });
 
-  const handleBookAppointment = (): void => {
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      setSelectedDoctor(null);
-      setSelectedDateTime(undefined);
-      setAppointmentType("");
-    }, 2000);
+  const handleBookAppointment = async (): Promise<void> => {
+    if (!selectedDoctor || !selectedDateTime || !appointmentType) return;
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) throw new Error("Kullanıcı bulunamadı");
+      const user = JSON.parse(userStr);
+      const appointmentData = {
+        patient_id: user.user_id,
+        doctor_id: selectedDoctor.id,
+        datetime: dayjs(selectedDateTime).format("YYYY-MM-DD HH:mm:ss"),
+        type: appointmentType === 'online' ? 'online' : 'face_to_face',
+      };
+      const res = await fetch("http://localhost:3005/api/appointments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(appointmentData),
+      });
+      if (!res.ok) {
+        throw new Error("Randevu oluşturulamadı");
+      }
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        setSelectedDoctor(null);
+        setSelectedDateTime(undefined);
+        setAppointmentType("");
+      }, 2000);
+    } catch (err) {
+      toast.error("Randevu oluşturulurken hata: " + (err as Error).message);
+    }
   };
 
   const handleDateTimeSelect = (date: Date | undefined): void => {

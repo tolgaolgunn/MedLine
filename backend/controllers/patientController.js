@@ -5,18 +5,25 @@ const db = require('../config/db');
 exports.createAppointment = async (req, res) => {
   try {
     const { patient_id, doctor_id, datetime, type } = req.body;
+    console.log("Gelen body:", req.body);
+
     if (!patient_id || !doctor_id || !datetime || !type) {
       return res.status(400).json({ message: 'Tüm alanlar zorunludur.' });
     }
+
     const result = await db.query(
       `INSERT INTO appointments (patient_id, doctor_id, datetime, type) VALUES ($1, $2, $3, $4) RETURNING *`,
       [patient_id, doctor_id, datetime, type]
     );
+
+    console.log("Randevu oluşturuldu:", result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    console.error("Veritabanı hatası:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 exports.getAppointmentsByUser = async (req, res) => {
   try {

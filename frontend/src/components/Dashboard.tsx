@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -50,15 +50,46 @@ export function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
 
+  // Dinamik upcomingAppointments ve loadingAppointments state'leri
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
+
+  useEffect(() => {
+    async function fetchAppointments() {
+      setLoadingAppointments(true);
+      try {
+        const userStr = localStorage.getItem("user");
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+
+        const res = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        console.log("API'den gelen veri:", data); 
+
+        const now = new Date();
+        const upcoming = data.filter((appointment: any) => {
+          if (!appointment.datetime) return false;
+          return new Date(appointment.datetime) > now;
+        }).sort((a: any, b: any) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
+        setUpcomingAppointments(upcoming);
+      } catch (e) {
+        console.error("Randevu verisi alınamadı:", e);
+        setUpcomingAppointments([]);
+      } finally {
+        setLoadingAppointments(false);
+      }
+    }
+
+    fetchAppointments();
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/');
   };
-
-  const upcomingAppointments: Appointment[] = [
-  //buraya yaklaşan randevularınızı ekleyeceksiniz dinamik olarak
-  ];
 
   const healthMetrics: HealthMetric[] = [
     { label: 'Tansiyon', value: '120/80', icon: Heart, status: 'normal' },
@@ -88,6 +119,7 @@ export function Dashboard() {
             <DashboardHome
               theme={theme}
               upcomingAppointments={upcomingAppointments}
+              loadingAppointments={loadingAppointments}
               healthMetrics={healthMetrics}
               getGreetingTime={getGreetingTime}
               setActiveSection={setActiveSection}
@@ -108,7 +140,7 @@ export function Dashboard() {
   );
 }
 
-function DashboardHome({ theme, upcomingAppointments, healthMetrics, getGreetingTime, setActiveSection }: any) {
+function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healthMetrics, getGreetingTime, setActiveSection }: any) {
   // Kullanıcı adını localStorage'dan al
   let userName = 'Kullanıcı';
   try {
@@ -191,35 +223,59 @@ function DashboardHome({ theme, upcomingAppointments, healthMetrics, getGreeting
         <Card className="lg:col-span-2 p-6 transition-colors duration-200">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Yaklaşan Randevular</h2>
-            <Button variant="outline" size="sm" className="text-black dark:text-white" onClick={() => setActiveSection('appointments')}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-black dark:text-white"
+              onClick={() => setActiveSection("appointments")}
+            >
               Tümünü Gör
             </Button>
           </div>
-          <div className="space-y-4">
-            {upcomingAppointments.map((appointment: any) => (
-              <div key={appointment.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg transition-colors duration-200">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{appointment.doctor}</h3>
-                    <p className="text-sm text-muted-foreground">{appointment.specialty}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">{appointment.date} - {appointment.time}</span>
-                      <Badge variant={appointment.type === 'Online' ? 'secondary' : 'outline'} className="text-xs">
-                        {appointment.type}
-                      </Badge>
+
+          {loadingAppointments ? (
+            <p className="text-sm text-muted-foreground">Randevular yükleniyor...</p>
+          ) : upcomingAppointments.length === 0 ? (
+            <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+              Yaklaşan bir randevunuz bulunmamaktadır.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {upcomingAppointments.map((appointment: any) => (
+                <div
+                  key={appointment.id}
+                  className="flex items-center justify-between p-4 bg-muted/50 rounded-lg transition-colors duration-200"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">{appointment.doctor_name || '-'}</h3>
+                      <p className="text-sm text-muted-foreground">{appointment.doctor_specialty || '-'}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">
+                          {(appointment.datetime ? new Date(appointment.datetime).toLocaleDateString('tr-TR') : '-')}
+                          {' - '}
+                          {(appointment.datetime ? new Date(appointment.datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '-')}
+                        </span>
+                        <Badge
+                          variant={appointment.type?.toLowerCase() === "online" ? "secondary" : "outline"}
+                          className="text-xs"
+                        >
+                          {appointment.type || '-'}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
+                  <Button variant="outline" size="sm" onClick={() => setActiveSection("appointments")}>
+                    Detay
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm">
-                  Detay
-                </Button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
         
         <Card className="p-6 transition-colors duration-200">
