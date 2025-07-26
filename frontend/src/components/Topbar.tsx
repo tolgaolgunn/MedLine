@@ -8,9 +8,10 @@ import { Bell, LogOut, Sun, Moon, User } from "lucide-react";
 
 interface TopbarProps {
   onLogout: () => void;
+  setActiveSection: (section: string) => void;
 }
 
-export function Topbar({ onLogout }: TopbarProps) {
+export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
   const { theme, setTheme } = useTheme();
 
   return (
@@ -21,7 +22,7 @@ export function Topbar({ onLogout }: TopbarProps) {
       </div>
       <div className="flex items-center gap-4 ml-4">
         {/* Notification Bell */}
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" onClick={() => setActiveSection('notifications')}  >
           <Bell className="w-5 h-5" />
           <Badge className="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs" variant="destructive">3</Badge>
         </Button>
@@ -35,7 +36,7 @@ export function Topbar({ onLogout }: TopbarProps) {
           {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </Button>
         {/* Profile Avatar */}
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" className="text-black dark:text-white" onClick={() => setActiveSection('profile')}>
           <Avatar>
             <AvatarFallback>
               <User className="w-5 h-5" />

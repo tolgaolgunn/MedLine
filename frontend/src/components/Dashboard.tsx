@@ -97,7 +97,7 @@ export function Dashboard() {
         setIsCollapsed={setIsCollapsed}
       />
       <div className="flex-1 flex flex-col overflow-auto">
-        <Topbar onLogout={handleLogout} />
+        <Topbar onLogout={handleLogout} setActiveSection={setActiveSection} />
         <main className="flex-1 overflow-auto">
           {activeSection === "dashboard" && (
             <DashboardHome
@@ -206,7 +206,7 @@ function DashboardHome({ theme, upcomingAppointments, healthMetrics, getGreeting
         <Card className="lg:col-span-2 p-6 transition-colors duration-200">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Yaklaşan Randevular</h2>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="text-black dark:text-white" onClick={() => setActiveSection('appointments')}>
               Tümünü Gör
             </Button>
           </div>
