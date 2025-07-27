@@ -32,7 +32,7 @@ exports.register = async (req, res) => {
         true
       );
     } else {
-      user = await createUser(full_name, email, password_hash, phone_number, role || "patient");
+      user = await createUser(full_name, email, password_hash, phone_number, role || "patient", true);
       await createPatientProfile(
         user.user_id,
         birth_date || null,
@@ -41,7 +41,8 @@ exports.register = async (req, res) => {
       );
     }
 
-    res.status(201).json({ message: "Kayıt başarılı, yönetici onayı bekleniyor.", user });
+    const successMessage = role === "doctor" ? "Kayıt başarılı, yönetici onayı bekleniyor." : "Kayıt başarılı!";
+    res.status(201).json({ message: successMessage, user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -58,7 +59,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Geçersiz e-posta veya şifre." });
     }
 
-    if ((user.role === "doctor" || user.role === "admin") && !user.is_approved) {
+    if (user.role === "doctor" && !user.is_approved) {
       return res.status(403).json({ message: "Hesabınız henüz yönetici tarafından onaylanmamıştır." });
     }
 

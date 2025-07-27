@@ -25,7 +25,7 @@ import { MedicalRecords } from "./MedicalRecords";
 import { Prescriptions } from "./prescriptions";
 import { Pharmacy } from "./pharmacy";
 import { Notifications } from "./notifications";
-import { Feedback } from "./feedback";    
+import { Feedback } from "./Feedback";    
 import { Topbar } from "./Topbar";
 
 interface Appointment {

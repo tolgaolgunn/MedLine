@@ -17,7 +17,7 @@ const formatDate = (date: Date) => {
     year: 'numeric'
   });
 };
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 
 // Password requirements (register ile aynı)
 function getPasswordErrors(password: string): Record<'upper' | 'lower' | 'digit' | 'punct', boolean> {
@@ -83,15 +83,10 @@ export function Profile() {
 
         const userData = await response.json();
         
-        // Backend'den gelen full_name'i ad ve soyada ayır
-        const nameParts = (userData.full_name || "").split(" ");
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(" ") || "";
-        
         // Backend'den gelen veriyi formData'ya uyarla
         setFormData({
-          firstName: firstName,
-          lastName: lastName,
+          firstName: userData.first_name || "",
+          lastName: userData.last_name || "",
           email: userData.email || "",
           phone: userData.phone_number || "",
           gender: userData.gender || "",
@@ -138,7 +133,7 @@ export function Profile() {
 
       // Backend'e gönderilecek veriyi hazırla
       const updateData = {
-        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        first_name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
         phone_number: formData.phone,
         gender: formData.gender,
@@ -156,95 +151,44 @@ export function Profile() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Profil güncellenemedi');
+        throw new Error('Profil güncellenemedi');
       }
 
-      toast.success("✅ Profil bilgileriniz başarıyla güncellendi!", {
-        duration: 3000,
-        description: "Değişiklikleriniz kaydedildi."
-      });
+      toast.success("Profil bilgileri başarıyla güncellendi!");
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Profil güncellenirken hata:', error);
-      toast.error(error.message || 'Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.', {
-        duration: 4000
-      });
+      toast.error('Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.');
     }
   };
 
-  const handleChangePassword = async () => {
+  const handleChangePassword = () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("❌ Şifreler eşleşmiyor!", {
-        duration: 3000,
-        description: "Lütfen yeni şifrenizi tekrar kontrol edin."
-      });
+      toast.error("Şifreler eşleşmiyor!");
       return;
     }
     if(passwordData.currentPassword === passwordData.newPassword) {
-      toast.error("❌ Mevcut şifre yeni şifre ile aynı olamaz!", {
-        duration: 3000,
-        description: "Farklı bir şifre seçin."
-      });
+      toast.error("Mevcut şifre yeni şifre ile aynı olamaz!");
       return;
     }
     
     // Şifre gereksinimleri kontrolü (register ile aynı)
     const errors = getPasswordErrors(passwordData.newPassword);
     if (Object.values(errors).some(Boolean)) {
-      toast.error("❌ Şifre gereksinimlerini karşılayınız.", {
-        duration: 4000,
-        description: "Şifreniz tüm gereksinimleri karşılamalıdır."
-      });
+      toast.error("Şifre gereksinimlerini karşılayınız.");
       return;
     }
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('❌ Oturum bulunamadı. Lütfen tekrar giriş yapın.', {
-          duration: 4000
-        });
-        return;
-      }
-
-      const response = await fetch('http://localhost:3005/api/change-password', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          oldPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Şifre değiştirilemedi');
-      }
-
-      toast.success("✅ Şifreniz başarıyla değiştirildi!", {
-        duration: 3000,
-        description: "Yeni şifrenizle giriş yapabilirsiniz."
-      });
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: ""
-      });
-      
-    } catch (error: any) {
-      console.error('Şifre değiştirilirken hata:', error);
-      toast.error(error.message || '❌ Şifre değiştirilemedi. Lütfen tekrar deneyin.', {
-        duration: 4000
-      });
-    }
+    
+    toast.success("Şifre başarıyla değiştirildi!");
+    setPasswordData({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: ""
+    });
   };
 
   return (
-    <div className="flex-1 p-6 bg-white dark:bg-black">
+    <div className="flex-1 p-6 bg-gray-50 dark:bg-gray-950">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -377,7 +321,7 @@ export function Profile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="currentPassword">Mevcut Şifre</Label>
+                <Label htmlFor="currentPassword" className="text-gray-900 dark:text-white">Mevcut Şifre</Label>
                 <div className="relative">
                   <Input
                     id="currentPassword"
@@ -405,10 +349,11 @@ export function Profile() {
               <Separator />
 
               <div className="space-y-2">
-                <Label htmlFor="newPassword">Yeni Şifre</Label>
+                <Label htmlFor="newPassword" className="text-gray-900 dark:text-white">Yeni Şifre</Label>
                 <div className="relative">
                   <Input
-                    id="newPassword"
+                    className="text-gray-900 dark:text-white"
+                  id="newPassword"
                     type={showNewPassword ? "text" : "password"}
                     value={passwordData.newPassword}
                     onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
@@ -431,9 +376,10 @@ export function Profile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Yeni Şifre Tekrar</Label>
+                <Label htmlFor="confirmPassword" className="text-gray-900 dark:text-white">Yeni Şifre Tekrar</Label>
                 <div className="relative">
                   <Input
+                    className="text-gray-900 dark:text-white"
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     value={passwordData.confirmPassword}
@@ -456,7 +402,7 @@ export function Profile() {
                 </div>
               </div>
 
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-gray-600">
                 <ul className="list-disc list-inside space-y-1">
                   {passwordRequirements.map(req => {
                     const errors = getPasswordErrors(passwordData.newPassword);
