@@ -33,22 +33,6 @@ import {
   User,
   CheckCircle,
 } from "lucide-react";
-// MUI imports
-import { Box } from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
-import "dayjs/locale/tr"; 
-import React from "react"; // Added missing import
-import { toast } from "react-toastify";
-
-// Dayjs plugins
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.locale("tr"); 
 
 interface Doctor {
   id: number;
@@ -73,7 +57,10 @@ export function DoctorSearch() {
     useState<string>("");
   const [selectedDoctor, setSelectedDoctor] =
     useState<Doctor | null>(null);
-  const [selectedDateTime, setSelectedDateTime] = useState<Date | undefined>();
+  const [selectedDate, setSelectedDate] = useState<
+    Date | undefined
+  >();
+  const [selectedTime, setSelectedTime] = useState<string>("");
   const [appointmentType, setAppointmentType] = useState<
     AppointmentType | ""
   >("");
@@ -124,6 +111,21 @@ export function DoctorSearch() {
     "KBB",
   ];
 
+  const timeSlots: string[] = [
+    "09:00",
+    "09:30",
+    "10:00",
+    "10:30",
+    "11:00",
+    "11:30",
+    "14:00",
+    "14:30",
+    "15:00",
+    "15:30",
+    "16:00",
+    "16:30",
+  ];
+
   const filteredDoctors = doctors.filter((doctor) => {
     const matchesSearch =
       doctor.name
@@ -139,42 +141,19 @@ export function DoctorSearch() {
     return matchesSearch && matchesSpecialty;
   });
 
-  const handleBookAppointment = async (): Promise<void> => {
-    if (!selectedDoctor || !selectedDateTime || !appointmentType) return;
-    try {
-      const userStr = localStorage.getItem("user");
-      if (!userStr) throw new Error("Kullanıcı bulunamadı");
-      const user = JSON.parse(userStr);
-      const appointmentData = {
-        patient_id: user.user_id,
-        doctor_id: selectedDoctor.id,
-        datetime: dayjs(selectedDateTime).format("YYYY-MM-DD HH:mm:ss"),
-        type: appointmentType === 'online' ? 'online' : 'face_to_face',
-      };
-      const res = await fetch("http://localhost:3005/api/appointments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(appointmentData),
-      });
-      if (!res.ok) {
-        throw new Error("Randevu oluşturulamadı");
-      }
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        setSelectedDoctor(null);
-        setSelectedDateTime(undefined);
-        setAppointmentType("");
-      }, 2000);
-    } catch (err) {
-      toast.error("Randevu oluşturulurken hata: " + (err as Error).message);
-    }
+  const handleBookAppointment = (): void => {
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+      setSelectedDoctor(null);
+      setSelectedDate(undefined);
+      setSelectedTime("");
+      setAppointmentType("");
+    }, 2000);
   };
 
-  const handleDateTimeSelect = (date: Date | undefined): void => {
-    setSelectedDateTime(date);
+  const handleDateSelect = (date: Date | undefined): void => {
+    setSelectedDate(date);
   };
 
   return (
@@ -364,45 +343,50 @@ export function DoctorSearch() {
 
                         <div>
                           <label className="block text-sm font-medium mb-2">
-                            Tarih ve Saat Seç
+                            Tarih Seç
                           </label>
-                          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="tr">
-                            <DateTimePicker
-                              label="Tarih ve Saat"
-                              value={selectedDateTime ? dayjs(selectedDateTime) : null}
-                              onChange={(newValue) => {
-                                if (newValue) {
-                                  handleDateTimeSelect(newValue.toDate());
-                                } else {
-                                  handleDateTimeSelect(undefined);
-                                }
-                              }}
-                              minDateTime={dayjs().startOf('day')}
-                              format="DD/MM/YYYY HH:mm"
-                              timeSteps={{ minutes: 10 }}
-                              slotProps={{
-                                popper: {
-                                  sx: { pointerEvents: "auto" },
-                                },
-                                textField: {
-                                  variant: "outlined",
-                                  fullWidth: true,
-                                  error: false,
-                                  placeholder: "Tarih ve saat seçin",
-                                },
-                              }}
-                            />
-                          </LocalizationProvider>
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={handleDateSelect}
+                            disabled={(date: Date ) => date < new Date()}
+                            className="rounded-md border"
+                          />
                         </div>
 
-
+                        {selectedDate && (
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              Saat Seç
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {timeSlots.map((time) => (
+                                <Button
+                                  key={time}
+                                  variant={
+                                    selectedTime === time
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  size="sm"
+                                  onClick={() =>
+                                    setSelectedTime(time)
+                                  }
+                                >
+                                  {time}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         <Button
                           className="w-full"
                           onClick={handleBookAppointment}
                           disabled={
                             !appointmentType ||
-                            !selectedDateTime
+                            !selectedDate ||
+                            !selectedTime
                           }
                         >
                           Randevuyu Onayla ({doctor.price})
