@@ -56,7 +56,6 @@ export function HealthAuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [formData, setFormData] = useState({
@@ -72,18 +71,6 @@ export function HealthAuthForm() {
     confirmPassword: ""
   });
   const [birthDateError, setBirthDateError] = useState("");
-
-  // Sayfa yüklendiğinde localStorage'dan "Beni Hatırla" durumunu kontrol et
-  useEffect(() => {
-    const savedRememberMe = localStorage.getItem('rememberMe');
-    if (savedRememberMe === 'true') {
-      setRememberMe(true);
-      const savedEmail = localStorage.getItem('rememberedEmail');
-      if (savedEmail) {
-        setFormData(prev => ({ ...prev, email: savedEmail }));
-      }
-    }
-  }, []);
 
   useEffect(() => {
     const pathname = location.pathname;
@@ -117,16 +104,6 @@ export function HealthAuthForm() {
           toast.error(data.message || "Giriş Başarısız.");
           return;
         }
-        
-        // "Beni Hatırla" işlemi
-        if (rememberMe) {
-          localStorage.setItem('rememberMe', 'true');
-          localStorage.setItem('rememberedEmail', formData.email);
-        } else {
-          localStorage.removeItem('rememberMe');
-          localStorage.removeItem('rememberedEmail');
-        }
-        
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         toast.success("Giriş Başarılı");
@@ -169,6 +146,13 @@ export function HealthAuthForm() {
       }
       // Telefon numarası birleştir
       const fullPhone = formData.phoneCountry + ' ' + formData.phone;
+      
+      // Gender değerini veritabanı formatına çevir
+      let genderDB = formData.gender;
+      if (formData.gender === 'Erkek') genderDB = 'male';
+      else if (formData.gender === 'Kadın') genderDB = 'female';
+      else if (formData.gender === 'Belirtmek istemiyorum') genderDB = 'other';
+      
       try {
         const response = await fetch(`${API_URL}/register`, {
           method: "POST",
@@ -179,7 +163,7 @@ export function HealthAuthForm() {
             password: formData.password,
             phone_number: fullPhone,
             birth_date: formData.birthDate,
-            gender: formData.gender,
+            gender: genderDB,
             address: formData.address,
             role: "patient"
           })
@@ -221,10 +205,27 @@ export function HealthAuthForm() {
   });
   async function onForgotSubmit(values: ForgotFormType) {
     try {
-      // Burada API çağrısı yapılabilir
+      setIsSubmitting(true);
+      const response = await fetch(`${API_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: values.email })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        sonnerToast.error(data.message || 'Şifre sıfırlama e-postası gönderilemedi. Lütfen tekrar deneyin.');
+        return;
+      }
+      
+      setResetEmail(values.email);
       sonnerToast.success('Şifre sıfırlama e-postası gönderildi. Lütfen e-posta kutunuzu kontrol edin.');
+      setMode("reset-success");
     } catch (error) {
-      sonnerToast.error('Şifre sıfırlama e-postası gönderilemedi. Lütfen tekrar deneyin.');
+      sonnerToast.error('Sunucu hatası. Lütfen tekrar deneyin.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -331,13 +332,13 @@ export function HealthAuthForm() {
                 {isLogin && "Hesabınıza Giriş Yapın"}
                 {isRegister && "Yeni Hesabınızı Oluşturun"}
                 {/* {isForgotPassword && "Şifremi Unuttum"} */}
-                {isResetSuccess && "E-posta Gönderildi"}
+                {/* {isResetSuccess && "E-posta Gönderildi"} */}
               </h2>
               <p className="text-gray-600 dark:text-gray-400">
                 {isLogin && "Sağlıklı yaşamınıza devam edin"}
                 {isRegister && "Sağlıklı yaşam yolculuğunuza başlayın"}
                 {/* {isForgotPassword && "E-posta adresinizi girin, size şifre sıfırlama bağlantısı gönderelim"} */}
-                {isResetSuccess && "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi"}
+                {/* {isResetSuccess && "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi"} */}
               </p>
             </div>
 
@@ -398,8 +399,12 @@ export function HealthAuthForm() {
                               </FormItem>
                             )}
                           />
-                          <Button type="submit" className="w-full text-white bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl font-semibold transition-colors">
-                            Sıfırlama Bağlantısı Gönder
+                          <Button 
+                            type="submit" 
+                            disabled={isSubmitting}
+                            className="w-full text-white bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isSubmitting ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
                           </Button>
                         </div>
                       </form>
@@ -581,22 +586,6 @@ export function HealthAuthForm() {
                       </ul>
                     )}
                   </div>
-                  
-                  {/* Beni Hatırla - Sadece login modunda göster */}
-                  {isLogin && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="rememberMe"
-                        checked={rememberMe}
-                        onCheckedChange={(checked: boolean | "indeterminate") => setRememberMe(checked as boolean)}
-                        className="border-slate-300 data-[state=checked]:bg-slate-800 data-[state=checked]:border-slate-800"
-                      />
-                      <Label htmlFor="rememberMe" className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                        Beni Hatırla
-                      </Label>
-                    </div>
-                  )}
-                  
                   {/* Şifre tekrar ve hata */}
                   {isRegister && (
                     <div className="space-y-2">

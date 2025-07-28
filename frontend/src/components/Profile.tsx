@@ -6,18 +6,9 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Separator } from "./ui/separator";
-import { Calendar } from "./ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { CalendarIcon, Eye, EyeOff, User } from "lucide-react";
-// Date formatting helper - date-fns would be imported in a real project
-const formatDate = (date: Date) => {
-  return date.toLocaleDateString('tr-TR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  });
-};
-import { toast } from "sonner";
+import { Calendar, Eye, EyeOff, User } from "lucide-react";
+
+import { toast } from "react-toastify";
 
 // Password requirements (register ile aynı)
 function getPasswordErrors(password: string): Record<'upper' | 'lower' | 'digit' | 'punct', boolean> {
@@ -52,6 +43,7 @@ export function Profile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -84,9 +76,14 @@ export function Profile() {
         const userData = await response.json();
         
         // Backend'den gelen veriyi formData'ya uyarla
+        const fullName = userData.full_name || "";
+        const nameParts = fullName.split(' ');
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(' ') || "";
+        
         setFormData({
-          firstName: userData.first_name || "",
-          lastName: userData.last_name || "",
+          firstName: firstName,
+          lastName: lastName,
           email: userData.email || "",
           phone: userData.phone_number || "",
           gender: userData.gender || "",
@@ -133,7 +130,7 @@ export function Profile() {
 
       // Backend'e gönderilecek veriyi hazırla
       const updateData = {
-        first_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
         phone_number: formData.phone,
         gender: formData.gender,
@@ -141,7 +138,8 @@ export function Profile() {
         birth_date: birthDate ? birthDate.toISOString().split('T')[0] : null
       };
 
-      const response = await fetch('http://localhost:3005/api/profile/update', {
+      console.log('Sending update data:', updateData);
+      const response = await fetch('http://localhost:3005/api/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -149,9 +147,13 @@ export function Profile() {
         },
         body: JSON.stringify(updateData)
       });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
 
       if (!response.ok) {
-        throw new Error('Profil güncellenemedi');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Profil güncellenemedi');
       }
 
       toast.success("Profil bilgileri başarıyla güncellendi!");
@@ -162,7 +164,7 @@ export function Profile() {
     }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error("Şifreler eşleşmiyor!");
       return;
@@ -178,17 +180,48 @@ export function Profile() {
       toast.error("Şifre gereksinimlerini karşılayınız.");
       return;
     }
-    
-    toast.success("Şifre başarıyla değiştirildi!");
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: ""
-    });
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+        return;
+      }
+
+      const response = await fetch('http://localhost:3005/api/change-password', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          oldPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Şifre değiştirilemedi');
+        return;
+      }
+
+      toast.success("Şifre başarıyla değiştirildi!");
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+    } catch (error) {
+      console.error('Şifre değiştirme hatası:', error);
+      toast.error('Şifre değiştirilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
-    <div className="flex-1 p-6 bg-white dark:bg-black">
+    <div className="flex-1 p-6 bg-gray-50 dark:bg-gray-950">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -270,27 +303,17 @@ export function Profile() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Doğum Tarihi</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {birthDate ? formatDate(birthDate) : "Tarih seçin"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={birthDate}
-                        onSelect={setBirthDate}
-
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label htmlFor="birthDate">Doğum Tarihi</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="birthDate"
+                      type="date"
+                      value={birthDate ? birthDate.toISOString().split('T')[0] : ""}
+                      onChange={(e) => setBirthDate(e.target.value ? new Date(e.target.value) : undefined)}
+                      className="pl-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 dark:text-white"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -321,7 +344,7 @@ export function Profile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="currentPassword">Mevcut Şifre</Label>
+                <Label htmlFor="currentPassword" className="text-gray-900 dark:text-white">Mevcut Şifre</Label>
                 <div className="relative">
                   <Input
                     id="currentPassword"
@@ -349,10 +372,11 @@ export function Profile() {
               <Separator />
 
               <div className="space-y-2">
-                <Label htmlFor="newPassword">Yeni Şifre</Label>
+                <Label htmlFor="newPassword" className="text-gray-900 dark:text-white">Yeni Şifre</Label>
                 <div className="relative">
                   <Input
-                    id="newPassword"
+                    className="text-gray-900 dark:text-white"
+                  id="newPassword"
                     type={showNewPassword ? "text" : "password"}
                     value={passwordData.newPassword}
                     onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
@@ -375,9 +399,10 @@ export function Profile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Yeni Şifre Tekrar</Label>
+                <Label htmlFor="confirmPassword" className="text-gray-900 dark:text-white">Yeni Şifre Tekrar</Label>
                 <div className="relative">
                   <Input
+                    className="text-gray-900 dark:text-white"
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     value={passwordData.confirmPassword}
@@ -400,7 +425,7 @@ export function Profile() {
                 </div>
               </div>
 
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-gray-600">
                 <ul className="list-disc list-inside space-y-1">
                   {passwordRequirements.map(req => {
                     const errors = getPasswordErrors(passwordData.newPassword);
@@ -415,9 +440,9 @@ export function Profile() {
               <Button 
                 onClick={handleChangePassword} 
                 className="w-full"
-                disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isChangingPassword}
               >
-                Şifreyi Değiştir
+                {isChangingPassword ? "Değiştiriliyor..." : "Şifreyi Değiştir"}
               </Button>
             </CardContent>
           </Card>

@@ -32,7 +32,7 @@ exports.register = async (req, res) => {
         true
       );
     } else {
-      user = await createUser(full_name, email, password_hash, phone_number, role || "patient");
+      user = await createUser(full_name, email, password_hash, phone_number, role || "patient", true);
       await createPatientProfile(
         user.user_id,
         birth_date || null,
@@ -41,7 +41,8 @@ exports.register = async (req, res) => {
       );
     }
 
-    res.status(201).json({ message: "Kayıt başarılı, yönetici onayı bekleniyor.", user });
+    const successMessage = role === "doctor" ? "Kayıt başarılı, yönetici onayı bekleniyor." : "Kayıt başarılı!";
+    res.status(201).json({ message: successMessage, user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -58,7 +59,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Geçersiz e-posta veya şifre." });
     }
 
-    if ((user.role === "doctor" || user.role === "admin") && !user.is_approved) {
+    if (user.role === "doctor" && !user.is_approved) {
       return res.status(403).json({ message: "Hesabınız henüz yönetici tarafından onaylanmamıştır." });
     }
 
@@ -87,16 +88,27 @@ exports.login = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const userId = req.user.user_id;
+    console.log('Getting profile for user_id:', userId);
+    
     const user = await getUserById(userId);
     if (!user) {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
+    
+    console.log('User data from database:', user);
+    
     let profile = {};
     if (user.role === "patient") {
       profile = await getPatientProfileByUserId(userId) || {};
+      console.log('Patient profile data:', profile);
     }
-    res.json({ ...user, ...profile });
+    
+    const responseData = { ...user, ...profile };
+    console.log('Final response data:', responseData);
+    
+    res.json(responseData);
   } catch (err) {
+    console.error('Get profile error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -106,15 +118,17 @@ exports.updateProfile = async (req, res) => {
     const user_id = req.user.user_id;
     const { full_name, email, phone_number, birth_date, gender, address } = req.body;
 
-
+    // User tablosunu güncelle
     const updatedUser = await updateUserProfile(user_id, { full_name, email, phone_number });
 
+    // Patient profile'ı güncelle (eğer patient ise)
     if (req.user.role === "patient") {
       await updatePatientProfile(user_id, { birth_date, gender, address });
     }
 
     res.json({ message: "Profil güncellendi", user: updatedUser });
   } catch (err) {
+    console.error('Profile update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -124,12 +138,21 @@ exports.changePassword = async (req, res) => {
     const user_id = req.user.user_id;
     const { oldPassword, newPassword } = req.body;
 
+    console.log('Change password request for user_id:', user_id);
+    console.log('Old password provided:', !!oldPassword);
+    console.log('New password provided:', !!newPassword);
+
     const user = await getUserById(user_id);
     if (!user) {
+      console.log('User not found for user_id:', user_id);
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
 
+    console.log('User found:', user.email);
+
     const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
+    console.log('Password match result:', isMatch);
+    
     if (!isMatch) {
       return res.status(400).json({ message: "Eski şifre yanlış." });
     }
@@ -138,9 +161,11 @@ exports.changePassword = async (req, res) => {
     const password_hash = await bcrypt.hash(newPassword, salt);
 
     await updateUserPassword(user_id, password_hash);
+    console.log('Password updated successfully for user_id:', user_id);
 
     res.json({ message: "Şifre başarıyla değiştirildi." });
   } catch (err) {
+    console.error('Change password error:', err);
     res.status(500).json({ error: err.message });
   }
 };

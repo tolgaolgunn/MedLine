@@ -7,8 +7,8 @@ const getUserByEmail = async (email) => {
 
 const createUser = async (full_name, email, password_hash, phone_number, role, is_approved = false) => {
   const result = await db.query(
-    "INSERT INTO users (full_name, email, password_hash, phone_number, role) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-    [full_name, email, password_hash, phone_number, role]
+    "INSERT INTO users (full_name, email, password_hash, phone_number, role, is_approved) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+    [full_name, email, password_hash, phone_number, role, is_approved]
   );
   return result.rows[0];
 };
