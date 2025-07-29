@@ -25,15 +25,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 
 type AuthMode = "login" | "register" | "forgot-password" | "reset-success";
 
-// Helper to allow only letters and spaces (including Turkish)
 function filterNameInput(value: string) {
   return value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '');
 }
-// Helper to allow only digits and spaces for phone
+
 function filterPhoneInput(value: string) {
   return value.replace(/[^0-9\s]/g, '');
 }
-// Password requirements
+
 function getPasswordErrors(password: string): Record<'upper' | 'lower' | 'digit' | 'punct', boolean> {
   return {
     upper: !/[A-Z]/.test(password),
@@ -56,6 +55,7 @@ export function HealthAuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [formData, setFormData] = useState({
@@ -85,6 +85,19 @@ export function HealthAuthForm() {
     }
   }, [location.pathname]);
 
+  // Beni hatırla özelliği - sayfa yüklendiğinde hatırlanan email'i yükle
+  useEffect(() => {
+    if (mode === 'login') {
+      const rememberedEmail = localStorage.getItem("rememberedEmail");
+      const isRemembered = localStorage.getItem("rememberMe") === "true";
+      
+      if (rememberedEmail && isRemembered) {
+        setFormData(prev => ({ ...prev, email: rememberedEmail }));
+        setRememberMe(true);
+      }
+    }
+  }, [mode]);
+
   const API_URL = "http://localhost:3005/api";
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,6 +119,16 @@ export function HealthAuthForm() {
         }
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
+        
+        // Beni hatırla özelliği
+        if (rememberMe) {
+          localStorage.setItem("rememberMe", "true");
+          localStorage.setItem("rememberedEmail", formData.email);
+        } else {
+          localStorage.removeItem("rememberMe");
+          localStorage.removeItem("rememberedEmail");
+        }
+        
         toast.success("Giriş Başarılı");
         navigate("/dashboard");
       } catch (err) {
@@ -128,7 +151,7 @@ export function HealthAuthForm() {
           setBirthDateError("");
         }
       }
-      // Şifreler eşleşiyor mu?
+      
       if (formData.password !== formData.confirmPassword) {
         toast.error("Şifreler Eşleşmiyor.");
         return;
@@ -139,15 +162,15 @@ export function HealthAuthForm() {
         toast.error("Şifre gereksinimlerini karşılayınız.");
         return;
       }
-      // Tüm alanlar dolu mu?
+      
       if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.birthDate || !formData.gender || !formData.address) {
         toast.error("Lütfen tüm alanları doldurun.");
         return;
       }
       // Telefon numarası birleştir
       const fullPhone = formData.phoneCountry + ' ' + formData.phone;
-      
-      // Gender değerini veritabanı formatına çevir
+
+     //Cinsiyet değerini veritabanı formatına çevir
       let genderDB = formData.gender;
       if (formData.gender === 'Erkek') genderDB = 'male';
       else if (formData.gender === 'Kadın') genderDB = 'female';
@@ -194,7 +217,7 @@ export function HealthAuthForm() {
   const isForgotPassword = mode === "forgot-password";
   const isResetSuccess = mode === "reset-success";
 
-  // Forgot password modern form schema
+  // Şifremi unuttum formu
   const forgotFormSchema = z.object({
     email: z.string().email('Geçerli bir e-posta adresi giriniz.'),
   });
@@ -586,6 +609,25 @@ export function HealthAuthForm() {
                       </ul>
                     )}
                   </div>
+                  
+                  {/* Beni Hatırla - Sadece login modunda göster */}
+                  {isLogin && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="rememberMe"
+                        checked={rememberMe}
+                        onCheckedChange={(checked: boolean | "indeterminate") => setRememberMe(checked as boolean)}
+                        className="border-slate-300 data-[state=checked]:bg-slate-800 data-[state=checked]:border-slate-800"
+                      />
+                      <Label 
+                        htmlFor="rememberMe" 
+                        className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer"
+                      >
+                        Beni Hatırla
+                      </Label>
+                    </div>
+                  )}
+                  
                   {/* Şifre tekrar ve hata */}
                   {isRegister && (
                     <div className="space-y-2">

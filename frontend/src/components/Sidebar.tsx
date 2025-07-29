@@ -2,8 +2,9 @@ import { Button } from './ui/button';
 import { useTheme } from './ThemeProvider';
 import { 
   User,Heart,Calendar, Pill, MessageSquare, Bell, Settings,LogOut,Menu,X,
-  Stethoscope,FileText,Package,Sun,Moon,Monitor
+  Stethoscope,FileText,Package,Sun,Moon,Monitor,BarChart3
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export interface SidebarProps {
   activeSection: string;
@@ -21,8 +22,23 @@ interface MenuItem {
 
 export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCollapsed, onLogout }: SidebarProps) {
   const { theme, setTheme } = useTheme();
+  const [userRole, setUserRole] = useState<string>('patient');
 
-  const menuItems: MenuItem[] = [
+  // Get user role from localStorage
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userObj = JSON.parse(userStr);
+        setUserRole(userObj.role || 'patient');
+      }
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+    }
+  }, []);
+
+  // Menu items for patients
+  const patientMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Ana Sayfa', icon: Heart },
     { id: 'ai-diagnosis', label: 'AI Ön Tanı', icon: Stethoscope },
     { id: 'doctor-search', label: 'Doktor Ara', icon: User },
@@ -31,6 +47,17 @@ export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCol
     { id: 'prescriptions', label: 'Reçeteler', icon: Pill },
     { id: 'feedback', label: 'Geri Bildirim', icon: MessageSquare },
   ];
+
+  // Menu items for doctors
+  const doctorMenuItems: MenuItem[] = [
+    { id: 'dashboard', label: 'Ana Sayfa', icon: Heart },
+    { id: 'appointments', label: 'Randevular', icon: Calendar },
+    { id: 'feedback', label: 'Geri Bildirim', icon: MessageSquare },
+    { id: 'reports', label: 'Raporlar', icon: BarChart3 },
+  ];
+
+  // Use appropriate menu items based on user role
+  const menuItems = userRole === 'doctor' ? doctorMenuItems : patientMenuItems;
 
   const getThemeIcon = (): React.ComponentType<{ className?: string }> => {
     switch (theme) {
@@ -109,6 +136,7 @@ export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCol
       <Button
         variant="ghost"
         className={`w-full justify-start gap-3 ${isCollapsed ? 'px-2' : 'px-3'}`}
+        onClick={() => setActiveSection('settings')}
       >
         <Settings className="w-4 h-4 flex-shrink-0" />
         {!isCollapsed && <span>Ayarlar</span>}
