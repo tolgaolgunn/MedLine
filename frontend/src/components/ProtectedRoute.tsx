@@ -1,11 +1,26 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token');
+  const location = useLocation();
+  let user = null;
+
+  try {
+    user = JSON.parse(localStorage.getItem('user') || '{}');
+  } catch {
+    user = null;
+  }
+
   if (!token) {
     return <Navigate to="/login" replace />;
   }
+
+  // Doktor rolü kontrolü
+  if (location.pathname.startsWith('/doctor') && (!user || user.role !== 'doctor')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 };
 
@@ -24,4 +39,4 @@ export const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return children;
 };
 
-export default ProtectedRoute; 
+export default ProtectedRoute;
