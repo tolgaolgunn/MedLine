@@ -226,8 +226,9 @@ const DoctorDashboard: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Doktor Paneli</h1>
-          <p className="text-gray-600">Hoş geldiniz, Dr. [İsim]</p>
+          <p className="text-gray-600">Hoş geldiniz.</p>
           <p className="text-gray-600">Sağlıklı günler dileriz.</p>
+          
         </div>
       </div>
 
