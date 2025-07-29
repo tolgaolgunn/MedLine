@@ -4,16 +4,13 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import LandingPage from "./components/LandingPage";
 import { HealthAuthForm } from "./components/HealthAuthForm";
 import { Dashboard } from "./components/Dashboard";
+import { DoctorDashboard, DoctorAppointments, PatientManagement, DoctorPrescription } from "./components/doctor";
 import { Feedback } from "./components/feedback";
 import { Profile } from "./components/Profile";
+import DoctorReports from "./components/DoctorReports";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // Toast için stil
-
-// Doktor bileşenleri
-import { DoctorDashboard, DoctorAppointments, PatientManagement, DoctorPrescription } from "./components/doctor";
-import DoctorReports from "./components/DoctorReports";
-import DoctorLayout from "./components/doctor/DoctorLayout";
 
 function App(): React.ReactElement {
   return (
@@ -38,25 +35,22 @@ function App(): React.ReactElement {
               }
             />
             
-            {/* Doktor sayfaları */}
+            {/* Doktor Dashboard */}
             <Route
-              path="/doctor"
+              path="/doctor-dashboard"
               element={
                 <ProtectedRoute>
-                  <DoctorLayout>
-                    <DoctorDashboard />
-                  </DoctorLayout>
+                  <DoctorDashboard />
                 </ProtectedRoute>
               }
             />
             
+            {/* Doktor Sayfaları */}
             <Route
               path="/doctor/appointments"
               element={
                 <ProtectedRoute>
-                  <DoctorLayout>
-                    <DoctorAppointments />
-                  </DoctorLayout>
+                  <DoctorAppointments />
                 </ProtectedRoute>
               }
             />
@@ -65,9 +59,7 @@ function App(): React.ReactElement {
               path="/doctor/patients"
               element={
                 <ProtectedRoute>
-                  <DoctorLayout>
-                    <PatientManagement />
-                  </DoctorLayout>
+                  <PatientManagement />
                 </ProtectedRoute>
               }
             />
@@ -76,9 +68,7 @@ function App(): React.ReactElement {
               path="/doctor/prescriptions"
               element={
                 <ProtectedRoute>
-                  <DoctorLayout>
-                    <DoctorPrescription />
-                  </DoctorLayout>
+                  <DoctorPrescription />
                 </ProtectedRoute>
               }
             />
@@ -87,9 +77,7 @@ function App(): React.ReactElement {
               path="/doctor/reports"
               element={
                 <ProtectedRoute>
-                  <DoctorLayout>
-                    <DoctorReports />
-                  </DoctorLayout>
+                  <DoctorReports />
                 </ProtectedRoute>
               }
             />
@@ -98,9 +86,7 @@ function App(): React.ReactElement {
               path="/doctor/feedback"
               element={
                 <ProtectedRoute>
-                  <DoctorLayout>
-                    <Feedback />
-                  </DoctorLayout>
+                  <Feedback />
                 </ProtectedRoute>
               }
             />
@@ -109,9 +95,7 @@ function App(): React.ReactElement {
               path="/doctor/profile"
               element={
                 <ProtectedRoute>
-                  <DoctorLayout>
-                    <Profile />
-                  </DoctorLayout>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

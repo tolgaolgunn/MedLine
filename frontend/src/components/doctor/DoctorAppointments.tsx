@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import axios from 'axios';
 
 interface Appointment {
   id: number;
@@ -27,9 +28,8 @@ interface Appointment {
   date: string;
   time: string;
   type: 'online' | 'face_to_face';
-  status: 'confirmed' | 'pending' | 'completed';
+  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
   symptoms: string;
-  isCurrent?: boolean;
 }
 
 const DoctorAppointments: React.FC = () => {
@@ -38,66 +38,40 @@ const DoctorAppointments: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  // Örnek randevu verileri
-  const upcomingAppointments: Appointment[] = [
-    {
-      id: 1,
-      patientName: 'Ahmet Yılmaz',
-      patientAge: 45,
-      specialty: 'Kardiyoloji',
-      date: new Date().toISOString().split('T')[0],
-      time: '14:30',
-      type: 'online',
-      status: 'confirmed',
-      symptoms: 'Göğüs ağrısı, nefes darlığı'
-    },
-    {
-      id: 2,
-      patientName: 'Fatma Demir',
-      patientAge: 32,
-      specialty: 'Dahiliye',
-      date: new Date().toISOString().split('T')[0],
-      time: '16:00',
-      type: 'face_to_face',
-      status: 'confirmed',
-      symptoms: 'Baş ağrısı, mide bulantısı'
-    },
-    {
-      id: 3,
-      patientName: 'Mehmet Kaya',
-      patientAge: 28,
-      specialty: 'Ortopedi',
-      date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      time: '10:00',
-      type: 'online',
-      status: 'confirmed',
-      symptoms: 'Sırt ağrısı'
-    },
-    {
-      id: 4,
-      patientName: 'Ayşe Özkan',
-      patientAge: 55,
-      specialty: 'Nöroloji',
-      date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      time: '11:30',
-      type: 'face_to_face',
-      status: 'confirmed',
-      symptoms: 'Baş dönmesi, denge problemi'
+  useEffect(() => {
+    const userDataStr = localStorage.getItem('user');
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const doctorId = userData?.user_id;
+    if (doctorId) {
+      axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`)
+        .then(res => {
+          const mapped = res.data.map((item: any) => {
+            const dateObj = new Date(item.datetime);
+            return {
+              id: item.id,
+              patientName: item.patientname || item.patientName,
+              patientAge: item.patientAge,
+              specialty: item.specialty,
+              date: dateObj.toLocaleDateString('tr-TR'),
+              time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+              type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
+              status: item.status,
+            };
+          });
+          setAppointments(mapped);
+        });
     }
-  ];
+  }, []);
 
-  const currentAppointment: Appointment = {
-    id: 1,
-    patientName: 'Ahmet Yılmaz',
-    patientAge: 45,
-    specialty: 'Kardiyoloji',
-    date: new Date().toISOString().split('T')[0],
-    time: '14:30',
-    type: 'online',
-    status: 'confirmed',
-    symptoms: 'Göğüs ağrısı, nefes darlığı',
-    isCurrent: true
+  const isCurrentAppointment = (appointment: Appointment) => {
+    const [day, month, year] = appointment.date.split('.');
+    const [hour, minute] = appointment.time.split(':');
+    const appointmentDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    const now = new Date();
+    const diff = (appointmentDate.getTime() - now.getTime()) / 60000;
+    return diff <= 10 && diff >= -30;
   };
 
   const filterOptions = [
@@ -171,7 +145,7 @@ const DoctorAppointments: React.FC = () => {
     
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    return upcomingAppointments.filter(appointment => {
+    return appointments.filter(appointment => {
       const appointmentDate = new Date(appointment.date);
       
       // Tarih filtresi
@@ -321,49 +295,39 @@ const DoctorAppointments: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {getFilteredAppointments().map((appointment) => (
-                <div key={appointment.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Users className="w-6 h-6 text-primary" />
-                    </div>
+              {appointments
+                .filter(app => {
+                  // appointment.date şu anda 'DD.MM.YYYY' formatında, bunu 'YYYY-MM-DD' formatına çevir
+                  const [day, month, year] = app.date.split('.');
+                  const appointmentISO = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                  const todayISO = new Date().toISOString().split('T')[0];
+                  return appointmentISO >= todayISO;
+                })
+                .map((appointment) => (
+                  <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
                     <div>
-                      <h3 className="font-medium">{appointment.patientName}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.patientAge} yaş • {appointment.specialty}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {formatDate(appointment.date)} - {formatTime(appointment.time)}
-                        </span>
-                        <Badge variant={appointment.type === 'online' ? 'secondary' : 'outline'} className="text-xs">
-                          {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Şikayet: {appointment.symptoms}
-                      </p>
+                      <p className="font-medium">{appointment.patientName}</p>
+                      <p className="text-sm text-gray-600">{appointment.patientAge} yaş • {appointment.specialty}</p>
+                      <p className="text-xs text-gray-500">{appointment.date} - {appointment.time} • {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
+                      <p className="text-xs text-gray-500">Şikayet: {appointment.symptoms}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isCurrentAppointment(appointment) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {/* Randevuyu başlat işlemi */}}
+                        >
+                          <Play className="w-4 h-4 mr-1" />
+                          Randevuyu Başlat
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm">
+                        <Eye className="w-4 h-4 mr-1" />
+                        Detay
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {appointment.type === 'online' && (
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleStartAppointment(appointment.id)}
-                        variant="outline"
-                        className="bg-white hover:bg-gray-50"
-                      >
-                        <Play className="w-4 h-4 mr-1" />
-                        Randevuyu Başlat
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm">
-                      <Eye className="w-4 h-4 mr-1" />
-                      Detay
-                    </Button>
-                  </div>
-                </div>
               ))}
             </div>
           </Card>
@@ -374,53 +338,53 @@ const DoctorAppointments: React.FC = () => {
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Şu Anki Randevu</h2>
             
-            {currentAppointment ? (
+            {appointments.find(app => isCurrentAppointment(app)) ? (
               <div className="space-y-4">
                 <div className="text-center p-4 bg-primary/10 rounded-lg">
                   <div className="text-2xl font-bold text-primary mb-2">
-                    {formatTime(currentAppointment.time)}
+                    {appointments.find(app => isCurrentAppointment(app))?.time}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {formatDate(currentAppointment.date)}
+                    {appointments.find(app => isCurrentAppointment(app))?.date}
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Hasta</Label>
-                    <p className="font-medium">{currentAppointment.patientName}</p>
+                    <p className="font-medium">{appointments.find(app => isCurrentAppointment(app))?.patientName}</p>
                   </div>
                   
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Yaş</Label>
-                    <p>{currentAppointment.patientAge} yaş</p>
+                    <p>{appointments.find(app => isCurrentAppointment(app))?.patientAge} yaş</p>
                   </div>
                   
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Uzmanlık</Label>
-                    <p>{currentAppointment.specialty}</p>
+                    <p>{appointments.find(app => isCurrentAppointment(app))?.specialty}</p>
                   </div>
                   
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Randevu Türü</Label>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={currentAppointment.type === 'online' ? 'secondary' : 'outline'}>
-                        {currentAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}
+                      <Badge variant={appointments.find(app => isCurrentAppointment(app))?.type === 'online' ? 'secondary' : 'outline'}>
+                        {appointments.find(app => isCurrentAppointment(app))?.type === 'online' ? 'Online' : 'Yüz Yüze'}
                       </Badge>
                     </div>
                   </div>
                   
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Şikayet</Label>
-                    <p className="text-sm">{currentAppointment.symptoms}</p>
+                    <p className="text-sm">{appointments.find(app => isCurrentAppointment(app))?.symptoms}</p>
                   </div>
                 </div>
 
-                {currentAppointment.type === 'online' && (
+                {appointments.find(app => isCurrentAppointment(app))?.type === 'online' && (
                   <Button 
                     variant="outline"
                     className="w-full bg-white hover:bg-gray-50"
-                    onClick={() => handleStartAppointment(currentAppointment.id)}
+                    onClick={() => handleStartAppointment(appointments.find(app => isCurrentAppointment(app))?.id || 0)}
                   >
                     <Play className="w-4 h-4 mr-2" />
                     Online Randevuyu Başlat

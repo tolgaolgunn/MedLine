@@ -5,7 +5,8 @@ require('dotenv').config();
 
 const initializeDatabase = require('./data/createUserTable');
 const userRoutes = require('./routes/userRoutes');
-const patientRoutes=require('./routes/patientRoute');
+const patientRoutes = require('./routes/patientRoute');
+const doctorRoutes = require('./routes/doctorRoute');
 
 const app = express();
 
@@ -16,7 +17,8 @@ app.use(cors({
 app.use(express.json()); 
 
 app.use('/api', userRoutes);
-app.use('/api',patientRoutes)
+app.use('/api', patientRoutes);
+app.use('/api/doctor', doctorRoutes);
 
 initializeDatabase().then(() => {
     const PORT = process.env.PORT || 3005;

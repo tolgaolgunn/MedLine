@@ -25,6 +25,8 @@ import {
   User,
   Bell,
 } from 'lucide-react';
+import axios from 'axios';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 
 interface Appointment {
   id: number;
@@ -50,85 +52,10 @@ interface Patient {
 }
 
 const DoctorDashboard: React.FC = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: 1,
-      patientName: 'Ahmet Yılmaz',
-      patientAge: 45,
-      specialty: 'Kardiyoloji',
-      date: new Date().toISOString().split('T')[0],
-      time: '14:30',
-      type: 'online',
-      status: 'confirmed',
-      symptoms: 'Göğüs ağrısı, nefes darlığı'
-    },
-    {
-      id: 2,
-      patientName: 'Fatma Demir',
-      patientAge: 32,
-      specialty: 'Dahiliye',
-      date: new Date().toISOString().split('T')[0],
-      time: '16:00',
-      type: 'face_to_face',
-      status: 'confirmed',
-      symptoms: 'Baş ağrısı, mide bulantısı'
-    },
-    {
-      id: 3,
-      patientName: 'Mehmet Kaya',
-      patientAge: 28,
-      specialty: 'Ortopedi',
-      date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      time: '10:00',
-      type: 'online',
-      status: 'confirmed',
-      symptoms: 'Sırt ağrısı'
-    },
-    {
-      id: 4,
-      patientName: 'Ayşe Özkan',
-      patientAge: 55,
-      specialty: 'Nöroloji',
-      date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      time: '11:30',
-      type: 'face_to_face',
-      status: 'confirmed',
-      symptoms: 'Baş dönmesi, denge problemi'
-    },
-    {
-      id: 5,
-      patientName: 'Ali Veli',
-      patientAge: 38,
-      specialty: 'Dermatoloji',
-      date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      time: '09:00',
-      type: 'face_to_face',
-      status: 'completed',
-      symptoms: 'Cilt problemi'
-    },
-    {
-      id: 6,
-      patientName: 'Zeynep Kaya',
-      patientAge: 42,
-      specialty: 'Göz Hastalıkları',
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      time: '15:30',
-      type: 'online',
-      status: 'completed',
-      symptoms: 'Görme problemi'
-    },
-    {
-      id: 7,
-      patientName: 'Can Demir',
-      patientAge: 29,
-      specialty: 'Psikiyatri',
-      date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      time: '13:00',
-      type: 'online',
-      status: 'pending',
-      symptoms: 'Anksiyete'
-    }
-  ]);
+  const [totalPatients, setTotalPatients] = useState<number>(0);
+  const [pendingAppointments, setPendingAppointments] = useState<number>(0);
+  const [todayAppointmentCount, setTodayAppointmentCount] = useState<number>(0);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   const [patients, setPatients] = useState<Patient[]>([
     {
@@ -161,6 +88,9 @@ const DoctorDashboard: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterSpecialty, setFilterSpecialty] = useState<string>('all');
+
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -195,13 +125,14 @@ const DoctorDashboard: React.FC = () => {
     });
   };
 
-  const todayAppointments = getFilteredAppointments().filter(appointment => {
-    const today = new Date().toISOString().split('T')[0];
-    return appointment.date === today;
+  // Yaklaşan (bugün ve sonrası) randevuları al
+  const todayISO = new Date().toISOString().split('T')[0];
+  const upcomingAppointments = getFilteredAppointments().filter(appointment => {
+    // appointment.date şu anda 'DD.MM.YYYY' formatında, bunu 'YYYY-MM-DD' formatına çevir
+    const [day, month, year] = appointment.date.split('.');
+    const appointmentISO = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    return appointmentISO >= todayISO;
   });
-
-  // Filtrelenmiş randevuları al
-  const filteredTodayAppointments = todayAppointments;
 
   // Boş durum mesajını belirle
   const getEmptyMessage = () => {
@@ -218,7 +149,142 @@ const DoctorDashboard: React.FC = () => {
     }
   };
 
+  const isCurrentAppointment = (appointment: Appointment) => {
+    // appointment.date: 'DD.MM.YYYY'
+    // appointment.time: 'HH:mm'
+    const [day, month, year] = appointment.date.split('.');
+    const [hour, minute] = appointment.time.split(':');
+    const appointmentDate = new Date(
+      Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)
+    );
+    const now = new Date();
 
+    // Randevu zamanı ile şimdi arasındaki fark (ör: 10 dakika öncesi ve sonrası başlatılabilir)
+    const diff = (appointmentDate.getTime() - now.getTime()) / 60000;
+    return diff <= 10 && diff >= -30; // 10 dakika sonrası ve 30 dakika öncesi arası başlatılabilir
+  };
+
+  // Kullanıcı bilgisini localStorage'dan al
+  const [userName, setUserName] = useState('');
+  const [doctorId, setDoctorId] = useState<string>('');
+  
+  useEffect(() => {
+    const userDataStr = localStorage.getItem('user');
+    if (userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr);
+        // Kullanıcı adını al (full_name veya email)
+        setUserName(userData.full_name || userData.email || '');
+        // Doktor ID'sini al
+        if (userData.user_id) {
+          setDoctorId(userData.user_id);
+        }
+      } catch (error) {
+        console.error('Kullanıcı bilgisi çözümlenirken hata oluştu:', error);
+      }
+    }
+  }, []);
+
+  // Toplam hasta sayısını veritabanından çek
+  useEffect(() => {
+    if (doctorId) {
+      const fetchTotalPatients = async () => {
+        try {
+          const response = await axios.get(`http://localhost:3005/api/doctor/patients/count/${doctorId}`);
+          if (response.data && typeof response.data.count === 'number') {
+            setTotalPatients(response.data.count);
+          }
+        } catch (error) {
+          console.error('Hasta sayısı çekilirken hata oluştu:', error);
+        }
+      };
+      
+      fetchTotalPatients();
+    }
+  }, [doctorId]);
+
+  // Bekleyen randevu sayısını veritabanından çek
+  useEffect(() => {
+    if (doctorId) {
+      const fetchPendingAppointments = async () => {
+        try {
+          const response = await axios.get(`http://localhost:3005/api/doctor/appointments/pending/count/${doctorId}`);
+          if (response.data && typeof response.data.count === 'number') {
+            setPendingAppointments(response.data.count);
+          }
+        } catch (error) {
+          console.error('Bekleyen randevu sayısı çekilirken hata oluştu:', error);
+        }
+      };
+      
+      fetchPendingAppointments();
+    }
+  }, [doctorId]);
+
+  // Bugünkü randevu sayısını veritabanından çek
+  useEffect(() => {
+    if (doctorId) {
+      const fetchTodayAppointments = async () => {
+        try {
+          const response = await axios.get(`http://localhost:3005/api/doctor/appointments/today/count/${doctorId}`);
+          if (response.data && typeof response.data.count === 'number') {
+            setTodayAppointmentCount(response.data.count);
+          }
+        } catch (error) {
+          console.error('Bugünkü randevu sayısı çekilirken hata oluştu:', error);
+        }
+      };
+      
+      fetchTodayAppointments();
+    }
+  }, [doctorId]);
+
+  // Doktora ait randevuları backend'den çek
+  useEffect(() => {
+    if (doctorId) {
+      const fetchAppointments = async () => {
+        try {
+          const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
+          
+          const mapped = response.data.map((item: any) => {
+            const dateObj = new Date(item.datetime);
+      
+            return {
+              id: item.id,
+              patientName: item.patientname || item.patientName,
+              patientAge: undefined, // API'den yaş gelmiyor, gerekirse eklenir
+              specialty: item.specialty,
+              date: dateObj.toLocaleDateString('tr-TR'), // örnek: 29.07.2025
+              time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), // örnek: 11:00
+              type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
+              status: item.status,
+              symptoms: item.symptoms,
+            };
+          });
+      
+          setAppointments(mapped);
+        } catch (error) {
+          console.error('Randevular çekilirken hata oluştu:', error);
+        }
+      };
+      
+      fetchAppointments();
+    }
+  }, [doctorId]);
+
+  const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled') => {
+    try {
+      await axios.patch(`http://localhost:3005/api/doctor/appointments/${appointmentId}/status`, { status: newStatus });
+      // Güncel randevuları tekrar çek veya local state'i güncelle
+      setAppointments(prev =>
+        prev.map(app =>
+          app.id === appointmentId ? { ...app, status: newStatus } : app
+        )
+      );
+    } catch (e) {
+      alert('Durum güncellenemedi!');
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -226,7 +292,7 @@ const DoctorDashboard: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Doktor Paneli</h1>
-          <p className="text-gray-600">Hoş geldiniz.</p>
+          <p className="text-gray-600">Hoş geldiniz, {userName}.</p>
           <p className="text-gray-600">Sağlıklı günler dileriz.</p>
           
         </div>
@@ -244,7 +310,7 @@ const DoctorDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Toplam Hasta</p>
-                <p className="text-2xl font-bold">{patients.length}</p>
+                <p className="text-2xl font-bold">{totalPatients}</p>
               </div>
             </div>
           </CardContent>
@@ -260,7 +326,7 @@ const DoctorDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Bugünkü Randevular</p>
-                <p className="text-2xl font-bold">{todayAppointments.length}</p>
+                <p className="text-2xl font-bold">{todayAppointmentCount}</p>
               </div>
             </div>
           </CardContent>
@@ -276,9 +342,7 @@ const DoctorDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Bekleyen</p>
-                <p className="text-2xl font-bold">
-                  {appointments.filter(a => a.status === 'confirmed').length}
-                </p>
+                <p className="text-2xl font-bold">{pendingAppointments}</p>
               </div>
             </div>
           </CardContent>
@@ -294,7 +358,7 @@ const DoctorDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Reçeteler</p>
-                <p className="text-2xl font-bold">12</p>
+                <p className="text-2xl font-bold">0</p>
               </div>
             </div>
           </CardContent>
@@ -337,13 +401,13 @@ const DoctorDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {filteredTodayAppointments.length === 0 ? (
+              {upcomingAppointments.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>{getEmptyMessage()}</p>
                 </div>
               ) : (
-                filteredTodayAppointments.map((appointment) => (
+                upcomingAppointments.map((appointment) => (
                   <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
                     <div className="flex items-center space-x-3">
                       <div>
@@ -357,7 +421,44 @@ const DoctorDashboard: React.FC = () => {
                         {appointment.status === 'confirmed' ? 'Onaylandı' :
                          appointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}
                       </Badge>
-                      <Button size="sm" variant="outline">Detay</Button>
+                      {appointment.status === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="success"
+                            onClick={() => handleUpdateStatus(appointment.id, 'confirmed')}
+                          >
+                            Onayla
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleUpdateStatus(appointment.id, 'cancelled')}
+                          >
+                            İptal Et
+                          </Button>
+                        </>
+                      )}
+                      {isCurrentAppointment(appointment) && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleUpdateStatus(appointment.id, 'confirmed')}
+                        >
+                          Randevuyu Başlat
+                        </Button>
+                      )}
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        onClick={() => {
+                          setSelectedAppointment(appointment);
+                          setShowDetail(true);
+                        }}
+                      >
+                        Detay
+                      </Button>
                     </div>
                   </div>
                 ))
@@ -410,10 +511,28 @@ const DoctorDashboard: React.FC = () => {
         </Card>
       </div>
 
+      {showDetail && selectedAppointment && (
+        <Dialog open={showDetail} onOpenChange={setShowDetail}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Randevu Detayı</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              <div><b>Hasta:</b> {selectedAppointment.patientName}</div>
+              <div><b>Tarih:</b> {selectedAppointment.date}</div>
+              <div><b>Saat:</b> {selectedAppointment.time}</div>
+              <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
+              <div><b>Branş:</b> {selectedAppointment.specialty}</div>
+              <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
+            </div>
+            <Button onClick={() => setShowDetail(false)}>Kapat</Button>
+          </DialogContent>
+        </Dialog>
+      )}
 
 
     </div>
   );
 };
 
-export default DoctorDashboard; 
+export default DoctorDashboard;

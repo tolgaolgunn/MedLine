@@ -141,15 +141,46 @@ export function DoctorSearch() {
     return matchesSearch && matchesSpecialty;
   });
 
-  const handleBookAppointment = (): void => {
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      setSelectedDoctor(null);
-      setSelectedDate(undefined);
-      setSelectedTime("");
-      setAppointmentType("");
-    }, 2000);
+  const handleBookAppointment = async (): Promise<void> => {
+    if (!selectedDoctor || !selectedDate || !selectedTime || !appointmentType) return;
+
+    // Kullanıcı bilgisini localStorage'dan al
+    const userDataStr = localStorage.getItem('user');
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const patient_id = userData?.user_id;
+
+    // Tarih ve saat birleştir
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const datetime = `${dateStr} ${selectedTime}:00`;
+
+    try {
+      const response = await fetch('http://localhost:3005/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id,
+          doctor_id: selectedDoctor.id,
+          datetime,
+          type: appointmentType === 'online' ? 'online' : 'face_to_face'
+        })
+      });
+
+      if (response.ok) {
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          setSelectedDoctor(null);
+          setSelectedDate(undefined);
+          setSelectedTime("");
+          setAppointmentType("");
+        }, 2000);
+      } else {
+        // Hata mesajı göster
+        alert('Randevu kaydedilemedi!');
+      }
+    } catch (e) {
+      alert('Sunucu hatası!');
+    }
   };
 
   const handleDateSelect = (date: Date | undefined): void => {
