@@ -7,5 +7,3 @@ router.get('/appointments/pending/count/:doctorId', doctorController.getPendingA
 router.get('/appointments/today/count/:doctorId', doctorController.getTodayAppointmentCount);
 router.get('/appointments/:doctorId', doctorController.getAppointmentsByDoctor);
 router.patch('/appointments/:appointmentId/status', doctorController.updateAppointmentStatus);
-
-module.exports = router;

@@ -527,7 +527,7 @@ export function HealthAuthForm() {
                           </div>
                         </div>
                       </div>
-                      {/* Doğum tarihi ve cinsiyet yan yana */}
+                      {/* Doğum tarihi ve Cinsiyet*/}
                       <div className="space-y-2">
                         <Label htmlFor="birthDate" className="text-gray-700 dark:text-gray-300">Doğum Tarihi</Label>
                         <div className="relative">

@@ -26,7 +26,7 @@ import {
   Bell,
 } from 'lucide-react';
 import axios from 'axios';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 
 interface Appointment {
   id: number;
@@ -91,6 +91,8 @@ const DoctorDashboard: React.FC = () => {
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -105,7 +107,7 @@ const DoctorDashboard: React.FC = () => {
     }
   };
 
-  // Filtreleme fonksiyonu
+    // Filtreleme fonksiyonu
   const getFilteredAppointments = () => {
     return appointments.filter(appointment => {
       // Status filtresi
@@ -123,6 +125,18 @@ const DoctorDashboard: React.FC = () => {
       
       return true;
     });
+  };
+
+  // Filtre değişikliklerini takip et
+  const handleFilterChange = (type: string, value: string) => {
+    if (type === 'status') setFilterStatus(value);
+    if (type === 'type') setFilterType(value);
+    if (type === 'specialty') setFilterSpecialty(value);
+  };
+
+  // Çıkış onayı fonksiyonları
+  const handleCloseDetail = () => {
+    setShowDetail(false);
   };
 
   // Yaklaşan (bugün ve sonrası) randevuları al
@@ -370,7 +384,7 @@ const DoctorDashboard: React.FC = () => {
             <div className="flex justify-between items-center">
               <CardTitle>Yaklaşan Randevular</CardTitle>
               <div className="flex gap-2">
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <Select value={filterStatus} onValueChange={(value) => handleFilterChange('status', value)}>
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Durum" />
                   </SelectTrigger>
@@ -382,7 +396,7 @@ const DoctorDashboard: React.FC = () => {
                   </SelectContent>
                 </Select>
                 
-                <Select value={filterType} onValueChange={setFilterType}>
+                <Select value={filterType} onValueChange={(value) => handleFilterChange('type', value)}>
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Randevu Tipi" />
                   </SelectTrigger>
@@ -390,10 +404,10 @@ const DoctorDashboard: React.FC = () => {
                     <SelectItem value="all">Randevular</SelectItem>
                     <SelectItem value="online">Online</SelectItem>
                     <SelectItem value="face_to_face">Yüz Yüze</SelectItem>
-
                   </SelectContent>
                 </Select>
-              
+
+                
               </div>
             </div>
           </CardHeader>
@@ -509,7 +523,7 @@ const DoctorDashboard: React.FC = () => {
       </div>
 
       {showDetail && selectedAppointment && (
-        <Dialog open={showDetail} onOpenChange={setShowDetail}>
+        <Dialog open={showDetail} onOpenChange={handleCloseDetail}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Randevu Detayı</DialogTitle>
@@ -522,10 +536,39 @@ const DoctorDashboard: React.FC = () => {
               <div><b>Branş:</b> {selectedAppointment.specialty}</div>
               <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
             </div>
-            <Button onClick={() => setShowDetail(false)}>Kapat</Button>
+            <Button onClick={handleCloseDetail}>Kapat</Button>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Çıkış Onayı Modal */}
+      <Dialog open={showExitConfirm} onOpenChange={(open) => {
+        if (!open) {
+          setShowExitConfirm(false);
+        }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Çıkış Onayı</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Filtreleriniz uygulanmamış. Çıkmak istediğinizden emin misiniz?
+            </p>
+          </div>
+                     <DialogFooter className="flex gap-2">
+             <Button variant="outline" onClick={() => setShowExitConfirm(false)}>
+               İptal
+             </Button>
+             <Button variant="destructive" onClick={() => {
+               setShowExitConfirm(false);
+               setShowDetail(false);
+             }}>
+               Çık
+             </Button>
+           </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
     </div>

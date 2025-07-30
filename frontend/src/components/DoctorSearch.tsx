@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "./ui/dialog";
 import {
   Select,
@@ -33,6 +34,8 @@ import {
   User,
   CheckCircle,
 } from "lucide-react";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth } from 'date-fns';
+import { tr } from 'date-fns/locale';
 
 interface Doctor {
   id: number;
@@ -68,6 +71,9 @@ export function DoctorSearch() {
     useState<boolean>(false);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [showCalendar, setShowCalendar] = useState<boolean>(false);
+  const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
   useEffect(() => {
     async function fetchDoctors() {
@@ -150,7 +156,7 @@ export function DoctorSearch() {
     const patient_id = userData?.user_id;
 
     // Tarih ve saat birleştir
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const datetime = `${dateStr} ${selectedTime}:00`;
 
     try {
@@ -165,16 +171,14 @@ export function DoctorSearch() {
         })
       });
 
-      if (response.ok) {
-        setShowSuccess(true);
-        setTimeout(() => {
-          setShowSuccess(false);
-          setSelectedDoctor(null);
-          setSelectedDate(undefined);
-          setSelectedTime("");
-          setAppointmentType("");
-        }, 2000);
-      } else {
+             if (response.ok) {
+         setShowSuccess(true);
+         setTimeout(() => {
+           setShowSuccess(false);
+           setSelectedDoctor(null);
+           clearSelections();
+         }, 2000);
+       } else {
         // Hata mesajı göster
         alert('Randevu kaydedilemedi!');
       }
@@ -183,8 +187,42 @@ export function DoctorSearch() {
     }
   };
 
-  const handleDateSelect = (date: Date | undefined): void => {
-    setSelectedDate(date);
+  const handleDateSelect = (date: Date | null): void => {
+    console.log('Seçilen tarih:', date);
+    setSelectedDate(date || undefined);
+  };
+
+  const clearSelections = () => {
+    setSelectedDate(undefined);
+    setSelectedTime("");
+    setAppointmentType("");
+    setShowCalendar(false);
+  };
+
+  const handleOpenAppointmentModal = (doctor: Doctor) => {
+    // Önceki seçimleri temizle
+    clearSelections();
+    setSelectedDoctor(doctor);
+  };
+
+  const handleCloseModal = () => {
+    // Eğer seçim yapılmışsa onay sor
+    if (appointmentType || selectedDate || selectedTime) {
+      setShowExitConfirm(true);
+    } else {
+      setSelectedDoctor(null);
+      clearSelections();
+    }
+  };
+
+  const confirmExit = () => {
+    setShowExitConfirm(false);
+    setSelectedDoctor(null);
+    clearSelections();
+  };
+
+  const cancelExit = () => {
+    setShowExitConfirm(false);
   };
 
   return (
@@ -316,20 +354,24 @@ export function DoctorSearch() {
                 <span className="font-semibold text-lg">
                   {doctor.price}
                 </span>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      onClick={() => setSelectedDoctor(doctor)}
-                    >
-                      Randevu Al
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>
-                        Randevu Al - {doctor.name}
-                      </DialogTitle>
-                    </DialogHeader>
+                                 <Dialog open={selectedDoctor?.id === doctor.id} onOpenChange={(open) => {
+                   if (!open) {
+                     handleCloseModal();
+                   }
+                 }}>
+                   <DialogTrigger asChild>
+                     <Button
+                       onClick={() => handleOpenAppointmentModal(doctor)}
+                     >
+                       Randevu Al
+                     </Button>
+                   </DialogTrigger>
+                   <DialogContent className="max-w-md">
+                     <DialogHeader>
+                       <DialogTitle>
+                         Randevu Al - {doctor.name}
+                       </DialogTitle>
+                     </DialogHeader>
 
                     {showSuccess ? (
                       <div className="text-center py-8">
@@ -372,56 +414,193 @@ export function DoctorSearch() {
                           </Select>
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Tarih Seç
-                          </label>
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={handleDateSelect}
-                            disabled={(date: Date ) => date < new Date()}
-                            className="rounded-md border"
-                          />
-                        </div>
-
-                        {selectedDate && (
                           <div>
-                            <label className="block text-sm font-medium mb-2">
-                              Saat Seç
-                            </label>
-                            <div className="grid grid-cols-3 gap-2">
-                              {timeSlots.map((time) => (
-                                <Button
-                                  key={time}
-                                  variant={
-                                    selectedTime === time
-                                      ? "default"
-                                      : "outline"
-                                  }
-                                  size="sm"
-                                  onClick={() =>
-                                    setSelectedTime(time)
-                                  }
-                                >
-                                  {time}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                           <label className="block text-sm font-medium mb-2">
+                             Tarih Seç
+                           </label>
+                           <div className="space-y-2">
+                             <div className="flex gap-2">
+                               <Input
+                                 value={selectedDate ? selectedDate.toLocaleDateString('tr-TR') : ''}
+                                 placeholder="gg/aa/yyyy formatında tarih seçin"
+                                 readOnly
+                                 className="flex-1"
+                               />
+                               <Button
+                                 type="button"
+                                 variant="outline"
+                                 onClick={() => setShowCalendar(!showCalendar)}
+                                 className="px-3"
+                               >
+                                 📅
+                               </Button>
+                             </div>
+                             
+                              {showCalendar && (
+                                <div className="border rounded-lg p-4 bg-white shadow-lg">
+                                  <div className="calendar">
+                                    {/* Month */}
+                                    <div className="flex items-center justify-between mb-4">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                                      >
+                                        ←
+                                      </Button>
+                                      <h3 className="font-semibold">
+                                        {format(currentMonth, 'MMMM yyyy', { locale: tr })}
+                                      </h3>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                                      >
+                                        →
+                                      </Button>
+                                    </div>
 
-                        <Button
-                          className="w-full"
-                          onClick={handleBookAppointment}
-                          disabled={
-                            !appointmentType ||
-                            !selectedDate ||
-                            !selectedTime
-                          }
-                        >
-                          Randevuyu Onayla ({doctor.price})
-                        </Button>
+                                     {/* Days */}
+                                     <div className="grid grid-cols-7 gap-1 mb-2">
+                                       {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day) => (
+                                         <div key={day} className="text-center text-sm font-medium text-gray-500 p-2">
+                                           {day}
+                                         </div>
+                                       ))}
+                                     </div>
+
+                                                                         {/* Dates */}
+                                     <div className="grid grid-cols-7 gap-1">
+                                       {(() => {
+                                         const start = startOfMonth(currentMonth);
+                                         const end = endOfMonth(currentMonth);
+                                         const startDay = start.getDay(); 
+                                         const daysInMonth = end.getDate();
+                                         
+                                         const mondayOffset = startDay === 0 ? 6 : startDay - 1;
+                                         const days = [];
+                                        
+                                         for (let i = 0; i < mondayOffset; i++) {
+                                           days.push(<div key={`empty-${i}`} className="p-2"></div>);
+                                         }
+                                         
+                                                                                   for (let day = 1; day <= daysInMonth; day++) {
+                                            const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                                            const today = new Date();
+                                            const isToday = isSameDay(currentDate, today);
+                                            const isSelected = selectedDate && isSameDay(currentDate, selectedDate);
+                                            
+                                            // Bugünün başlangıcını al (saat 00:00:00)
+                                            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                            // Seçilen günün başlangıcını al (saat 00:00:00)
+                                            const currentDateStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+                                            const isPast = currentDateStart < todayStart;
+                                            
+                                            days.push(
+                                              <button
+                                                key={day}
+                                                onClick={() => {
+                                                  if (!isPast) {
+                                                    setSelectedDate(currentDate);
+                                                    setShowCalendar(false);
+                                                  }
+                                                }}
+                                                disabled={isPast}
+                                                className={`
+                                                  p-2 text-sm rounded-md transition-colors
+                                                  ${isPast ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-blue-100 cursor-pointer'}
+                                                  ${isToday ? 'bg-blue-50 text-blue-600 font-medium' : ''}
+                                                  ${isSelected ? 'bg-blue-600 text-white font-medium' : ''}
+                                                `}
+                                              >
+                                                {day}
+                                              </button>
+                                            );
+                                          }
+                                         
+                                         return days;
+                                       })()}
+                                     </div>
+
+                                    {/* Butonlar */}
+                                    <div className="flex gap-2 mt-4">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowCalendar(false)}
+                                        className="flex-1"
+                                      >
+                                        İptal
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => setShowCalendar(false)}
+                                        className="flex-1"
+                                      >
+                                        Onayla
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                           </div>
+                         </div>
+
+                         {selectedDate && (
+                           <div>
+                             <label className="block text-sm font-medium mb-2">
+                               Saat Seç
+                             </label>
+                             <div className="grid grid-cols-3 gap-3">
+                               {timeSlots.map((time) => (
+                                 <Button
+                                   key={time}
+                                   variant={
+                                     selectedTime === time
+                                       ? "default"
+                                       : "outline"
+                                   }
+                                   size="sm"
+                                   className="h-10 text-sm font-medium"
+                                   onClick={() => {
+                                     console.log('Seçilen saat:', time);
+                                     setSelectedTime(time);
+                                   }}
+                                 >
+                                   {time}
+                                 </Button>
+                               ))}
+                             </div>
+                             {selectedTime && (
+                               <p className="text-sm text-green-600 mt-2">
+                                 Seçilen saat: {selectedTime}
+                               </p>
+                             )}
+                           </div>
+                         )}
+
+                          <div className="space-y-3">
+                           <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                             <p className="font-medium mb-2">Seçimleriniz:</p>
+                             <ul className="space-y-1">
+                               <li>• Randevu Türü: {appointmentType === 'online' ? 'Online Görüşme' : appointmentType === 'office' ? 'Muayenehane Ziyareti' : 'Seçilmedi'}</li>
+                               <li>• Tarih: {selectedDate ? selectedDate.toLocaleDateString('tr-TR') : 'Seçilmedi'}</li>
+                               <li>• Saat: {selectedTime || 'Seçilmedi'}</li>
+                             </ul>
+                           </div>
+                           
+                           <Button
+                             className="w-full"
+                             onClick={handleBookAppointment}
+                             disabled={
+                               !appointmentType ||
+                               !selectedDate ||
+                               !selectedTime
+                             }
+                           >
+                             Randevuyu Onayla ({doctor.price})
+                           </Button>
+                         </div>
                       </div>
                     )}
                   </DialogContent>
@@ -442,7 +621,33 @@ export function DoctorSearch() {
             Arama kriterlerinizi değiştirerek tekrar deneyin.
           </p>
         </Card>
-      )}
-    </div>
-  );
-}
+             )}
+
+        {/* Çıkış Onayı Modal */}
+        <Dialog open={showExitConfirm} onOpenChange={(open) => {
+          if (!open) {
+            setShowExitConfirm(false);
+          }
+        }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Çıkış Onayı</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-gray-600">
+                Seçimleriniz kaydedilmedi. Çıkmak istediğinizden emin misiniz?
+              </p>
+            </div>
+            <DialogFooter className="flex gap-2">
+              <Button variant="outline" onClick={cancelExit}>
+                İptal
+              </Button>
+              <Button variant="destructive" onClick={confirmExit}>
+                Çık
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+     </div>
+   );
+ }
