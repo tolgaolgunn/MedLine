@@ -6,9 +6,7 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Separator } from "./ui/separator";
-import { Calendar } from "./ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { CalendarIcon, Eye, EyeOff, User } from "lucide-react";
+import { Eye, EyeOff, User } from "lucide-react";
 // Date formatting helper - date-fns would be imported in a real project
 const formatDate = (date: Date) => {
   return date.toLocaleDateString('tr-TR', {
@@ -20,8 +18,9 @@ const formatDate = (date: Date) => {
 import { toast } from "react-toastify";
 
 // Password requirements (register ile aynı)
-function getPasswordErrors(password: string): Record<'upper' | 'lower' | 'digit' | 'punct', boolean> {
+function getPasswordErrors(password: string): Record<'length' | 'upper' | 'lower' | 'digit' | 'punct', boolean> {
   return {
+    length: password.length < 8,
     upper: !/[A-Z]/.test(password),
     lower: !/[a-z]/.test(password),
     digit: !/[0-9]/.test(password),
@@ -29,7 +28,8 @@ function getPasswordErrors(password: string): Record<'upper' | 'lower' | 'digit'
   };
 }
 
-const passwordRequirements: { key: 'upper' | 'lower' | 'digit' | 'punct'; label: string }[] = [
+const passwordRequirements: { key: 'length' | 'upper' | 'lower' | 'digit' | 'punct'; label: string }[] = [
+  { key: 'length', label: 'En az 8 karakter uzunluğunda olmalıdır.' },
   { key: 'upper', label: '1 büyük harf içermelidir.' },
   { key: 'lower', label: '1 küçük harf içermelidir.' },
   { key: 'digit', label: '1 sayı içermelidir.' },
@@ -39,6 +39,16 @@ const passwordRequirements: { key: 'upper' | 'lower' | 'digit' | 'punct'; label:
 export function Profile() {
   
   const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    gender: "",
+    address: ""
+  });
+
+  // Orijinal form verilerini saklamak için
+  const [originalFormData, setOriginalFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
@@ -89,14 +99,17 @@ export function Profile() {
         const lastName = nameParts.slice(1).join(" ") || "";
         
         // Backend'den gelen veriyi formData'ya uyarla
-        setFormData({
+        const newFormData = {
           firstName: firstName,
           lastName: lastName,
           email: userData.email || "",
           phone: userData.phone_number || "",
           gender: userData.gender || "",
           address: userData.address || ""
-        });
+        };
+        
+        setFormData(newFormData);
+        setOriginalFormData(newFormData); // Orijinal verileri de sakla
 
         // Doğum tarihini Date objesine çevir
         if (userData.birth_date) {
@@ -115,9 +128,33 @@ export function Profile() {
   }, []);
 
   const handleInputChange = (field: string, value: string) => {
+    let validatedValue = value;
+    
+    switch (field) {
+      case 'firstName':
+      case 'lastName':
+        // Sadece harf ve boşluk
+        validatedValue = value.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ\s]/g, '');
+        break;
+      case 'email':
+        // E-posta için anında validasyon yok, sadece kaydetme sırasında kontrol edilecek
+        break;
+      case 'phone':
+        // Sadece rakam
+        validatedValue = value.replace(/[^0-9]/g, '');
+        break;
+      case 'address':
+        // 200 karakter sınırı
+        if (value.length > 200) {
+          toast.error('Adres en fazla 200 karakter olabilir');
+          return;
+        }
+        break;
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: validatedValue
     }));
   };
 
@@ -128,7 +165,49 @@ export function Profile() {
     }));
   };
 
+  // Form verilerinde değişiklik olup olmadığını kontrol et
+  const hasChanges = () => {
+    return (
+      formData.firstName !== originalFormData.firstName ||
+      formData.lastName !== originalFormData.lastName ||
+      formData.email !== originalFormData.email ||
+      formData.phone !== originalFormData.phone ||
+      formData.gender !== originalFormData.gender ||
+      formData.address !== originalFormData.address
+    );
+  };
+
   const handleSaveProfile = async () => {
+    // Form validasyonu
+    if (!formData.firstName.trim()) {
+      toast.error('Ad alanı boş bırakılamaz');
+      return;
+    }
+    if (!formData.lastName.trim()) {
+      toast.error('Soyad alanı boş bırakılamaz');
+      return;
+    }
+    if (!formData.email.trim()) {
+      toast.error('E-posta alanı boş bırakılamaz');
+      return;
+    }
+    
+    // E-posta formatı kontrolü
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Geçerli bir e-posta adresi giriniz');
+      return;
+    }
+    
+    if (!formData.phone.trim()) {
+      toast.error('Telefon alanı boş bırakılamaz');
+      return;
+    }
+    if (formData.phone.length < 10) {
+      toast.error('Telefon numarası en az 10 haneli olmalıdır');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -160,51 +239,45 @@ export function Profile() {
         throw new Error(errorData.message || 'Profil güncellenemedi');
       }
 
-      toast.success(" Profil bilgileriniz başarıyla güncellendi!", {
-        duration: 3000,
-        description: "Değişiklikleriniz kaydedildi."
+      toast.success("Profil bilgileriniz başarıyla güncellendi!");
+      
+      // Başarılı kaydetme sonrası orijinal verileri güncelle
+      setOriginalFormData({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        gender: formData.gender,
+        address: formData.address
       });
       
     } catch (error: any) {
       console.error('Profil güncellenirken hata:', error);
-      toast.error(error.message || 'Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.', {
-        duration: 4000
-      });
+      toast.error(error.message || 'Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.');
     }
   };
 
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error(" Şifreler eşleşmiyor!", {
-        duration: 3000,
-        description: "Lütfen yeni şifrenizi tekrar kontrol edin."
-      });
+      toast.error("Şifreler eşleşmiyor!");
       return;
     }
     if(passwordData.currentPassword === passwordData.newPassword) {
-      toast.error(" Mevcut şifre yeni şifre ile aynı olamaz!", {
-        duration: 3000,
-        description: "Farklı bir şifre seçin."
-      });
+      toast.error("Mevcut şifre yeni şifre ile aynı olamaz!");
       return;
     }
     
     // Şifre gereksinimleri kontrolü (register ile aynı)
     const errors = getPasswordErrors(passwordData.newPassword);
     if (Object.values(errors).some(Boolean)) {
-      toast.error(" Şifre gereksinimlerini karşılayınız.", {
-        duration: 4000,
-        description: "Şifreniz tüm gereksinimleri karşılamalıdır."
-      });
+      toast.error("Şifre gereksinimlerini karşılayınız.");
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        toast.error(' Oturum bulunamadı. Lütfen tekrar giriş yapın.', {
-          duration: 4000
-        });
+        toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
         return;
       }
 
@@ -225,10 +298,7 @@ export function Profile() {
         throw new Error(errorData.message || 'Şifre değiştirilemedi');
       }
 
-      toast.success(" Şifreniz başarıyla değiştirildi!", {
-        duration: 3000,
-        description: "Yeni şifrenizle giriş yapabilirsiniz."
-      });
+      toast.success("Şifreniz başarıyla değiştirildi!");
       setPasswordData({
         currentPassword: "",
         newPassword: "",
@@ -237,9 +307,7 @@ export function Profile() {
       
     } catch (error: any) {
       console.error('Şifre değiştirilirken hata:', error);
-      toast.error(error.message || ' Şifre değiştirilemedi. Lütfen tekrar deneyin.', {
-        duration: 4000
-      });
+      toast.error(error.message || 'Şifre değiştirilemedi. Lütfen tekrar deneyin.');
     }
   };
 
@@ -267,48 +335,51 @@ export function Profile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">Ad</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    placeholder="Adınızı girin"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Soyad</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    placeholder="Soyadınızı girin"
-                  />
-                </div>
-              </div>
+                             <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                   <Label htmlFor="firstName">Ad</Label>
+                   <Input
+                     id="firstName"
+                     value={formData.firstName}
+                     onChange={(e) => handleInputChange('firstName', e.target.value)}
+                     placeholder="Adınızı giriniz"
+                     maxLength={50}
+                   />
+                 </div>
+                 <div className="space-y-2">
+                   <Label htmlFor="lastName">Soyad</Label>
+                   <Input
+                     id="lastName"
+                     value={formData.lastName}
+                     onChange={(e) => handleInputChange('lastName', e.target.value)}
+                     placeholder="Soyadınızı giriniz"
+                     maxLength={50}
+                   />
+                 </div>
+               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">E-posta</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="E-posta adresinizi girin"
-                />
-              </div>
+                             <div className="space-y-2">
+                 <Label htmlFor="email">E-posta</Label>
+                 <Input
+                   id="email"
+                   type="email"
+                   value={formData.email}
+                   onChange={(e) => handleInputChange('email', e.target.value)}
+                   placeholder="ornek@gmail.com"
+                 />
+               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefon Numarası</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="Telefon numaranızı girin"
-                />
-              </div>
+                <div className="space-y-2">
+                 <Label htmlFor="phone">Telefon Numarası</Label>
+                 <Input
+                   id="phone"
+                   type="tel"
+                   value={formData.phone}
+                   onChange={(e) => handleInputChange('phone', e.target.value)}
+                   placeholder="Telefon numaranızı giriniz"
+                   maxLength={11}
+                 />
+               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -320,48 +391,41 @@ export function Profile() {
                     <SelectContent>
                       <SelectItem value="female">Kadın</SelectItem>
                       <SelectItem value="male">Erkek</SelectItem>
-                      <SelectItem value="other">Diğer</SelectItem>
+                      <SelectItem value="other">Belirtmek istemiyorum</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Doğum Tarihi</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {birthDate ? formatDate(birthDate) : "Tarih seçin"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={birthDate}
-                        onSelect={setBirthDate}
-
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                                 <div className="space-y-2">
+                   <Label>Doğum Tarihi</Label>
+                   <div className="w-full p-3 border border-gray-300 rounded-md bg-gray-50 dark:bg-gray-800 dark:border-gray-600">
+                     <span className="text-gray-700 dark:text-gray-300 text-sm">
+                       {birthDate ? formatDate(birthDate) : "Belirtilmemiş"}
+                     </span>
+                   </div>
+                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Adres</Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  placeholder="Adresinizi girin"
-                  rows={3}
-                />
-              </div>
+                             <div className="space-y-2">
+                 <Label htmlFor="address">Adres</Label>
+                 <Textarea
+                   id="address"
+                   value={formData.address}
+                   onChange={(e) => handleInputChange('address', e.target.value)}
+                   placeholder="Adresinizi girin (maksimum 200 karakter)"
+                   rows={3}
+                   maxLength={200}
+                 />
+                 <div className="text-xs text-gray-500 text-right">
+                   {formData.address.length}/200 karakter
+                 </div>
+               </div>
 
-              <Button onClick={handleSaveProfile} className="w-full">
+              <Button 
+                onClick={handleSaveProfile} 
+                className="w-full"
+                disabled={!hasChanges()}
+              >
                 Profil Bilgilerini Kaydet
               </Button>
             </CardContent>
