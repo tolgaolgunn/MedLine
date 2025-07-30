@@ -36,7 +36,7 @@ interface Appointment {
   date: string;
   time: string;
   type: 'online' | 'face_to_face';
-  status: 'confirmed' | 'pending' | 'completed';
+  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
   symptoms: string;
   isCurrent?: boolean;
 }
@@ -173,9 +173,7 @@ const DoctorDashboard: React.FC = () => {
     if (userDataStr) {
       try {
         const userData = JSON.parse(userDataStr);
-        // Kullanıcı adını al (full_name veya email)
         setUserName(userData.full_name || userData.email || '');
-        // Doktor ID'sini al
         if (userData.user_id) {
           setDoctorId(userData.user_id);
         }
@@ -423,20 +421,19 @@ const DoctorDashboard: React.FC = () => {
                       </Badge>
                       {appointment.status === 'pending' && (
                         <>
-                          <Button
-                            size="sm"
-                            variant="success"
+                         <button
+                            className="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm transition-all duration-200 text-sm"
                             onClick={() => handleUpdateStatus(appointment.id, 'confirmed')}
-                          >
+                            >
                             Onayla
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
+                            </button>
+                            <button
                             onClick={() => handleUpdateStatus(appointment.id, 'cancelled')}
-                          >
+                            className="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm transition-all duration-200 text-sm"
+                            >
                             İptal Et
-                          </Button>
+                            </button>
+
                         </>
                       )}
                       {isCurrentAppointment(appointment) && (
@@ -448,17 +445,17 @@ const DoctorDashboard: React.FC = () => {
                           Randevuyu Başlat
                         </Button>
                       )}
-                      <Button 
-                        size="sm"
-                        variant="outline"
-                        type="button"
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          setShowDetail(true);
-                        }}
-                      >
-                        Detay
-                      </Button>
+                      <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedAppointment(appointment);
+                                setShowDetail(true);
+                            }}
+                            className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1 px-4 rounded-md transition-all duration-200 text-sm"
+                            >
+                            Detay
+                            </button>
+
                     </div>
                   </div>
                 ))

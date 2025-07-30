@@ -6,8 +6,17 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Separator } from "./ui/separator";
-import { Calendar, Eye, EyeOff, User } from "lucide-react";
-
+import { Calendar } from "./ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { CalendarIcon, Eye, EyeOff, User } from "lucide-react";
+// Date formatting helper - date-fns would be imported in a real project
+const formatDate = (date: Date) => {
+  return date.toLocaleDateString('tr-TR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+};
 import { toast } from "react-toastify";
 
 // Password requirements (register ile aynı)
@@ -43,7 +52,6 @@ export function Profile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
   
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -75,12 +83,12 @@ export function Profile() {
 
         const userData = await response.json();
         
-        // Backend'den gelen veriyi formData'ya uyarla
-        const fullName = userData.full_name || "";
-        const nameParts = fullName.split(' ');
+        // Backend'den gelen full_name'i ad ve soyada ayır
+        const nameParts = (userData.full_name || "").split(" ");
         const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(' ') || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
         
+        // Backend'den gelen veriyi formData'ya uyarla
         setFormData({
           firstName: firstName,
           lastName: lastName,
@@ -138,7 +146,6 @@ export function Profile() {
         birth_date: birthDate ? birthDate.toISOString().split('T')[0] : null
       };
 
-      console.log('Sending update data:', updateData);
       const response = await fetch('http://localhost:3005/api/profile', {
         method: 'PUT',
         headers: {
@@ -147,44 +154,57 @@ export function Profile() {
         },
         body: JSON.stringify(updateData)
       });
-      
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Profil güncellenemedi');
       }
 
-      toast.success("Profil bilgileri başarıyla güncellendi!");
+      toast.success(" Profil bilgileriniz başarıyla güncellendi!", {
+        duration: 3000,
+        description: "Değişiklikleriniz kaydedildi."
+      });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Profil güncellenirken hata:', error);
-      toast.error('Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.');
+      toast.error(error.message || 'Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.', {
+        duration: 4000
+      });
     }
   };
 
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Şifreler eşleşmiyor!");
+      toast.error(" Şifreler eşleşmiyor!", {
+        duration: 3000,
+        description: "Lütfen yeni şifrenizi tekrar kontrol edin."
+      });
       return;
     }
     if(passwordData.currentPassword === passwordData.newPassword) {
-      toast.error("Mevcut şifre yeni şifre ile aynı olamaz!");
+      toast.error(" Mevcut şifre yeni şifre ile aynı olamaz!", {
+        duration: 3000,
+        description: "Farklı bir şifre seçin."
+      });
       return;
     }
     
     // Şifre gereksinimleri kontrolü (register ile aynı)
     const errors = getPasswordErrors(passwordData.newPassword);
     if (Object.values(errors).some(Boolean)) {
-      toast.error("Şifre gereksinimlerini karşılayınız.");
+      toast.error(" Şifre gereksinimlerini karşılayınız.", {
+        duration: 4000,
+        description: "Şifreniz tüm gereksinimleri karşılamalıdır."
+      });
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+        toast.error(' Oturum bulunamadı. Lütfen tekrar giriş yapın.', {
+          duration: 4000
+        });
         return;
       }
 
@@ -202,26 +222,29 @@ export function Profile() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        toast.error(errorData.message || 'Şifre değiştirilemedi');
-        return;
+        throw new Error(errorData.message || 'Şifre değiştirilemedi');
       }
 
-      toast.success("Şifre başarıyla değiştirildi!");
+      toast.success(" Şifreniz başarıyla değiştirildi!", {
+        duration: 3000,
+        description: "Yeni şifrenizle giriş yapabilirsiniz."
+      });
       setPasswordData({
         currentPassword: "",
         newPassword: "",
         confirmPassword: ""
       });
-    } catch (error) {
-      console.error('Şifre değiştirme hatası:', error);
-      toast.error('Şifre değiştirilemedi. Lütfen tekrar deneyin.');
-    } finally {
-      setIsChangingPassword(false);
+      
+    } catch (error: any) {
+      console.error('Şifre değiştirilirken hata:', error);
+      toast.error(error.message || ' Şifre değiştirilemedi. Lütfen tekrar deneyin.', {
+        duration: 4000
+      });
     }
   };
 
   return (
-    <div className="flex-1 p-6 bg-gray-50 dark:bg-gray-950">
+    <div className="flex-1 p-6 bg-white dark:bg-black">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -303,17 +326,27 @@ export function Profile() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="birthDate">Doğum Tarihi</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="birthDate"
-                      type="date"
-                      value={birthDate ? birthDate.toISOString().split('T')[0] : ""}
-                      onChange={(e) => setBirthDate(e.target.value ? new Date(e.target.value) : undefined)}
-                      className="pl-9 h-11 border-gray-300 dark:border-gray-600 focus:border-slate-800 dark:focus:border-slate-400 dark:text-white"
-                    />
-                  </div>
+                  <Label>Doğum Tarihi</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {birthDate ? formatDate(birthDate) : "Tarih seçin"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={birthDate}
+                        onSelect={setBirthDate}
+
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
@@ -344,7 +377,7 @@ export function Profile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="currentPassword" className="text-gray-900 dark:text-white">Mevcut Şifre</Label>
+                <Label htmlFor="currentPassword">Mevcut Şifre</Label>
                 <div className="relative">
                   <Input
                     id="currentPassword"
@@ -372,11 +405,10 @@ export function Profile() {
               <Separator />
 
               <div className="space-y-2">
-                <Label htmlFor="newPassword" className="text-gray-900 dark:text-white">Yeni Şifre</Label>
+                <Label htmlFor="newPassword">Yeni Şifre</Label>
                 <div className="relative">
                   <Input
-                    className="text-gray-900 dark:text-white"
-                  id="newPassword"
+                    id="newPassword"
                     type={showNewPassword ? "text" : "password"}
                     value={passwordData.newPassword}
                     onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
@@ -399,10 +431,9 @@ export function Profile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-gray-900 dark:text-white">Yeni Şifre Tekrar</Label>
+                <Label htmlFor="confirmPassword">Yeni Şifre Tekrar</Label>
                 <div className="relative">
                   <Input
-                    className="text-gray-900 dark:text-white"
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     value={passwordData.confirmPassword}
@@ -425,7 +456,7 @@ export function Profile() {
                 </div>
               </div>
 
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
                 <ul className="list-disc list-inside space-y-1">
                   {passwordRequirements.map(req => {
                     const errors = getPasswordErrors(passwordData.newPassword);
@@ -440,9 +471,9 @@ export function Profile() {
               <Button 
                 onClick={handleChangePassword} 
                 className="w-full"
-                disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isChangingPassword}
+                disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
               >
-                {isChangingPassword ? "Değiştiriliyor..." : "Şifreyi Değiştir"}
+                Şifreyi Değiştir
               </Button>
             </CardContent>
           </Card>

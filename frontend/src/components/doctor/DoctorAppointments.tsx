@@ -38,6 +38,8 @@ const DoctorAppointments: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
@@ -322,10 +324,16 @@ const DoctorAppointments: React.FC = () => {
                           Randevuyu Başlat
                         </Button>
                       )}
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-4 h-4 mr-1" />
-                        Detay
-                      </Button>
+                      <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedAppointment(appointment);
+                                setShowDetail(true);
+                            }}
+                            className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1 px-4 rounded-md transition-all duration-200 text-sm"
+                            >
+                            Detay
+                            </button>
                     </div>
                   </div>
               ))}
@@ -380,16 +388,22 @@ const DoctorAppointments: React.FC = () => {
                   </div>
                 </div>
 
-                {appointments.find(app => isCurrentAppointment(app))?.type === 'online' && (
-                  <Button 
-                    variant="outline"
-                    className="w-full bg-white hover:bg-gray-50"
-                    onClick={() => handleStartAppointment(appointments.find(app => isCurrentAppointment(app))?.id || 0)}
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Online Randevuyu Başlat
-                  </Button>
-                )}
+                {
+  appointments.find(app => isCurrentAppointment(app))?.type === 'online' && (
+    <Button 
+      variant="outline"
+      className="w-full bg-white hover:bg-gray-50"
+      onClick={() => {
+        const current = appointments.find(app => isCurrentAppointment(app));
+        if (current) handleStartAppointment(current.id);
+      }}
+    >
+      <Play className="w-4 h-4 mr-2" />
+      Online Randevuyu Başlat
+    </Button>
+  )
+}
+
                 
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1">
@@ -411,6 +425,25 @@ const DoctorAppointments: React.FC = () => {
           </Card>
         </div>
       </div>
+       {showDetail && selectedAppointment && (
+              <Dialog open={showDetail} onOpenChange={setShowDetail}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Randevu Detayı</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-2">
+                    <div><b>Hasta:</b> {selectedAppointment.patientName}</div>
+                    <div><b>Tarih:</b> {selectedAppointment.date}</div>
+                    <div><b>Saat:</b> {selectedAppointment.time}</div>
+                    <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
+                    <div><b>Branş:</b> {selectedAppointment.specialty}</div>
+                    <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
+                  </div>
+                  <Button onClick={() => setShowDetail(false)}>Kapat</Button>
+                </DialogContent>
+              </Dialog>
+            )}
+      
     </div>
   );
 };
