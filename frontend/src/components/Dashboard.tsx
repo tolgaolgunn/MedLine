@@ -96,10 +96,14 @@ export function Dashboard() {
           console.log("API'den gelen veri:", data); 
 
           const now = new Date();
-          const upcoming = data.filter((appointment: any) => {
-            if (!appointment.datetime) return false;
-            return new Date(appointment.datetime) > now;
-        }).slice(0, 5);
+          const upcoming = data
+            .filter((appointment: any) => {
+              if (!appointment.datetime) return false;
+              if (appointment.status === 'cancelled') return false;
+              return new Date(appointment.datetime) > now;
+            })
+            .sort((a: any, b: any) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+            .slice(0, 5);
 
           setUpcomingAppointments(upcoming);
       } catch (error) {
@@ -238,6 +242,20 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
     }
   } catch {}
 
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const userObj = JSON.parse(userStr);
+      if (userObj.full_name) {
+        userName = userObj.full_name;
+      } else if (userObj.email) {
+        userName = userObj.email;
+      }
+    }
+  } catch {}
+
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       {/* Karşılama Bölümü */}
@@ -348,7 +366,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                     <Badge variant={appointment.type === 'online' ? 'secondary' : 'outline'}>
                       {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}
                     </Badge>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedAppointment(appointment); setShowDetailModal(true); }}>
                       Detay
                     </Button>
                   </div>
@@ -358,7 +376,24 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
             </div>
           </Card>
 
-        {/* Sağlık Metrikleri */}
+        {showDetailModal && selectedAppointment && (
+  <Dialog open={showDetailModal} onOpenChange={(open) => { if (!open) setShowDetailModal(false); }}>
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle>Randevu Detayı</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-2">
+        <div><b>Doktor:</b> {selectedAppointment.doctor_name || 'Doktor'}</div>
+        <div><b>Tarih:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleDateString('tr-TR') : '-'}</div>
+        <div><b>Saat:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '-'}</div>
+        <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
+        <div><b>Branş:</b> {selectedAppointment.specialty || selectedAppointment.doctor_specialty || '-'}</div>
+        <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'pending' ? 'Beklemede' : selectedAppointment.status === 'cancelled' ? 'İptal Edildi' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : '-'}</div>
+      </div>
+      <Button onClick={() => setShowDetailModal(false)} className="w-full mt-4">Kapat</Button>
+    </DialogContent>
+  </Dialog>
+)}
         <div className="space-y-6">
           <Card className="p-6 transition-colors duration-200">
             <h2 className="text-xl font-semibold mb-4">Sağlık Durumu</h2>

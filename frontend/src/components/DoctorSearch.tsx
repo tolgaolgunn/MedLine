@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { toast } from "react-toastify";
 
 interface Doctor {
   id: number;
@@ -180,10 +181,10 @@ export function DoctorSearch() {
          }, 2000);
        } else {
         // Hata mesajı göster
-        alert('Randevu kaydedilemedi!');
+        toast.error('Randevu kaydedilemedi!');
       }
     } catch (e) {
-      alert('Sunucu hatası!');
+      toast.error('Sunucu hatası!');
     }
   };
 

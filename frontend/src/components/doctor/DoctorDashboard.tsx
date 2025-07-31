@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Calendar } from '../ui/calendar';
+import { toast } from "react-toastify";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -102,6 +103,8 @@ const DoctorDashboard: React.FC = () => {
         return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800'; 
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -294,7 +297,7 @@ const DoctorDashboard: React.FC = () => {
         )
       );
     } catch (e) {
-      alert('Durum güncellenemedi!');
+      toast.error('Durum güncellenemedi!');
     }
   };
 
@@ -429,10 +432,11 @@ const DoctorDashboard: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Badge className={getStatusColor(appointment.status)}>
-                        {appointment.status === 'confirmed' ? 'Onaylandı' :
-                         appointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}
-                      </Badge>
+                    <Badge className={getStatusColor(appointment.status)}>
+                       {appointment.status === 'confirmed' ? 'Onaylandı' :
+                       appointment.status === 'completed' ? 'Tamamlandı' : 
+                       appointment.status === 'cancelled' ? 'İptal Edildi' : 'Beklemede'}
+                    </Badge>
                       {appointment.status === 'pending' && (
                         <>
                          <button
@@ -534,7 +538,9 @@ const DoctorDashboard: React.FC = () => {
               <div><b>Saat:</b> {selectedAppointment.time}</div>
               <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
               <div><b>Branş:</b> {selectedAppointment.specialty}</div>
-              <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
+              <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' :
+               selectedAppointment.status === 'completed' ? 'Tamamlandı' :
+               selectedAppointment.status === 'cancelled' ? 'İptal Edildi' : 'Beklemede'}</div>
             </div>
             <Button onClick={handleCloseDetail}>Kapat</Button>
           </DialogContent>
