@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -23,6 +23,7 @@ import axios from 'axios';
 // Interface for appointment data structure
 interface Appointment {
   id: number;
+  patientId: number;
   patientName: string;
   patientAge: number;
   specialty: string;
@@ -30,7 +31,6 @@ interface Appointment {
   time: string;
   type: 'online' | 'face_to_face';
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
-  symptoms: string;
 }
 
 const DoctorAppointments: React.FC = () => {
@@ -45,6 +45,11 @@ const DoctorAppointments: React.FC = () => {
   const [showDetail, setShowDetail] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  
+  // State for patient history modal
+  const [showPatientHistory, setShowPatientHistory] = useState(false);
+  
+
   
   // State for exit confirmation and unsaved changes
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -72,6 +77,7 @@ const DoctorAppointments: React.FC = () => {
             const dateObj = new Date(item.datetime);
             return {
               id: item.id,
+              patientId: item.patient_id || 1, // Geçici olarak 1 kullanıyoruz
               patientName: item.patientname || item.patientName,
               patientAge: item.patientAge,
               specialty: item.specialty,
@@ -126,6 +132,11 @@ const DoctorAppointments: React.FC = () => {
   // Handle starting an online appointment
   const handleStartAppointment = (appointmentId: number) => {
     console.log('Randevu başlatılıyor:', appointmentId);
+  };
+
+  // Handle opening patient history
+  const handleOpenPatientHistory = () => {
+    setShowPatientHistory(true);
   };
 
   // Handle filter type changes in modal
@@ -307,7 +318,7 @@ const DoctorAppointments: React.FC = () => {
           <Card className="p-6">
             {/* Section Header with Filters */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Yaklaşan Randevular</h2>
+              <h2 className="text-xl font-semibold">Randevular</h2>
               <div className="flex items-center gap-3">
                 {/* Filter Button */}
                 <Button 
@@ -432,7 +443,7 @@ const DoctorAppointments: React.FC = () => {
                         <p className="font-medium">{appointment.patientName}</p>
                         <p className="text-sm text-gray-600">{appointment.patientAge} yaş • {appointment.specialty}</p>
                         <p className="text-xs text-gray-500">{appointment.date} - {appointment.time} • {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
-                        <p className="text-xs text-gray-500">Şikayet: {appointment.symptoms}</p>
+                        <p className="text-xs text-gray-500">Şikayet: Belirtilmemiş</p>
                       </div>
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
@@ -509,7 +520,7 @@ const DoctorAppointments: React.FC = () => {
                   
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Şikayet</Label>
-                    <p className="text-sm">{appointments.find(app => isCurrentAppointment(app))?.symptoms}</p>
+                    <p className="text-sm">Belirtilmemiş</p>
                   </div>
                 </div>
 
@@ -530,14 +541,25 @@ const DoctorAppointments: React.FC = () => {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1">
-                    <Eye className="w-4 h-4 mr-1" />
-                    Randevu Detayı
-                  </Button>
-                  <Button variant="outline" className="flex-1">
-                    <FileText className="w-4 h-4 mr-1" />
-                    Hasta Geçmişi
-                  </Button>
+                <Button
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedAppointment(appointments.find(app => isCurrentAppointment(app)) || null);
+                            setShowDetail(true);
+                          }}
+                          className="flex-1"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                        Randevu Detayı
+                        </Button>
+                                     <Button 
+                     variant="outline" 
+                     className="flex-1"
+                     onClick={handleOpenPatientHistory}
+                   >
+                     <FileText className="w-4 h-4 mr-1" />
+                     Hasta Geçmişi
+                   </Button>
                 </div>
               </div>
             ) : (
@@ -550,25 +572,45 @@ const DoctorAppointments: React.FC = () => {
         </div>
       </div>
 
-      {/* Appointment Detail Modal */}
-      {showDetail && selectedAppointment && (
-        <Dialog open={showDetail} onOpenChange={setShowDetail}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Randevu Detayı</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-2">
-              <div><b>Hasta:</b> {selectedAppointment.patientName}</div>
-              <div><b>Tarih:</b> {selectedAppointment.date}</div>
-              <div><b>Saat:</b> {selectedAppointment.time}</div>
-              <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
-              <div><b>Branş:</b> {selectedAppointment.specialty}</div>
-              <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
-            </div>
-            <Button onClick={() => setShowDetail(false)}>Kapat</Button>
-          </DialogContent>
-        </Dialog>
-      )}
+             {/* Appointment Detail Modal */}
+       {showDetail && selectedAppointment && (
+         <Dialog open={showDetail} onOpenChange={setShowDetail}>
+           <DialogContent>
+             <DialogHeader>
+               <DialogTitle>Randevu Detayı</DialogTitle>
+             </DialogHeader>
+             <div className="space-y-2">
+               <div><b>Hasta:</b> {selectedAppointment.patientName}</div>
+               <div><b>Tarih:</b> {selectedAppointment.date}</div>
+               <div><b>Saat:</b> {selectedAppointment.time}</div>
+               <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
+               <div><b>Branş:</b> {selectedAppointment.specialty}</div>
+               <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
+             </div>
+             <Button onClick={() => setShowDetail(false)}>Kapat</Button>
+           </DialogContent>
+         </Dialog>
+       )}
+
+       {/* Patient History Modal */}
+       <Dialog open={showPatientHistory} onOpenChange={setShowPatientHistory}>
+         <DialogContent className="max-w-2xl">
+           <DialogHeader>
+             <DialogTitle>Hasta Geçmişi</DialogTitle>
+             <DialogDescription>Hastaya ait son 1 senelik geçmiş kayıtları görüntüleyebilirsiniz.</DialogDescription>
+           </DialogHeader>
+           <div className="text-center py-8">
+             <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+             <p className="text-lg font-medium text-gray-600 mb-2">Kayıt Bulunamadı</p>
+             <p className="text-sm text-gray-500">Bu hasta için henüz geçmiş kayıt bulunmamaktadır.</p>
+           </div>
+           <DialogFooter>
+             <Button onClick={() => setShowPatientHistory(false)}>Kapat</Button>
+           </DialogFooter>
+         </DialogContent>
+       </Dialog>
+
+      
 
       {/* Exit Confirmation Modal */}
       <Dialog open={showExitConfirm} onOpenChange={(open) => {

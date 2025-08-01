@@ -312,7 +312,7 @@ export function Profile() {
   };
 
   return (
-    <div className="flex-1 p-6 bg-white dark:bg-black">
+    <div className="flex-1 p-6 bg-white">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -320,14 +320,14 @@ export function Profile() {
             <User className="w-8 h-8 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-2xl text-gray-900 dark:text-white">Profil Düzenle</h1>
-            <p className="text-gray-600 dark:text-gray-400">Kişisel bilgilerinizi güncelleyin</p>
+            <h1 className="text-2xl text-gray-900">Profil Düzenle</h1>
+            <p className="text-gray-600">Kişisel bilgilerinizi güncelleyin</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Kişisel Bilgiler */}
-          <Card className="bg-gray-50 dark:bg-gray-900">
+          <Card className="bg-gray-50">
             <CardHeader>
               <CardTitle>Kişisel Bilgiler</CardTitle>
               <CardDescription>
@@ -398,8 +398,8 @@ export function Profile() {
 
                                  <div className="space-y-2">
                    <Label>Doğum Tarihi</Label>
-                   <div className="w-full p-3 border border-gray-300 rounded-md bg-gray-50 dark:bg-gray-800 dark:border-gray-600">
-                     <span className="text-gray-700 dark:text-gray-300 text-sm">
+                   <div className="w-full p-3 border border-gray-300 rounded-md bg-gray-50">
+                     <span className="text-gray-700 text-sm">
                        {birthDate ? formatDate(birthDate) : "Belirtilmemiş"}
                      </span>
                    </div>
@@ -432,7 +432,7 @@ export function Profile() {
           </Card>
 
           {/* Şifre Değiştirme */}
-          <Card className="bg-gray-50 dark:bg-gray-900">
+          <Card className="bg-gray-50">
             <CardHeader>
               <CardTitle>Şifre Değiştir</CardTitle>
               <CardDescription>
@@ -520,7 +520,7 @@ export function Profile() {
                 </div>
               </div>
 
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-gray-600">
                 <ul className="list-disc list-inside space-y-1">
                   {passwordRequirements.map(req => {
                     const errors = getPasswordErrors(passwordData.newPassword);

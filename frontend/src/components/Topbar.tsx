@@ -3,8 +3,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
-import { useTheme } from "./ThemeProvider";
-import { Bell, LogOut, Sun, Moon, User } from "lucide-react";
+import { Bell, LogOut, User } from "lucide-react";
 
 interface TopbarProps {
   onLogout: () => void;
@@ -12,8 +11,6 @@ interface TopbarProps {
 }
 
 export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
-  const { theme, setTheme } = useTheme();
-
   return (
     <header className="sticky top-0 z-30 w-full bg-background border-b border-border flex items-center justify-between px-6 h-16">
       {/* Search Bar */}
@@ -26,17 +23,9 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
           <Bell className="w-5 h-5" />
           <Badge className="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs" variant="destructive">3</Badge>
         </Button>
-        {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          title={theme === "dark" ? "Açık Tema" : "Koyu Tema"}
-        >
-          {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-        </Button>
+
         {/* Profile Avatar */}
-        <Button variant="ghost" size="icon" className="text-black dark:text-white" onClick={() => setActiveSection('profile')}>
+        <Button variant="ghost" size="icon" className="text-black" onClick={() => setActiveSection('profile')}>
           <Avatar>
             <AvatarFallback>
               <User className="w-5 h-5" />

@@ -4,11 +4,9 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { useNavigate } from 'react-router-dom';
 import { MedLineLogo } from './ui/MedLineLogo';
-import { useTheme } from "./ThemeProvider";
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
   
   return (
     <div className="min-h-screen flex">
@@ -17,15 +15,12 @@ export default function LandingPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          title={theme === "dark" ? "Açık Tema" : "Koyu Tema"}
-        >
-          {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+         >
         </Button>
       </div>
       
       {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 dark:from-slate-950 dark:via-blue-950 dark:to-slate-900 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl"></div>
@@ -90,38 +85,38 @@ export default function LandingPage() {
         </div>
       </div>
       {/* Sağ taraf - Beyaz tema */}
-      <div className="w-full lg:w-1/2 bg-white dark:bg-gray-900 flex items-center justify-center px-12">
+      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center px-12">
         <div className="w-full max-w-md">
-          <Card className="bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700">
+          <Card className="bg-white shadow-xl border border-gray-200">
             <CardContent className="p-8">
               <div className="text-center mb-8">
                 <MedLineLogo size={48} className="mx-auto mb-3" />
-                <h1 className="text-4xl font-bold mb-3 text-gray-900 dark:text-white">Hesabınıza Giriş Yapın</h1>
-                <p className="text-gray-500 dark:text-slate-300 text-xl mb-8">Sağlıklı yaşamınıza devam edin</p>
+                <h1 className="text-2xl font-bold mb-3 text-gray-900">Hesabınıza Giriş Yapın</h1>
+                <h2 className="text-2xl font-bold mb-3 text-gray-900">Veya Yeni Hesap Oluşturun</h2>
+                <p className="text-gray-500 text-sm mb-8">Sağlık Her Zaman Sizinle</p>
               </div>
-              <div className="space-y-6">
-                <Button   
-                  onClick={() => navigate('/login')}
-                  className="w-full bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800 hover:from-blue-950 hover:to-blue-950 text-white py-3 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                >
-                  Giriş Yap
-                </Button>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">VEYA</span>
-                  </div>
-                </div>
-                <Button 
-                  onClick={() => navigate('/register')}
-                  variant="outline"
-                  className="w-full border-2 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 py-3 rounded-xl transition-all hover:border-blue-300 dark:hover:border-blue-500"
-                >
-                  Yeni Hesap Oluştur
-                </Button>
-              </div>
+                             <div className="space-y-6">
+                 <Button   
+                   onClick={() => navigate('/login')}
+                   className="w-full bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800 hover:from-blue-950 hover:to-blue-950 text-white py-3 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                 >
+                   Giriş Yap
+                 </Button>
+                 <div className="relative">
+                   <div className="absolute inset-0 flex items-center">
+                     <div className="w-full border-t border-gray-200"></div>
+                   </div>
+                   <div className="relative flex justify-center text-sm">
+                     <span className="px-4 bg-white text-gray-500">VEYA</span>
+                   </div>
+                 </div>
+                 <Button 
+                   onClick={() => navigate('/register')}
+                   className="w-full bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800 hover:from-blue-950 hover:to-blue-950 text-white py-3 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                 >
+                   Yeni Hesap Oluştur
+                 </Button>
+               </div>
             </CardContent>
           </Card>
         </div>

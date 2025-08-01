@@ -1,5 +1,4 @@
 import { Button } from './ui/button';
-import { useTheme } from './ThemeProvider';
 import { 
   User,Heart,Calendar, Pill, MessageSquare, Bell, Settings,LogOut,Menu,X,
   Stethoscope,FileText,Package,Sun,Moon,Monitor,BarChart3
@@ -21,7 +20,6 @@ interface MenuItem {
 }
 
 export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCollapsed, onLogout }: SidebarProps) {
-  const { theme, setTheme } = useTheme();
   const [userRole, setUserRole] = useState<string>('patient');
 
   // Get user role from localStorage
@@ -59,39 +57,7 @@ export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCol
   // Use appropriate menu items based on user role
   const menuItems = userRole === 'doctor' ? doctorMenuItems : patientMenuItems;
 
-  const getThemeIcon = (): React.ComponentType<{ className?: string }> => {
-    switch (theme) {
-      case 'light':
-        return Sun;
-      case 'dark':
-        return Moon;
-      default:
-        return Monitor;
-    }
-  };
-
-  const getThemeLabel = (): string => {
-    switch (theme) {
-      case 'light':
-        return 'Açık Tema';
-      case 'dark':
-        return 'Koyu Tema';
-      default:
-        return 'Sistem Teması';
-    }
-  };
-
-  const cycleTheme = (): void => {
-    if (theme === 'light') {
-      setTheme('dark');
-    } else if (theme === 'dark') {
-      setTheme('system');
-    } else {
-      setTheme('light');
-    }
-  };
-
-  return (
+return (
     <div className={`bg-card border-r border-border transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} h-screen flex flex-col`}>
       {/* Header */}
       <div className="p-4 border-b border-border">

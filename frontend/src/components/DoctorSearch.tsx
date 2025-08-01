@@ -64,6 +64,9 @@ export function DoctorSearch() {
   const [selectedDate, setSelectedDate] = useState<
     Date | undefined
   >();
+  const [tempSelectedDate, setTempSelectedDate] = useState<
+    Date | undefined
+  >();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [appointmentType, setAppointmentType] = useState<
     AppointmentType | ""
@@ -74,6 +77,8 @@ export function DoctorSearch() {
   const [loading, setLoading] = useState<boolean>(true);
   const [showCalendar, setShowCalendar] = useState<boolean>(false);
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const [showAppointmentTypeError, setShowAppointmentTypeError] = useState<boolean>(false);
+  const [showDateError, setShowDateError] = useState<boolean>(false);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -195,9 +200,12 @@ export function DoctorSearch() {
 
   const clearSelections = () => {
     setSelectedDate(undefined);
+    setTempSelectedDate(undefined);
     setSelectedTime("");
     setAppointmentType("");
     setShowCalendar(false);
+    setShowDateError(false);
+    setShowAppointmentTypeError(false);
   };
 
   const handleOpenAppointmentModal = (doctor: Doctor) => {
@@ -208,7 +216,7 @@ export function DoctorSearch() {
 
   const handleCloseModal = () => {
     // Eğer seçim yapılmışsa onay sor
-    if (appointmentType || selectedDate || selectedTime) {
+    if (appointmentType || selectedDate || selectedTime || tempSelectedDate) {
       setShowExitConfirm(true);
     } else {
       setSelectedDoctor(null);
@@ -489,7 +497,8 @@ export function DoctorSearch() {
                                             const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
                                             const today = new Date();
                                             const isToday = isSameDay(currentDate, today);
-                                            const isSelected = selectedDate && isSameDay(currentDate, selectedDate);
+                                            const isSelected = (selectedDate && isSameDay(currentDate, selectedDate)) || 
+                                                           (tempSelectedDate && isSameDay(currentDate, tempSelectedDate));
                                             
                                             // Bugünün başlangıcını al (saat 00:00:00)
                                             const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -502,8 +511,11 @@ export function DoctorSearch() {
                                                 key={day}
                                                 onClick={() => {
                                                   if (!isPast) {
-                                                    setSelectedDate(currentDate);
-                                                    setShowCalendar(false);
+                                                    if (appointmentType) {
+                                                      setTempSelectedDate(currentDate);
+                                                    } else {
+                                                      setShowAppointmentTypeError(true);
+                                                    }
                                                   }
                                                 }}
                                                 disabled={isPast}
@@ -522,21 +534,28 @@ export function DoctorSearch() {
                                          return days;
                                        })()}
                                      </div>
-
-                                    {/* Butonlar */}
+                                     {/* Butonlar */}
                                     <div className="flex gap-2 mt-4">
-                                      <Button
-                                        variant="outline"
+                                                                            <Button
+                                        variant="outline" 
                                         size="sm"
-                                        onClick={() => setShowCalendar(false)}
-                                        className="flex-1"
+                                        onClick={() => {
+                                         
+                                          setTempSelectedDate(undefined);
+                                          setShowCalendar(false);
+                                        }}
+                                        className="flex-1 border-2 border-gray-300 hover:border-gray-400"
                                       >
                                         İptal
                                       </Button>
                                       <Button
                                         size="sm"
-                                        onClick={() => setShowCalendar(false)}
+                                        onClick={() => {
+                                          setSelectedDate(tempSelectedDate);
+                                          setShowCalendar(false);
+                                        }}
                                         className="flex-1"
+                                        disabled={!tempSelectedDate}
                                       >
                                         Onayla
                                       </Button>
@@ -640,11 +659,39 @@ export function DoctorSearch() {
               </p>
             </div>
             <DialogFooter className="flex gap-2">
-              <Button variant="outline" onClick={cancelExit}>
+              <Button variant="outline"
+              className="border-2 border-gray-300 hover:border-gray-400"
+              onClick={cancelExit}>
                 İptal
               </Button>
               <Button variant="destructive" onClick={confirmExit}>
-                Çık
+                Çıkış
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Randevu Uyarı Modal */}
+        <Dialog open={showAppointmentTypeError} onOpenChange={(open) => {
+          if (!open) {
+            setShowAppointmentTypeError(false);
+          }
+        }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Uyarı</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-gray-600">
+                Lütfen randevu türünü seçin.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button 
+                onClick={() => setShowAppointmentTypeError(false)}
+                className="w-1/4 border-2 border-gray-300 hover:border-gray-400"
+              >
+                Tamam
               </Button>
             </DialogFooter>
           </DialogContent>

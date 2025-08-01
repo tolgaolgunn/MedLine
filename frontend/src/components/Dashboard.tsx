@@ -10,7 +10,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './ui/dialog';
-import { useTheme } from './ThemeProvider';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
@@ -61,7 +60,6 @@ export function Dashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [userRole, setUserRole] = useState<string>('patient');
-  const { theme } = useTheme();
   const navigate = useNavigate();
 
   // Kullanıcı rolünü al
@@ -164,7 +162,6 @@ export function Dashboard() {
           <DoctorDashboard />
         ) : (
           <DashboardHome 
-            theme={theme}
             upcomingAppointments={upcomingAppointments}
             loadingAppointments={loadingAppointments}
             healthMetrics={healthMetrics}
@@ -197,7 +194,6 @@ export function Dashboard() {
           <DoctorDashboard />
         ) : (
           <DashboardHome 
-            theme={theme}
             upcomingAppointments={upcomingAppointments}
             loadingAppointments={loadingAppointments}
             healthMetrics={healthMetrics}

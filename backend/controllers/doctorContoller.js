@@ -63,6 +63,7 @@ exports.getAppointmentsByDoctor = async (req, res) => {
     const doctorId = req.params.doctorId;
     const result = await db.query(
       `SELECT a.appointment_id AS id,
+              a.patient_id,
               u.full_name AS patientName,
               a.datetime,
               a.type,
@@ -102,3 +103,4 @@ exports.updateAppointmentStatus = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
