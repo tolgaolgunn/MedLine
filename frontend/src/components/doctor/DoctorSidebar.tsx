@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { 
@@ -14,12 +14,20 @@ import {
   User,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  BarChart3
 } from 'lucide-react';
 
 const DoctorSidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    navigate('/login');
+  };
 
   const menuItems = [
     {
@@ -57,6 +65,12 @@ const DoctorSidebar: React.FC = () => {
       icon: Stethoscope,
       path: '/doctor/diagnosis',
       description: 'AI teşhis'
+    },
+    {
+      title: 'Raporlar',
+      icon: BarChart3,
+      path: '/doctor/reports',
+      description: 'Raporlar ve analizler'
     }
   ];
 
@@ -163,6 +177,7 @@ const DoctorSidebar: React.FC = () => {
       <div className="p-4 border-t border-gray-200">
         <Button
           variant="ghost"
+          onClick={handleLogout}
           className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${
             collapsed ? 'justify-center' : ''
           }`}

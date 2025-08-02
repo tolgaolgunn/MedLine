@@ -14,8 +14,8 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 w-full bg-background border-b border-border flex items-center justify-between px-6 h-16">
       {/* Search Bar */}
-      <div className="flex-1 max-w-xs">
-        <Input type="text" placeholder="Ara..." className="w-full" />
+      <div className="flex-1 max-w-xs" >
+        <Input type="text" placeholder="Ara..." className="w-full border border-border" />
       </div>
       <div className="flex items-center gap-4 ml-4">
         {/* Notification Bell */}
