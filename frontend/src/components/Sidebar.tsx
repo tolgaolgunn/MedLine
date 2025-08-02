@@ -1,7 +1,7 @@
 import { Button } from './ui/button';
 import { 
-  User,Heart,Calendar, Pill, MessageSquare, Bell, Settings,LogOut,Menu,X,
-  Stethoscope,FileText,Package,Sun,Moon,Monitor,BarChart3
+  User,Heart,Calendar, Pill, Settings,Menu,X,
+  Stethoscope,FileText,BarChart3,MessageSquare
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -50,7 +50,6 @@ export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCol
   const doctorMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Ana Sayfa', icon: Heart },
     { id: 'appointments', label: 'Randevular', icon: Calendar },
-    { id: 'feedback', label: 'Geri Bildirim', icon: MessageSquare },
     { id: 'reports', label: 'Raporlar', icon: BarChart3 },
   ];
 
@@ -111,4 +110,3 @@ return (
   );
 }
 
-export default Sidebar;

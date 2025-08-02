@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -54,6 +55,7 @@ interface Patient {
 }
 
 const DoctorDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [totalPatients, setTotalPatients] = useState<number>(0);
   const [pendingAppointments, setPendingAppointments] = useState<number>(0);
   const [todayAppointmentCount, setTodayAppointmentCount] = useState<number>(0);
@@ -509,6 +511,9 @@ const DoctorDashboard: React.FC = () => {
               <Button 
                 variant="outline" 
                 className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-green-50 hover:border-green-300 transition-colors"
+                onClick={() => {
+                  navigate('/doctor/patients');
+                }}
               >
                 <Users className="w-5 h-5 text-green-600" />
                 <span className="text-sm font-medium">Hasta Yönetimi</span>
@@ -517,6 +522,9 @@ const DoctorDashboard: React.FC = () => {
               <Button 
                 variant="outline" 
                 className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-purple-50 hover:border-purple-300 transition-colors"
+                onClick={() => {
+                  navigate('/doctor/prescriptions');
+                }}
               >
                 <Pill className="w-5 h-5 text-purple-600" />
                 <span className="text-sm font-medium">Reçete Yönetimi</span>
@@ -524,18 +532,25 @@ const DoctorDashboard: React.FC = () => {
               
               <Button 
                 variant="outline" 
-                className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-orange-50 hover:border-orange-300 transition-colors"
-              >
-                <BarChart3 className="w-5 h-5 text-orange-600" />
-                <span className="text-sm font-medium">Raporlar</span>
-              </Button>
-              
-              <Button 
-                variant="outline" 
                 className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-red-50 hover:border-red-300 transition-colors"
+                onClick={() => {
+                  navigate('/doctor/feedback');
+                }}
               >
                 <MessageSquare className="w-5 h-5 text-red-600" />
                 <span className="text-sm font-medium">Geri Bildirim</span>
+              </Button>
+               
+              <Button 
+                variant="outline" 
+                className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-orange-50 hover:border-orange-300 transition-colors"
+                onClick={() => {
+                  navigate('/doctor/reports');
+                }}
+              >
+                <BarChart3 className="w-5 h-5 text-orange-600" />
+                <span className="text-sm font-medium">Raporlar</span>
+                
               </Button>
               
             </div>

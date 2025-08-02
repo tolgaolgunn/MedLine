@@ -3,12 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Search, Plus, Filter, Eye, Edit, Trash2, Phone, Mail, Calendar } from 'lucide-react';
+import { Search, Plus, Filter, Eye, Trash2, Phone, Mail, Calendar } from 'lucide-react';
+
+// Filter functions from HealthAuthForm
+function filterNameInput(value: string) {
+  return value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '');
+}
+
+function filterPhoneInput(value: string) {
+  return value.replace(/[^0-9\s]/g, '');
+}
 
 interface Patient {
   id: string;
@@ -164,67 +173,60 @@ const PatientManagement: React.FC = () => {
           <Card key={patient.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar>
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${patient.name}`} />
-                    <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">{patient.name}</CardTitle>
-                    <p className="text-sm text-gray-600">ID: {patient.id}</p>
-                  </div>
+                <div>
+                  <CardTitle className="text-lg">{patient.name}</CardTitle>
+                  <p className="text-sm text-gray-600">ID: {patient.id}</p>
                 </div>
                 <Badge className={getStatusColor(patient.status)}>
                   {patient.status === 'active' ? 'Aktif' : 'Pasif'}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <span>{patient.age} yaş</span>
+            <CardContent className="flex flex-col h-full">
+              <div className="flex-1 space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span>{patient.age} yaş</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-400">Kan:</span>
+                    <span>{patient.bloodType}</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-gray-400">Kan:</span>
-                  <span>{patient.bloodType}</span>
+                
+                <div className="flex items-center space-x-2 text-sm">
+                  <Phone className="w-4 h-4 text-gray-400" />
+                  <span>{patient.phone}</span>
                 </div>
-              </div>
-              
-              <div className="flex items-center space-x-2 text-sm">
-                <Phone className="w-4 h-4 text-gray-400" />
-                <span>{patient.phone}</span>
-              </div>
-              
-              <div className="flex items-center space-x-2 text-sm">
-                <Mail className="w-4 h-4 text-gray-400" />
-                <span className="truncate">{patient.email}</span>
+                
+                <div className="flex items-center space-x-2 text-sm">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                  <span className="truncate">{patient.email}</span>
+                </div>
+
+                <div className="pt-2">
+                  <p className="text-xs text-gray-500">Son ziyaret: {patient.lastVisit}</p>
+                  {patient.nextAppointment && (
+                    <p className="text-xs text-blue-600">Sonraki randevu: {patient.nextAppointment}</p>
+                  )}
+                </div>
               </div>
 
-              <div className="pt-2">
-                <p className="text-xs text-gray-500">Son ziyaret: {patient.lastVisit}</p>
-                {patient.nextAppointment && (
-                  <p className="text-xs text-blue-600">Sonraki randevu: {patient.nextAppointment}</p>
-                )}
-              </div>
-
-              <div className="flex space-x-2 pt-2">
+              <div className="flex space-x-2 pt-4 mt-auto">
                 <Button
                   size="sm"
+                  className="text-black hover:text-black border border-black hover:border-black"
                   variant="outline"
                   onClick={() => setSelectedPatient(patient)}
                 >
                   <Eye className="w-4 h-4 mr-1" />
                   Görüntüle
                 </Button>
-                <Button size="sm" variant="outline">
-                  <Edit className="w-4 h-4 mr-1" />
-                  Düzenle
-                </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-red-600 hover:text-red-700"
+                  className="text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 bg-red-50"
                   onClick={() => handleDeletePatient(patient.id)}
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
@@ -317,11 +319,13 @@ const PatientManagement: React.FC = () => {
 // Add Patient Form Component
 const AddPatientForm: React.FC<{ onSubmit: (patient: Omit<Patient, 'id'>) => void }> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    age: '',
-    gender: '',
-    phone: '',
+    firstName: '',
+    lastName: '',
     email: '',
+    phone: '',
+    phoneCountry: '+90',
+    birthDate: '',
+    gender: '',
     address: '',
     bloodType: '',
     medicalHistory: '',
@@ -329,13 +333,78 @@ const AddPatientForm: React.FC<{ onSubmit: (patient: Omit<Patient, 'id'>) => voi
     medications: ''
   });
 
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Hata mesajlarını temizle
+    setErrors({});
+    
+    // Hata kontrolü
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'Ad alanı zorunludur';
+    } else if (formData.firstName.trim().length < 3) {
+      newErrors.firstName = 'Ad en az 3 harf olmalıdır';
+    }
+    
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Soyad alanı zorunludur';
+    } else if (formData.lastName.trim().length < 3) {
+      newErrors.lastName = 'Soyad en az 3 harf olmalıdır';
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'E-posta alanı zorunludur';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        newErrors.email = 'Geçerli bir e-posta adresi girin';
+      }
+    }
+    
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Telefon alanı zorunludur';
+    } else if (formData.phone.length !== 11) {
+      newErrors.phone = 'Telefon numarası 11 haneli olmalıdır';
+    }
+    
+    if (!formData.birthDate.trim()) {
+      newErrors.birthDate = 'Doğum tarihi zorunludur';
+    }
+    
+    if (!formData.gender.trim()) {
+      newErrors.gender = 'Cinsiyet seçimi zorunludur';
+    }
+    
+    if (!formData.bloodType.trim()) {
+      newErrors.bloodType = 'Kan grubu seçimi zorunludur';
+    }
+    
+    if (!formData.address.trim()) {
+      newErrors.address = 'Adres alanı zorunludur';
+    }
+    
+    // Hata varsa formu gönderme
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    // Doğum tarihinden yaş hesapla
+    const birthDate = new Date(formData.birthDate);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+    
     onSubmit({
-      name: formData.name,
-      age: parseInt(formData.age),
+      name: `${formData.firstName} ${formData.lastName}`,
+      age: actualAge,
       gender: formData.gender,
-      phone: formData.phone,
+      phone: `${formData.phoneCountry} ${formData.phone}`,
       email: formData.email,
       address: formData.address,
       bloodType: formData.bloodType,
@@ -349,42 +418,107 @@ const AddPatientForm: React.FC<{ onSubmit: (patient: Omit<Patient, 'id'>) => voi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Ad Soyad */}
+      <div className="grid grid-cols-2 gap-4 " >
         <div>
-          <Label htmlFor="name">Ad Soyad</Label>
+          <Label htmlFor="firstName" className="mb-2 block">Ad</Label>
           <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({...formData, name: e.target.value})}
+            id="firstName"
+            className={`border ${errors.firstName ? 'border-red-500' : 'border-border'}`}
+            type="text"
+            placeholder="Adınız"
+            value={formData.firstName}
+            onChange={(e) => setFormData({...formData, firstName: filterNameInput(e.target.value)})}
             required
           />
+          {errors.firstName && (
+            <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
+          )}
         </div>
         <div>
-          <Label htmlFor="age">Yaş</Label>
+          <Label htmlFor="lastName" className="mb-2 block">Soyad</Label>
           <Input
-            id="age"
-            type="number"
-            value={formData.age}
-            onChange={(e) => setFormData({...formData, age: e.target.value})}
+            id="lastName"
+            className={`border ${errors.lastName ? 'border-red-500' : 'border-border'}`}
+            type="text" 
+            placeholder="Soyadınız"
+            value={formData.lastName}
+            onChange={(e) => setFormData({...formData, lastName: filterNameInput(e.target.value)})}
             required
           />
+          {errors.lastName && (
+            <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Email */}
+      <div>
+        <Label htmlFor="email" className="mb-2 block">E-posta Adresi</Label>
+        <Input
+          id="email"
+          className={`border ${errors.email ? 'border-red-500' : 'border-border'}`}
+          type="email"
+          placeholder="ornek@email.com"
+          value={formData.email}
+          onChange={(e) => setFormData({...formData, email: e.target.value})}
+          required
+        />
+        {errors.email && (
+          <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+        )}
+      </div>
+
+      {/* Telefon ve Kan Grubu */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="phone" className="mb-2 block">Telefon</Label>
+          <div className="flex gap-2">
+            <div className="relative">
+              <select
+                id="phoneCountry"
+                value={formData.phoneCountry}
+                onChange={(e) => setFormData({...formData, phoneCountry: e.target.value})}
+                className="appearance-none outline-none h-10 border border-border focus:border-slate-800 bg-white rounded-md px-2 pr-6 min-w-[80px] font-medium text-base text-gray-900"
+                required
+              >
+                <option value="+90">🇹🇷 +90</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+44">🇬🇧 +44</option>
+                <option value="+49">🇩🇪 +49</option>
+                <option value="+33">🇫🇷 +33</option>
+                <option value="+7">🇷🇺 +7</option>
+                <option value="+39">🇮🇹 +39</option>
+                <option value="+34">🇪🇸 +34</option>
+                <option value="+61">🇦🇺 +61</option>
+                <option value="+81">🇯🇵 +81</option>
+                <option value="+86">🇨🇳 +86</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-1 pointer-events-none">
+                <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="555 555 55 55"
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: filterPhoneInput(e.target.value)})}
+              className={`flex-1 border ${errors.phone ? 'border-red-500' : 'border-border'}`}
+              maxLength={11}
+              required
+            />
+          </div>
+          {errors.phone && (
+            <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+          )}
         </div>
         <div>
-          <Label htmlFor="gender">Cinsiyet</Label>
-          <Select value={formData.gender} onValueChange={(value) => setFormData({...formData, gender: value})}>
-            <SelectTrigger>
-              <SelectValue placeholder="Seçiniz" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Erkek">Erkek</SelectItem>
-              <SelectItem value="Kadın">Kadın</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="bloodType">Kan Grubu</Label>
+          <Label htmlFor="bloodType" className="mb-2 block">Kan Grubu</Label>
           <Select value={formData.bloodType} onValueChange={(value) => setFormData({...formData, bloodType: value})}>
-            <SelectTrigger>
+            <SelectTrigger className={`border ${errors.bloodType ? 'border-red-500' : 'border-border'}`}>
               <SelectValue placeholder="Seçiniz" />
             </SelectTrigger>
             <SelectContent>
@@ -398,65 +532,122 @@ const AddPatientForm: React.FC<{ onSubmit: (patient: Omit<Patient, 'id'>) => voi
               <SelectItem value="O-">O-</SelectItem>
             </SelectContent>
           </Select>
+          {errors.bloodType && (
+            <p className="text-red-500 text-sm mt-1">{errors.bloodType}</p>
+          )}
         </div>
-        <div>
-          <Label htmlFor="phone">Telefon</Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => setFormData({...formData, phone: e.target.value})}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({...formData, email: e.target.value})}
-            required
-          />
-        </div>
-      </div>
-      
-      <div>
-        <Label htmlFor="address">Adres</Label>
-        <Textarea
-          id="address"
-          value={formData.address}
-          onChange={(e) => setFormData({...formData, address: e.target.value})}
-          required
-        />
       </div>
 
+      {/* Doğum Tarihi ve Cinsiyet */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="birthDate" className="mb-2 block">Doğum Tarihi</Label>
+          <Input
+            id="birthDate"
+            type="date"
+            value={formData.birthDate}
+            onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
+            className={`border ${errors.birthDate ? 'border-red-500' : 'border-border'}`}
+            required
+          />
+          {errors.birthDate && (
+            <p className="text-red-500 text-sm mt-1">{errors.birthDate}</p>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="gender" className="mb-2 block">Cinsiyet</Label>
+          <div className="relative">
+            <select
+              id="gender"
+              value={formData.gender}
+              onChange={(e) => setFormData({...formData, gender: e.target.value})}
+              className={`appearance-none outline-none h-10 border focus:border-slate-800 bg-white rounded-md px-3 pr-8 w-full text-gray-900 ${errors.gender ? 'border-red-500' : 'border-border'}`}
+              required
+            >
+              <option value="">Seçiniz</option>
+              <option value="Erkek">Erkek</option>
+              <option value="Kadın">Kadın</option>
+              <option value="Belirtmek istemiyorum">Belirtmek istemiyorum</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+          {errors.gender && (
+            <p className="text-red-500 text-sm mt-1">{errors.gender}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Adres */}
+      <div>
+        <Label htmlFor="address" className="mb-2 block">Adres</Label>
+        <Textarea
+          id="address"
+          placeholder="Adresiniz"
+          value={formData.address}
+          onChange={(e) => setFormData({...formData, address: e.target.value})}
+          maxLength={200}
+          className={`border break-words overflow-wrap-anywhere h-32 ${errors.address ? 'border-red-500' : 'border-border'}`}
+          style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}
+          required
+        />
+        <div className="text-xs text-gray-500 mt-1 text-right">
+          {formData.address.length}/200 karakter
+        </div>
+        {errors.address && (
+          <p className="text-red-500 text-sm mt-1">{errors.address}</p>
+        )}
+      </div>
+
+            {/* Tıbbi Bilgiler */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="medicalHistory">Tıbbi Geçmiş (virgülle ayırın)</Label>
+          <Label htmlFor="medicalHistory" className="mb-2 block">Tıbbi Geçmiş</Label>
           <Textarea
             id="medicalHistory"
+            maxLength={100}
             value={formData.medicalHistory}
             onChange={(e) => setFormData({...formData, medicalHistory: e.target.value})}
             placeholder="Hipertansiyon, Diyabet"
+            className="border border-border break-words overflow-wrap-anywhere h-32"
+            style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}
           />
+          <div className="text-xs text-gray-500 mt-1 text-right">
+           {formData.medicalHistory.length}/100 karakter
+         </div>
         </div>
         <div>
-          <Label htmlFor="allergies">Alerjiler (virgülle ayırın)</Label>
+          <Label htmlFor="allergies" className="mb-2 block">Alerjiler</Label>
           <Textarea
             id="allergies"
+            maxLength={100}
             value={formData.allergies}
             onChange={(e) => setFormData({...formData, allergies: e.target.value})}
             placeholder="Penisilin, Lateks"
+            className="border border-border break-words overflow-wrap-anywhere h-32"
+            style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}
           />
+          <div className="text-xs text-gray-500 mt-1 text-right">
+           {formData.allergies.length}/100 karakter
+         </div>
         </div>
         <div>
-          <Label htmlFor="medications">Mevcut İlaçlar (virgülle ayırın)</Label>
+          <Label htmlFor="medications" className="mb-2 block">Mevcut İlaçlar </Label>
           <Textarea
             id="medications"
+            maxLength={100}
             value={formData.medications}
             onChange={(e) => setFormData({...formData, medications: e.target.value})}
             placeholder="Metformin, Aspirin"
+            className="border border-border break-words overflow-wrap-anywhere h-32"
+            style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}
           />
+          <div className="text-xs text-gray-500 mt-1 text-right">
+           {formData.medications.length}/100 karakter
+         </div>
         </div>
       </div>
 
