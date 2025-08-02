@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import { Calendar, User, Video, Stethoscope } from "lucide-react";
+import PatientVideoCallButton from "./PatientVideoCallButton";
 
 interface Appointment {
   appointment_id: number;
@@ -23,6 +24,7 @@ export function Appointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
     async function fetchAppointments() {
@@ -32,6 +34,7 @@ export function Appointments() {
         const userStr = localStorage.getItem("user");
         if (!userStr) throw new Error("Kullanıcı bulunamadı");
         const user = JSON.parse(userStr);
+        setUserId(user.user_id);
         const res = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`);
         if (!res.ok) throw new Error("Randevular alınamadı");
         const data = await res.json();
@@ -47,6 +50,9 @@ export function Appointments() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      {/* Video Görüşme Bileşeni - Gizli olarak eklendi, sadece doktor aradığında görünecek */}
+      {userId && <PatientVideoCallButton userId={userId} />}
+      
       <h1 className="text-3xl font-bold mb-2">Randevu Yönetimi</h1>
       <p className="text-muted-foreground mb-6">
         Randevularınızı görüntüleyin, iptal edin veya güncelleyin.

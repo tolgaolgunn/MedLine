@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
+import StartAppointmentButton from './StartAppointmentButton';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -48,6 +49,7 @@ const DoctorAppointments: React.FC = () => {
   
   // State for patient history modal
   const [showPatientHistory, setShowPatientHistory] = useState(false);
+  const [historyPatientId, setHistoryPatientId] = useState<number | null>(null);
   
 
   
@@ -136,6 +138,8 @@ const DoctorAppointments: React.FC = () => {
 
   // Handle opening patient history
   const handleOpenPatientHistory = () => {
+    const current = appointments.find(app => isCurrentAppointment(app));
+    setHistoryPatientId(current?.patientId ?? null);
     setShowPatientHistory(true);
   };
 
@@ -526,18 +530,12 @@ const DoctorAppointments: React.FC = () => {
 
                 {/* Start Online Appointment Button */}
                 {appointments.find(app => isCurrentAppointment(app))?.type === 'online' && (
-                  <Button 
-                    variant="outline"
-                    className="w-full bg-white hover:bg-gray-50"
-                    onClick={() => {
-                      const current = appointments.find(app => isCurrentAppointment(app));
-                      if (current) handleStartAppointment(current.id);
-                    }}
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Online Randevuyu Başlat
-                  </Button>
-                )}
+  <StartAppointmentButton 
+    appointments={appointments} 
+    handleStartAppointment={handleStartAppointment}
+    isCurrentAppointment={isCurrentAppointment}
+  />
+)}
 
                 {/* Action Buttons */}
                 <div className="flex gap-2">
@@ -599,11 +597,49 @@ const DoctorAppointments: React.FC = () => {
              <DialogTitle>Hasta Geçmişi</DialogTitle>
              <DialogDescription>Hastaya ait son 1 senelik geçmiş kayıtları görüntüleyebilirsiniz.</DialogDescription>
            </DialogHeader>
-           <div className="text-center py-8">
-             <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-             <p className="text-lg font-medium text-gray-600 mb-2">Kayıt Bulunamadı</p>
-             <p className="text-sm text-gray-500">Bu hasta için henüz geçmiş kayıt bulunmamaktadır.</p>
-           </div>
+           {/* Geçmiş randevuları filtrele ve göster */}
+           {(() => {
+             if (!historyPatientId) {
+               return (
+                 <div className="text-center py-8">
+                   <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                   <p className="text-lg font-medium text-gray-600 mb-2">Kayıt Bulunamadı</p>
+                   <p className="text-sm text-gray-500">Bu hasta için henüz geçmiş kayıt bulunmamaktadır.</p>
+                 </div>
+               );
+             }
+             // Bugünden önceki randevuları ve ilgili hastanınkileri al
+             const now = new Date();
+             const historyList = appointments.filter(app => {
+               if (app.patientId !== historyPatientId) return false;
+               // Tarih parse
+               const [day, month, year] = app.date.split('.');
+               const appDate = new Date(Number(year), Number(month) - 1, Number(day));
+               return appDate < now;
+             });
+             if (historyList.length === 0) {
+               return (
+                 <div className="text-center py-8">
+                   <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                   <p className="text-lg font-medium text-gray-600 mb-2">Kayıt Bulunamadı</p>
+                   <p className="text-sm text-gray-500">Bu hasta için henüz geçmiş kayıt bulunmamaktadır.</p>
+                 </div>
+               );
+             }
+             return (
+               <div className="space-y-4 max-h-[350px] overflow-y-auto px-2">
+                 {historyList.map((app, idx) => (
+                   <div key={app.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                     <div>
+                       <p className="font-medium">{app.date} - {app.time}</p>
+                       <p className="text-sm text-gray-700">{app.specialty}</p>
+                       <p className="text-xs text-gray-500">{app.type === 'online' ? 'Online' : 'Yüz Yüze'} • {app.status === 'confirmed' ? 'Onaylandı' : app.status === 'completed' ? 'Tamamlandı' : app.status === 'pending' ? 'Beklemede' : 'İptal'}</p>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             );
+           })()}
            <DialogFooter>
              <Button onClick={() => setShowPatientHistory(false)}>Kapat</Button>
            </DialogFooter>

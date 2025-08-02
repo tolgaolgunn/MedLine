@@ -39,6 +39,7 @@ import { Feedback } from "./feedback";
 import { Topbar } from "./Topbar";
 import { DoctorAppointments, DoctorDashboard } from "./doctor";
 import DoctorReports from "./DoctorReports";
+import PatientVideoCallButton from "./PatientVideoCallButton";
 
 interface Appointment {
   id: number;
@@ -224,8 +225,9 @@ export function Dashboard() {
 
 // Hasta Dashboard Ana Sayfası
 function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healthMetrics, getGreetingTime, setActiveSection }: any) {
-  // Kullanıcı adını localStorage'dan al
+  // Kullanıcı adını ve ID'sini localStorage'dan al
   let userName = 'Kullanıcı';
+  let userId = '';
   try {
     const userStr = localStorage.getItem('user');
     if (userStr) {
@@ -235,6 +237,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
       } else if (userObj.email) {
         userName = userObj.email;
       }
+      userId = userObj.user_id || '';
     }
   } catch {}
 
@@ -254,6 +257,9 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      {/* Video Görüşme Bileşeni - Gizli olarak eklendi, sadece doktor aradığında görünecek */}
+      {userId && <PatientVideoCallButton userId={userId} />}
+      
       {/* Karşılama Bölümü */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">

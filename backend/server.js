@@ -22,8 +22,41 @@ app.use('/api/doctor', doctorRoutes);
 
 initializeDatabase().then(() => {
     const PORT = process.env.PORT || 3005;
-    app.listen(3005, () => {
-        console.log('Server is running on port 3005');
-        console.log('http://localhost:3005');
+    const server = app.listen(PORT, () => {
+        console.log('Server is running on port ' + PORT);
+        console.log('http://localhost:' + PORT);
     });
+
+    
+    const { Server } = require('socket.io');
+    const io = new Server(server, {
+        cors: {
+            origin: 'http://localhost:5173',
+            methods: ['GET', 'POST'],
+            credentials: true
+        }
+    });
+
+    io.on('connection', (socket) => {
+        console.log('Socket connected:', socket.id);
+
+        // Forward signaling messages (doctor <-> patient)
+        socket.on('signal', ({ to, data }) => {
+            io.to(to).emit('signal', { from: socket.id, data });
+        });
+
+        // For direct messaging: join a room by userId
+        socket.on('join', (userId) => {
+            socket.join(userId);
+            socket.userId = userId;
+            console.log('Socket', socket.id, 'joined room', userId);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Socket disconnected:', socket.id);
+        });
+    });
+
+    // Export io if needed in other modules
+    module.exports.io = io;
 });

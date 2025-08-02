@@ -57,6 +57,37 @@ exports.getTodayAppointmentCount = async (req, res) => {
   }
 };
 
+// Doktorun başlatılabilir randevularını getir (10dk önce - 30dk sonrası)
+exports.getActiveAppointments = async (req, res) => {
+  try {
+    const doctorId = req.params.doctorId;
+    const now = new Date();
+    const minTime = new Date(now.getTime() - 30 * 60000); // 30dk önce
+    const maxTime = new Date(now.getTime() + 10 * 60000); // 10dk sonrası
+    const result = await db.query(
+      `SELECT a.appointment_id AS id,
+              a.patient_id,
+              u.full_name AS patientName,
+              a.datetime,
+              a.type,
+              a.status,
+              d.specialty
+         FROM appointments a
+         JOIN users u ON a.patient_id = u.user_id
+         JOIN doctor_profiles d ON a.doctor_id = d.user_id
+        WHERE a.doctor_id = $1
+          AND a.datetime >= $2
+          AND a.datetime <= $3
+        ORDER BY a.datetime ASC`,
+      [doctorId, minTime.toISOString(), maxTime.toISOString()]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Başlatılabilir randevular getirilirken hata oluştu:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Doktora ait randevuları getir
 exports.getAppointmentsByDoctor = async (req, res) => {
   try {
