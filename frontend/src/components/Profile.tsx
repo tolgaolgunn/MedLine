@@ -215,7 +215,7 @@ export function Profile() {
         return;
       }
 
-      // Backend'e gönderilecek veriyi hazırla
+      // Backend'e gönderilecek veriyi hazırla - userController.js'deki updateProfile endpoint'i ile uyumlu
       const updateData = {
         full_name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
@@ -224,6 +224,8 @@ export function Profile() {
         address: formData.address,
         birth_date: birthDate ? birthDate.toISOString().split('T')[0] : null
       };
+
+      console.log('Gönderilen profil verileri:', updateData);
 
       const response = await fetch('http://localhost:3005/api/profile', {
         method: 'PUT',
@@ -250,6 +252,16 @@ export function Profile() {
         gender: formData.gender,
         address: formData.address
       });
+
+      // Kullanıcı bilgilerini localStorage'da güncelle
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userObj = JSON.parse(userStr);
+        userObj.full_name = updateData.full_name;
+        userObj.email = updateData.email;
+        userObj.phone_number = updateData.phone_number;
+        localStorage.setItem('user', JSON.stringify(userObj));
+      }
       
     } catch (error: any) {
       console.error('Profil güncellenirken hata:', error);
@@ -397,12 +409,20 @@ export function Profile() {
                 </div>
 
                                  <div className="space-y-2">
-                   <Label>Doğum Tarihi</Label>
-                   <div className="w-full p-3 border border-gray-300 rounded-md bg-gray-50">
-                     <span className="text-gray-700 text-sm">
-                       {birthDate ? formatDate(birthDate) : "Belirtilmemiş"}
-                     </span>
-                   </div>
+                   <Label htmlFor="birthDate">Doğum Tarihi</Label>
+                   <Input
+                     id="birthDate"
+                     type="date"
+                     value={birthDate ? birthDate.toISOString().split('T')[0] : ''}
+                     onChange={(e) => {
+                       if (e.target.value) {
+                         setBirthDate(new Date(e.target.value));
+                       } else {
+                         setBirthDate(undefined);
+                       }
+                     }}
+                     className="w-full"
+                   />
                  </div>
               </div>
 
