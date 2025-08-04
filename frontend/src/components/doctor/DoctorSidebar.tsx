@@ -61,12 +61,6 @@ const DoctorSidebar: React.FC = () => {
       description: 'Hasta kayıtları'
     },
     {
-      title: 'Teşhis',
-      icon: Stethoscope,
-      path: '/doctor/diagnosis',
-      description: 'AI teşhis'
-    },
-    {
       title: 'Raporlar',
       icon: BarChart3,
       path: '/doctor/reports',

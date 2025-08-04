@@ -80,39 +80,51 @@ export function Dashboard() {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
 
+  const fetchAppointments = async () => {
+    setLoadingAppointments(true);
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return;
+      const user = JSON.parse(userStr);
+
+      const res = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      console.log("API'den gelen veri:", data); 
+
+      const now = new Date();
+      const upcoming = data
+        .filter((appointment: any) => {
+          if (!appointment.datetime) return false;
+          if (appointment.status === 'cancelled') return false;
+          return new Date(appointment.datetime) > now;
+        })
+        .sort((a: any, b: any) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+        .slice(0, 5);
+
+      setUpcomingAppointments(upcoming);
+    } catch (error) {
+      console.error("Randevular yüklenirken hata:", error);
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
   useEffect(() => {
-      async function fetchAppointments() {
-        setLoadingAppointments(true);
-        try {
-          const userStr = localStorage.getItem("user");
-          if (!userStr) return;
-          const user = JSON.parse(userStr);
+    fetchAppointments();
+  }, []);
 
-          const res = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`);
-          if (!res.ok) return;
-
-          const data = await res.json();
-          console.log("API'den gelen veri:", data); 
-
-          const now = new Date();
-          const upcoming = data
-            .filter((appointment: any) => {
-              if (!appointment.datetime) return false;
-              if (appointment.status === 'cancelled') return false;
-              return new Date(appointment.datetime) > now;
-            })
-            .sort((a: any, b: any) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
-            .slice(0, 5);
-
-          setUpcomingAppointments(upcoming);
-      } catch (error) {
-        console.error("Randevular yüklenirken hata:", error);
-        } finally {
-          setLoadingAppointments(false);
-        }
-      }
-
+  // Randevu oluşturulduğunda dashboard'ı yenile
+  useEffect(() => {
+    const handleAppointmentCreated = () => {
       fetchAppointments();
+    };
+
+    window.addEventListener('appointmentCreated', handleAppointmentCreated);
+    return () => {
+      window.removeEventListener('appointmentCreated', handleAppointmentCreated);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -420,22 +432,23 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                 </div>
               ))}
             </div>
-                  <Button 
-                    variant="outline"
-              className="w-full mt-4"
-              onClick={() => setActiveSection('ai-diagnosis')}
-                  >
-              AI Teşhis Al
-                  </Button>
+                                                                                                                                                                       <Button 
+                        variant="outline"
+                        className="w-full mt-4 !border-2 !border-black !border-solid hover:!border-gray-700 hover:!bg-gray-50 !text-black !font-semibold"
+                        style={{ borderWidth: '2px', borderColor: 'black', borderStyle: 'solid' }}
+                        onClick={() => setActiveSection('ai-diagnosis')}
+                      >
+                        AI Teşhis Al
+                      </Button>
           </Card>
 
           {/* Hızlı Eylemler */}
-          <Card className="p-6 transition-colors duration-200">
+          <Card className="p-6 transition-colors duration-200 border-2 ">
             <h2 className="text-xl font-semibold mb-4">Hızlı Eylemler</h2>
             <div className="space-y-3">
               <Button 
                 variant="outline" 
-                className="w-full justify-start"
+                className="w-full justify-start border-green-300 hover:bg-green-100 hover:border-green-400 text-green-700"
                 onClick={() => setActiveSection('doctor-search')}
               >
                 <Stethoscope className="w-4 h-4 mr-2" />
@@ -443,7 +456,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
               </Button>
               <Button 
                 variant="outline" 
-                className="w-full justify-start"
+                className="w-full justify-start border-blue-300 hover:bg-blue-100 hover:border-blue-400 text-blue-700"
                 onClick={() => setActiveSection('appointments')}
               >
                 <Calendar className="w-4 h-4 mr-2" />
@@ -451,21 +464,21 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
               </Button>
               <Button 
                 variant="outline" 
-                className="w-full justify-start"
+                className="w-full justify-start border-purple-300 hover:bg-purple-100 hover:border-purple-400 text-purple-700"
                 onClick={() => setActiveSection('prescriptions')}
               >
                 <Pill className="w-4 h-4 mr-2" />
                 Reçetelerim
-                  </Button>
+              </Button>
               <Button 
                 variant="outline" 
-                className="w-full justify-start"
+                className="w-full justify-start border-orange-300 hover:bg-orange-100 hover:border-orange-400 text-orange-700"
                 onClick={() => setActiveSection('medical-records')}
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Tıbbi Kayıtlar
-                  </Button>
-                </div>
+              </Button>
+            </div>
           </Card>
         </div>
       </div>
