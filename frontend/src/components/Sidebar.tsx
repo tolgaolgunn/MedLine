@@ -1,6 +1,6 @@
 import { Button } from './ui/button';
 import { 
-  User,Heart,Calendar, Pill, Settings,Menu,X,
+  User,Heart,Calendar, Pill, Settings,Menu,ChevronLeft,ChevronRight,
   Stethoscope,FileText,BarChart3,MessageSquare
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -61,22 +61,26 @@ return (
       {/* Header */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
-          {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Heart className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-semibold">MedLine</span>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2"
-          >
-            {isCollapsed ? <Menu className="w-4 h-4" /> : <X className="w-4 h-4" />}
-          </Button>
+                     {!isCollapsed ? (
+             <div className="flex items-center gap-2">
+               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                 <Heart className="w-5 h-5 text-primary-foreground" />
+               </div>
+               <span className="font-semibold">MedLine</span>
+             </div>
+           ) : (
+             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+               <Heart className="w-5 h-5 text-primary-foreground" />
+             </div>
+           )}
+           <Button
+             variant="ghost"
+             size="sm"
+             onClick={() => setIsCollapsed(!isCollapsed)}
+             className="p-2"
+           >
+             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+           </Button>
         </div>
       </div>
 
@@ -88,7 +92,7 @@ return (
             <Button
               key={item.id}
               variant={activeSection === item.id ? "default" : "ghost"}
-              className={`w-full justify-start gap-3 ${isCollapsed ? 'px-2' : 'px-3'}`}
+              className={`w-full ${isCollapsed ? 'justify-center px-2' : 'justify-start gap-3 px-3'}`}
               onClick={() => setActiveSection(item.id)}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
@@ -100,7 +104,7 @@ return (
 
       <Button
         variant="ghost"
-        className={`w-full justify-start gap-3 ${isCollapsed ? 'px-2' : 'px-3'}`}
+        className={`w-full ${isCollapsed ? 'justify-center px-2' : 'justify-start gap-3 px-3'}`}
         onClick={() => setActiveSection('settings')}
       >
         <Settings className="w-4 h-4 flex-shrink-0" />
