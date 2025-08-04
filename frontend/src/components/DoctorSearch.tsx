@@ -59,6 +59,8 @@ export function DoctorSearch() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedSpecialty, setSelectedSpecialty] =
     useState<string>("");
+  const [activeSearchTerm, setActiveSearchTerm] = useState<string>("");
+  const [activeSelectedSpecialty, setActiveSelectedSpecialty] = useState<string>("");
   const [selectedDoctor, setSelectedDoctor] =
     useState<Doctor | null>(null);
   const [selectedDate, setSelectedDate] = useState<
@@ -80,6 +82,9 @@ export function DoctorSearch() {
   const [showAppointmentTypeError, setShowAppointmentTypeError] = useState<boolean>(false);
   const [showDateError, setShowDateError] = useState<boolean>(false);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [doctorAppointments, setDoctorAppointments] = useState<any[]>([]);
+  const [patientAppointments, setPatientAppointments] = useState<any[]>([]);
+  const [loadingAppointments, setLoadingAppointments] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchDoctors() {
@@ -111,8 +116,14 @@ export function DoctorSearch() {
     fetchDoctors();
   }, []);
 
+  // Tarih veya doktor değiştiğinde randevuları kontrol et
+  useEffect(() => {
+    if (selectedDate && selectedDoctor) {
+      checkAppointments(selectedDate, selectedDoctor.id);
+    }
+  }, [selectedDate, selectedDoctor]);
+
   const specialties: string[] = [
-    "Tümü",
     "Kardiyoloji",
     "Genel Dahiliye",
     "Nöroloji",
@@ -142,19 +153,33 @@ export function DoctorSearch() {
     const matchesSearch =
       doctor.name
         .toLocaleLowerCase("tr")
-        .includes(searchTerm.toLocaleLowerCase("tr")) ||
+        .includes(activeSearchTerm.toLocaleLowerCase("tr")) ||
       doctor.specialty
         .toLocaleLowerCase("tr")
-        .includes(searchTerm.toLocaleLowerCase("tr"));
+        .includes(activeSearchTerm.toLocaleLowerCase("tr")) ||
+      doctor.location
+        .toLocaleLowerCase("tr")
+        .includes(activeSearchTerm.toLocaleLowerCase("tr"));
     const matchesSpecialty =
-      !selectedSpecialty ||
-      selectedSpecialty === "Tümü" ||
-      doctor.specialty === selectedSpecialty;
+      !activeSelectedSpecialty ||
+      activeSelectedSpecialty === "Tümü" ||
+      doctor.specialty === activeSelectedSpecialty;
     return matchesSearch && matchesSpecialty;
   });
 
+  const handleSearch = () => {
+    setActiveSearchTerm(searchTerm);
+    setActiveSelectedSpecialty(selectedSpecialty);
+  };
+
   const handleBookAppointment = async (): Promise<void> => {
     if (!selectedDoctor || !selectedDate || !selectedTime || !appointmentType) return;
+    
+    // Seçilen saat disabled ise işlemi durdur
+    if (isTimeSlotDisabled(selectedTime)) {
+      toast.error(getTimeSlotMessage(selectedTime));
+      return;
+    }
 
     // Kullanıcı bilgisini localStorage'dan al
     const userDataStr = localStorage.getItem('user');
@@ -177,16 +202,17 @@ export function DoctorSearch() {
         })
       });
 
-             if (response.ok) {
-         setShowSuccess(true);
-         setTimeout(() => {
-           setShowSuccess(false);
-           setSelectedDoctor(null);
-           clearSelections();
-         }, 2000);
-       } else {
-        // Hata mesajı göster
-        toast.error('Randevu kaydedilemedi!');
+      if (response.ok) {
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          setSelectedDoctor(null);
+          clearSelections();
+        }, 2000);
+      } else {
+        // Hata mesajını al ve göster
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Randevu kaydedilemedi!');
       }
     } catch (e) {
       toast.error('Sunucu hatası!');
@@ -194,8 +220,117 @@ export function DoctorSearch() {
   };
 
   const handleDateSelect = (date: Date | null): void => {
-    console.log('Seçilen tarih:', date);
     setSelectedDate(date || undefined);
+    
+    setSelectedTime("");
+  };
+
+  const checkAppointments = async (date: Date, doctorId: number) => {
+    setLoadingAppointments(true);
+    const dateStr = format(date, 'yyyy-MM-dd');
+    
+    try {
+      // Kullanıcı bilgisini localStorage'dan al
+      const userDataStr = localStorage.getItem('user');
+      const userData = userDataStr ? JSON.parse(userDataStr) : null;
+      const patient_id = userData?.user_id;
+
+      // Doktorun randevularını getir
+      const doctorResponse = await fetch(`http://localhost:3005/api/doctor-appointments/${doctorId}/${dateStr}`);
+      const doctorData = await doctorResponse.json();
+      setDoctorAppointments(doctorData);
+
+      // Hastanın randevularını getir
+      const patientResponse = await fetch(`http://localhost:3005/api/patient-appointments/${patient_id}/${dateStr}`);
+      const patientData = await patientResponse.json();
+      setPatientAppointments(patientData);
+      if (selectedTime && isTimeSlotDisabled(selectedTime)) {
+        setSelectedTime("");
+        toast.error(getTimeSlotMessage(selectedTime));
+      }
+    } catch (error) {
+      console.error('Randevu kontrolü hatası:', error);
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  const isTimeSlotDisabled = (time: string): boolean => {
+    if (!selectedDate || !selectedDoctor || !time) return false;
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const expectedDateTime = `${dateStr} ${time}:00`;
+    
+    // Doktorun bu saatte randevusu var mı kontrol et
+    const doctorHasAppointment = doctorAppointments.some(
+      (appointment: any) => {
+        try {
+          const appointmentDateTime = new Date(appointment.datetime);
+          const expectedDate = new Date(expectedDateTime);
+          return appointmentDateTime.getTime() === expectedDate.getTime();
+        } catch (error) {
+          return false;
+        }
+      }
+    );
+    
+    // Hastanın bu saatte başka randevusu var mı kontrol et
+    const patientHasAppointment = patientAppointments.some(
+      (appointment: any) => {
+        try {
+          const appointmentDateTime = new Date(appointment.datetime);
+          const expectedDate = new Date(expectedDateTime);
+          return appointmentDateTime.getTime() === expectedDate.getTime();
+        } catch (error) {
+          return false;
+        }
+      }
+    );
+    
+    return doctorHasAppointment || patientHasAppointment;
+  };
+
+  const getTimeSlotMessage = (time: string): string => {
+    if (!selectedDate || !selectedDoctor || !time) return '';
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const expectedDateTime = `${dateStr} ${time}:00`;
+    
+    // Doktorun bu saatte randevusu var mı kontrol et
+    const doctorAppointment = doctorAppointments.find(
+      (appointment: any) => {
+        try {
+          const appointmentDateTime = new Date(appointment.datetime);
+          const expectedDate = new Date(expectedDateTime);
+          return appointmentDateTime.getTime() === expectedDate.getTime();
+        } catch (error) {
+          return false;
+        }
+      }
+    );
+    
+    if (doctorAppointment) {
+      return 'Bu saatte doktorun randevusu var';
+    }
+    
+    // Hastanın bu saatte başka randevusu var mı kontrol et
+    const patientAppointment = patientAppointments.find(
+      (appointment: any) => {
+        try {
+          const appointmentDateTime = new Date(appointment.datetime);
+          const expectedDate = new Date(expectedDateTime);
+          return appointmentDateTime.getTime() === expectedDate.getTime();
+        } catch (error) {
+          return false;
+        }
+      }
+    );
+    
+    if (patientAppointment) {
+      return 'Bu saatte başka randevunuz var';
+    }
+    
+    return '';
   };
 
   const clearSelections = () => {
@@ -206,6 +341,15 @@ export function DoctorSearch() {
     setShowCalendar(false);
     setShowDateError(false);
     setShowAppointmentTypeError(false);
+    setDoctorAppointments([]);
+    setPatientAppointments([]);
+  };
+
+  const clearSearch = () => {
+    setSearchTerm("");
+    setSelectedSpecialty("");
+    setActiveSearchTerm("");
+    setActiveSelectedSpecialty("");
   };
 
   const handleOpenAppointmentModal = (doctor: Doctor) => {
@@ -248,24 +392,30 @@ export function DoctorSearch() {
       {/* Search and Filters */}
       <Card className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
+          <div className="relative w-full border-2 border-gray-300 rounded-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Doktor adı veya uzmanlık alanı..."
+              placeholder="Doktor adı,il,ilçe veya uzmanlık alanı..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
               className="pl-10"
             />
           </div>
 
-          <Select
-            value={selectedSpecialty}
-            onValueChange={setSelectedSpecialty}
-          >
-            <SelectTrigger>
+                      <Select
+              value={selectedSpecialty}
+              onValueChange={(value) => setSelectedSpecialty(value)}
+            >
+            <SelectTrigger className="w-full border-2 border-gray-300 rounded-md">
               <SelectValue placeholder="Uzmanlık Alanı" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="Tümü">Tümü</SelectItem>
               {specialties.map((specialty) => (
                 <SelectItem key={specialty} value={specialty}>
                   {specialty}
@@ -274,12 +424,35 @@ export function DoctorSearch() {
             </SelectContent>
           </Select>
 
-          <Button className="w-full">
-            <Search className="w-4 h-4 mr-2" />
-            Ara
-          </Button>
+                      <Button className="w-full" onClick={handleSearch}>
+              <Search className="w-4 h-4 mr-2" />
+              Ara
+            </Button>
         </div>
       </Card>
+
+              {/* Search Results Info */}
+        {(activeSearchTerm || activeSelectedSpecialty) && (
+          <Card className="p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 flex-1">
+                <Search className="w-4 h-4 text-gray-600" />
+                <span className="text-sm text-gray-700">
+                  Arama sonuçları: 
+                  {activeSearchTerm && ` "${activeSearchTerm}"`}
+                  {activeSelectedSpecialty && activeSelectedSpecialty !== "Tümü" && ` - ${activeSelectedSpecialty}`}
+                  {` (${filteredDoctors.length} doktor bulundu)`}
+                </span>
+              </div>
+              <button
+                onClick={clearSearch}
+                className="px-3 py-1.5 text-gray-600 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 rounded-md text-sm font-medium transition-colors"
+              >
+                Temizle
+              </button>
+            </div>
+          </Card>
+        )}
 
       {/* Doctor Results */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -571,25 +744,47 @@ export function DoctorSearch() {
                              <label className="block text-sm font-medium mb-2">
                                Saat Seç
                              </label>
+                             {loadingAppointments && (
+                               <p className="text-sm text-blue-600 mb-2">
+                                 Randevular kontrol ediliyor...
+                               </p>
+                             )}
                              <div className="grid grid-cols-3 gap-3">
-                               {timeSlots.map((time) => (
-                                 <Button
-                                   key={time}
-                                   variant={
-                                     selectedTime === time
-                                       ? "default"
-                                       : "outline"
-                                   }
-                                   size="sm"
-                                   className="h-10 text-sm font-medium"
-                                   onClick={() => {
-                                     console.log('Seçilen saat:', time);
-                                     setSelectedTime(time);
-                                   }}
-                                 >
-                                   {time}
-                                 </Button>
-                               ))}
+                               {timeSlots.map((time) => {
+                                 const isDisabled = isTimeSlotDisabled(time);
+                                 const message = getTimeSlotMessage(time);
+                                 
+                                 return (
+                                   <div key={time} className="relative">
+                                     <Button
+                                       variant={
+                                         selectedTime === time
+                                           ? "default"
+                                           : "outline"
+                                       }
+                                       size="sm"
+                                       className={`h-10 text-sm font-medium w-full ${
+                                         isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+                                       }`}
+                                       onClick={() => {
+                                         if (!isDisabled) {
+                                           setSelectedTime(time);
+                                         } else {
+                                           toast.error(message);
+                                         }
+                                       }}
+                                       disabled={isDisabled}
+                                     >
+                                       {time}
+                                     </Button>
+                                     {isDisabled && (
+                                       <div className="absolute -bottom-6 left-0 right-0 text-xs text-red-500 text-center">
+                                         {message}
+                                       </div>
+                                     )}
+                                   </div>
+                                 );
+                               })}
                              </div>
                              {selectedTime && (
                                <p className="text-sm text-green-600 mt-2">
@@ -609,17 +804,23 @@ export function DoctorSearch() {
                              </ul>
                            </div>
                            
-                           <Button
-                             className="w-full"
-                             onClick={handleBookAppointment}
-                             disabled={
-                               !appointmentType ||
-                               !selectedDate ||
-                               !selectedTime
-                             }
-                           >
-                             Randevuyu Onayla ({doctor.price})
-                           </Button>
+                                                       <Button
+                              className="w-full"
+                              onClick={handleBookAppointment}
+                              disabled={
+                                !appointmentType ||
+                                !selectedDate ||
+                                !selectedTime ||
+                                isTimeSlotDisabled(selectedTime)
+                              }
+                            >
+                              Randevuyu Onayla ({doctor.price})
+                            </Button>
+                           {selectedTime && isTimeSlotDisabled(selectedTime) && (
+                             <p className="text-sm text-red-600 text-center">
+                               {getTimeSlotMessage(selectedTime)}
+                             </p>
+                           )}
                          </div>
                       </div>
                     )}
