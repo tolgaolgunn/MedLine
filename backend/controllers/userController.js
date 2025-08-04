@@ -101,6 +101,16 @@ exports.getProfile = async (req, res) => {
     if (user.role === "patient") {
       profile = await getPatientProfileByUserId(userId) || {};
       console.log('Patient profile data:', profile);
+      
+      // Doğum tarihini kontrol et ve düzgün formatta olduğundan emin ol
+      if (profile.birth_date) {
+        console.log('Doğum tarihi (ham):', profile.birth_date);
+        // PostgreSQL'den gelen tarih formatını düzelt
+        if (profile.birth_date instanceof Date) {
+          profile.birth_date = profile.birth_date.toISOString().split('T')[0];
+        }
+        console.log('Doğum tarihi (düzeltilmiş):', profile.birth_date);
+      }
     }
     
     const responseData = { ...user, ...profile };
@@ -118,21 +128,54 @@ exports.updateProfile = async (req, res) => {
     const user_id = req.user.user_id;
     const { full_name, email, phone_number, birth_date, gender, address } = req.body;
 
+    console.log('Profil güncelleme isteği alındı:');
+    console.log('birth_date (gelen):', birth_date, typeof birth_date);
+
     // User tablosunu güncelle
     const updatedUser = await updateUserProfile(user_id, { full_name, email, phone_number });
 
-    // Patient profile'ı güncelle (eğer patient ise)
+    let updatedPatient = null;
     if (req.user.role === "patient") {
-      await updatePatientProfile(user_id, { birth_date, gender, address });
+      updatedPatient = await updatePatientProfile(user_id, { 
+        birth_date, 
+        gender, 
+        address 
+      });
+      
+      // Veritabanından tekrar çekerek formatı garantiye al
+      const dbPatient = await getPatientProfileByUserId(user_id);
+      if (dbPatient) {
+        updatedPatient = {
+          ...dbPatient,
+          birth_date: dbPatient.birth_date ? formatDate(dbPatient.birth_date) : null
+        };
+      }
     }
 
-    res.json({ message: "Profil güncellendi", user: updatedUser });
+    res.json({
+      message: "Profil güncellendi",
+      user: {
+        ...updatedUser,
+        ...(updatedPatient || {})
+      }
+    });
+
   } catch (err) {
     console.error('Profile update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
+// Yardımcı fonksiyon
+function formatDate(date) {
+  if (!date) return null;
+  // Eğer zaten string ise
+  if (typeof date === 'string') return date.split('T')[0];
+  // Date objesi ise
+  if (date instanceof Date) return date.toISOString().split('T')[0];
+  // Diğer durumlar
+  return new Date(date).toISOString().split('T')[0];
+}
 exports.changePassword = async (req, res) => {
   try {
     const user_id = req.user.user_id;

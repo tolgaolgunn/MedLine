@@ -7,18 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "./ui/textarea";
 import { Separator } from "./ui/separator";
 import { Eye, EyeOff, User } from "lucide-react";
-// Date formatting helper - date-fns would be imported in a real project
-const formatDate = (date: Date) => {
-  return date.toLocaleDateString('tr-TR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  });
-};
 import { toast } from "react-toastify";
 
-// Password requirements (register ile aynı)
-function getPasswordErrors(password: string): Record<'length' | 'upper' | 'lower' | 'digit' | 'punct', boolean> {
+// Şifre gereksinimleri kontrolü
+function getPasswordErrors(password: string) {
   return {
     length: password.length < 8,
     upper: !/[A-Z]/.test(password),
@@ -28,7 +20,7 @@ function getPasswordErrors(password: string): Record<'length' | 'upper' | 'lower
   };
 }
 
-const passwordRequirements: { key: 'length' | 'upper' | 'lower' | 'digit' | 'punct'; label: string }[] = [
+const passwordRequirements = [
   { key: 'length', label: 'En az 8 karakter uzunluğunda olmalıdır.' },
   { key: 'upper', label: '1 büyük harf içermelidir.' },
   { key: 'lower', label: '1 küçük harf içermelidir.' },
@@ -37,7 +29,6 @@ const passwordRequirements: { key: 'length' | 'upper' | 'lower' | 'digit' | 'pun
 ];
 
 export function Profile() {
-  
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -47,17 +38,17 @@ export function Profile() {
     address: ""
   });
 
-  // Orijinal form verilerini saklamak için
   const [originalFormData, setOriginalFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
     gender: "",
-    address: ""
+    address: "",
+    birthDate: ""
   });
 
-  const [birthDate, setBirthDate] = useState<Date | undefined>(undefined);
+  const [birthDate, setBirthDate] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -69,7 +60,7 @@ export function Profile() {
     confirmPassword: ""
   });
 
-  // Backend'den kullanıcı bilgilerini getir
+  // Kullanıcı verilerini yükle
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -87,33 +78,31 @@ export function Profile() {
           }
         });
 
-        if (!response.ok) {
-          throw new Error('Profil bilgileri alınamadı');
-        }
+        if (!response.ok) throw new Error('Profil bilgileri alınamadı');
 
         const userData = await response.json();
-        
-        // Backend'den gelen full_name'i ad ve soyada ayır
         const nameParts = (userData.full_name || "").split(" ");
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(" ") || "";
         
-        // Backend'den gelen veriyi formData'ya uyarla
         const newFormData = {
-          firstName: firstName,
-          lastName: lastName,
+          firstName: nameParts[0] || "",
+          lastName: nameParts.slice(1).join(" ") || "",
           email: userData.email || "",
           phone: userData.phone_number || "",
           gender: userData.gender || "",
-          address: userData.address || ""
+          address: userData.address || "",
         };
         
         setFormData(newFormData);
-        setOriginalFormData(newFormData); // Orijinal verileri de sakla
+        setOriginalFormData({
+          ...newFormData,
+          birthDate: userData.birth_date || ""
+        });
 
-        // Doğum tarihini Date objesine çevir
+        // Doğum tarihini işle (YYYY-MM-DD formatında sakla)
         if (userData.birth_date) {
-          setBirthDate(new Date(userData.birth_date));
+          const date = new Date(userData.birth_date);
+          const formattedDate = date.toISOString().split('T')[0];
+          setBirthDate(formattedDate);
         }
 
       } catch (error) {
@@ -133,18 +122,12 @@ export function Profile() {
     switch (field) {
       case 'firstName':
       case 'lastName':
-        // Sadece harf ve boşluk
         validatedValue = value.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ\s]/g, '');
         break;
-      case 'email':
-        // E-posta için anında validasyon yok, sadece kaydetme sırasında kontrol edilecek
-        break;
       case 'phone':
-        // Sadece rakam
         validatedValue = value.replace(/[^0-9]/g, '');
         break;
       case 'address':
-        // 200 karakter sınırı
         if (value.length > 200) {
           toast.error('Adres en fazla 200 karakter olabilir');
           return;
@@ -152,20 +135,14 @@ export function Profile() {
         break;
     }
     
-    setFormData(prev => ({
-      ...prev,
-      [field]: validatedValue
-    }));
+    setFormData(prev => ({ ...prev, [field]: validatedValue }));
   };
 
   const handlePasswordChange = (field: string, value: string) => {
-    setPasswordData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setPasswordData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Form verilerinde değişiklik olup olmadığını kontrol et
+  // Değişiklik kontrolü
   const hasChanges = () => {
     return (
       formData.firstName !== originalFormData.firstName ||
@@ -173,59 +150,33 @@ export function Profile() {
       formData.email !== originalFormData.email ||
       formData.phone !== originalFormData.phone ||
       formData.gender !== originalFormData.gender ||
-      formData.address !== originalFormData.address
+      formData.address !== originalFormData.address ||
+      birthDate !== originalFormData.birthDate
     );
   };
 
+  // Profil bilgilerini kaydet
   const handleSaveProfile = async () => {
-    // Form validasyonu
-    if (!formData.firstName.trim()) {
-      toast.error('Ad alanı boş bırakılamaz');
-      return;
-    }
-    if (!formData.lastName.trim()) {
-      toast.error('Soyad alanı boş bırakılamaz');
-      return;
-    }
-    if (!formData.email.trim()) {
-      toast.error('E-posta alanı boş bırakılamaz');
-      return;
-    }
-    
-    // E-posta formatı kontrolü
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast.error('Geçerli bir e-posta adresi giriniz');
-      return;
-    }
-    
-    if (!formData.phone.trim()) {
-      toast.error('Telefon alanı boş bırakılamaz');
-      return;
-    }
-    if (formData.phone.length < 10) {
-      toast.error('Telefon numarası en az 10 haneli olmalıdır');
-      return;
-    }
+    // Validasyonlar
+    if (!formData.firstName.trim()) return toast.error('Ad alanı boş bırakılamaz');
+    if (!formData.lastName.trim()) return toast.error('Soyad alanı boş bırakılamaz');
+    if (!formData.email.trim()) return toast.error('E-posta alanı boş bırakılamaz');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return toast.error('Geçerli bir e-posta adresi giriniz');
+    if (!formData.phone.trim()) return toast.error('Telefon alanı boş bırakılamaz');
+    if (formData.phone.length < 10) return toast.error('Telefon numarası en az 10 haneli olmalıdır');
 
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
-        return;
-      }
+      if (!token) return toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
 
-      // Backend'e gönderilecek veriyi hazırla - userController.js'deki updateProfile endpoint'i ile uyumlu
       const updateData = {
         full_name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
         phone_number: formData.phone,
         gender: formData.gender,
         address: formData.address,
-        birth_date: birthDate ? birthDate.toISOString().split('T')[0] : null
+        birth_date: birthDate || null
       };
-
-      console.log('Gönderilen profil verileri:', updateData);
 
       const response = await fetch('http://localhost:3005/api/profile', {
         method: 'PUT',
@@ -242,26 +193,10 @@ export function Profile() {
       }
 
       toast.success("Profil bilgileriniz başarıyla güncellendi!");
-      
-      // Başarılı kaydetme sonrası orijinal verileri güncelle
       setOriginalFormData({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        gender: formData.gender,
-        address: formData.address
+        ...formData,
+        birthDate: birthDate
       });
-
-      // Kullanıcı bilgilerini localStorage'da güncelle
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const userObj = JSON.parse(userStr);
-        userObj.full_name = updateData.full_name;
-        userObj.email = updateData.email;
-        userObj.phone_number = updateData.phone_number;
-        localStorage.setItem('user', JSON.stringify(userObj));
-      }
       
     } catch (error: any) {
       console.error('Profil güncellenirken hata:', error);
@@ -269,29 +204,23 @@ export function Profile() {
     }
   };
 
+  // Şifre değiştirme
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Şifreler eşleşmiyor!");
-      return;
+      return toast.error("Şifreler eşleşmiyor!");
     }
-    if(passwordData.currentPassword === passwordData.newPassword) {
-      toast.error("Mevcut şifre yeni şifre ile aynı olamaz!");
-      return;
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      return toast.error("Mevcut şifre yeni şifre ile aynı olamaz!");
     }
     
-    // Şifre gereksinimleri kontrolü (register ile aynı)
     const errors = getPasswordErrors(passwordData.newPassword);
     if (Object.values(errors).some(Boolean)) {
-      toast.error("Şifre gereksinimlerini karşılayınız.");
-      return;
+      return toast.error("Şifre gereksinimlerini karşılayınız.");
     }
 
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
-        return;
-      }
+      if (!token) return toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
 
       const response = await fetch('http://localhost:3005/api/change-password', {
         method: 'PUT',
@@ -326,7 +255,6 @@ export function Profile() {
   return (
     <div className="flex-1 p-6 bg-white">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
             <User className="w-8 h-8 text-blue-600" />
@@ -342,56 +270,54 @@ export function Profile() {
           <Card className="bg-gray-50">
             <CardHeader>
               <CardTitle>Kişisel Bilgiler</CardTitle>
-              <CardDescription>
-                Temel profil bilgilerinizi burada düzenleyebilirsiniz
-              </CardDescription>
+              <CardDescription>Temel profil bilgilerinizi burada düzenleyebilirsiniz</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                             <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                   <Label htmlFor="firstName">Ad</Label>
-                   <Input
-                     id="firstName"
-                     value={formData.firstName}
-                     onChange={(e) => handleInputChange('firstName', e.target.value)}
-                     placeholder="Adınızı giriniz"
-                     maxLength={50}
-                   />
-                 </div>
-                 <div className="space-y-2">
-                   <Label htmlFor="lastName">Soyad</Label>
-                   <Input
-                     id="lastName"
-                     value={formData.lastName}
-                     onChange={(e) => handleInputChange('lastName', e.target.value)}
-                     placeholder="Soyadınızı giriniz"
-                     maxLength={50}
-                   />
-                 </div>
-               </div>
-
-                             <div className="space-y-2">
-                 <Label htmlFor="email">E-posta</Label>
-                 <Input
-                   id="email"
-                   type="email"
-                   value={formData.email}
-                   onChange={(e) => handleInputChange('email', e.target.value)}
-                   placeholder="ornek@gmail.com"
-                 />
-               </div>
-
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                 <Label htmlFor="phone">Telefon Numarası</Label>
-                 <Input
-                   id="phone"
-                   type="tel"
-                   value={formData.phone}
-                   onChange={(e) => handleInputChange('phone', e.target.value)}
-                   placeholder="Telefon numaranızı giriniz"
-                   maxLength={11}
-                 />
-               </div>
+                  <Label htmlFor="firstName">Ad</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    placeholder="Adınızı giriniz"
+                    maxLength={50}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Soyad</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    placeholder="Soyadınızı giriniz"
+                    maxLength={50}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">E-posta</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  placeholder="ornek@gmail.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefon Numarası</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="Telefon numaranızı giriniz"
+                  maxLength={11}
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -408,38 +334,32 @@ export function Profile() {
                   </Select>
                 </div>
 
-                                 <div className="space-y-2">
-                   <Label htmlFor="birthDate">Doğum Tarihi</Label>
-                   <Input
-                     id="birthDate"
-                     type="date"
-                     value={birthDate ? birthDate.toISOString().split('T')[0] : ''}
-                     onChange={(e) => {
-                       if (e.target.value) {
-                         setBirthDate(new Date(e.target.value));
-                       } else {
-                         setBirthDate(undefined);
-                       }
-                     }}
-                     className="w-full"
-                   />
-                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="birthDate">Doğum Tarihi</Label>
+                  <Input
+                    id="birthDate"
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
               </div>
 
-                             <div className="space-y-2">
-                 <Label htmlFor="address">Adres</Label>
-                 <Textarea
-                   id="address"
-                   value={formData.address}
-                   onChange={(e) => handleInputChange('address', e.target.value)}
-                   placeholder="Adresinizi girin (maksimum 200 karakter)"
-                   rows={3}
-                   maxLength={200}
-                 />
-                 <div className="text-xs text-gray-500 text-right">
-                   {formData.address.length}/200 karakter
-                 </div>
-               </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Adres</Label>
+                <Textarea
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  placeholder="Adresinizi girin (maksimum 200 karakter)"
+                  rows={3}
+                  maxLength={200}
+                />
+                <div className="text-xs text-gray-500 text-right">
+                  {formData.address.length}/200 karakter
+                </div>
+              </div>
 
               <Button 
                 onClick={handleSaveProfile} 
@@ -455,9 +375,7 @@ export function Profile() {
           <Card className="bg-gray-50">
             <CardHeader>
               <CardTitle>Şifre Değiştir</CardTitle>
-              <CardDescription>
-                Hesabınızın güvenliği için düzenli olarak şifrenizi değiştirin
-              </CardDescription>
+              <CardDescription>Hesabınızın güvenliği için düzenli olarak şifrenizi değiştirin</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -477,11 +395,7 @@ export function Profile() {
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -505,11 +419,7 @@ export function Profile() {
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowNewPassword(!showNewPassword)}
                   >
-                    {showNewPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -531,11 +441,7 @@ export function Profile() {
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -545,9 +451,7 @@ export function Profile() {
                   {passwordRequirements.map(req => {
                     const errors = getPasswordErrors(passwordData.newPassword);
                     if (!errors[req.key]) return null;
-                    return (
-                      <li key={req.key} className="text-red-600">{req.label}</li>
-                    );
+                    return <li key={req.key} className="text-red-600">{req.label}</li>;
                   })}
                 </ul>
               </div>
