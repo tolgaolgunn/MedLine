@@ -51,8 +51,6 @@ const DoctorAppointments: React.FC = () => {
   const [showPatientHistory, setShowPatientHistory] = useState(false);
   const [historyPatientId, setHistoryPatientId] = useState<number | null>(null);
   
-
-  
   // State for exit confirmation and unsaved changes
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -79,7 +77,7 @@ const DoctorAppointments: React.FC = () => {
             const dateObj = new Date(item.datetime);
             return {
               id: item.id,
-              patientId: item.patient_id || 1, // Geçici olarak 1 kullanıyoruz
+              patientId: item.patient_id || 1, 
               patientName: item.patientname || item.patientName,
               patientAge: item.patientAge,
               specialty: item.specialty,
@@ -327,14 +325,14 @@ const DoctorAppointments: React.FC = () => {
                 {/* Filter Button */}
                 <Button 
                   variant="outline" 
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 border-2 border-gray-300 shadow-sm"
                   onClick={handleOpenFilterModal}
                 >
                   <Filter className="w-4 h-4" />
                   <span>{getActiveFiltersText()}</span>
                   {(filter !== 'today' || activeFilters.length > 0) && (
                     <Badge variant="secondary" className="ml-1">
-                      {activeFilters.length + (filter !== 'today' ? 1 : 0)}
+                      {activeFilters.length + (filter !== 'today' ? 1 : 0)} 
                     </Badge>
                   )}
                 </Button>
@@ -346,6 +344,7 @@ const DoctorAppointments: React.FC = () => {
                       <DialogTitle>Filtreler</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-6">
+                      
                       {/* Date Range Filters */}
                       <div>
                         <h3 className="font-medium mb-3">Tarih Aralığı</h3>
@@ -356,15 +355,16 @@ const DoctorAppointments: React.FC = () => {
                               variant={tempFilters.filter === option.value ? "default" : "outline"}
                               size="sm"
                               onClick={() => handleFilterChange(option.value)}
-                              className="justify-start"
+                              className="justify-start border-2 border-gray-300 shadow-sm"
                             >
                               {option.label}
                             </Button>
                           ))}
                         </div>
+
                         {/* Custom Date Range Inputs */}
                         {tempFilters.filter === 'custom' && (
-                          <div className="mt-3 space-y-2">
+                          <div className="mt-3 flex gap-2">
                             <Input 
                               type="date" 
                               value={tempFilters.startDate}
@@ -397,7 +397,7 @@ const DoctorAppointments: React.FC = () => {
                               variant={tempFilters.activeFilters.includes(action.value) ? "default" : "outline"}
                               size="sm"
                               onClick={() => handleQuickActionToggle(action.value)}
-                              className="justify-start"
+                              className="justify-start border-2 border-gray-300 shadow-sm"
                             >
                               {action.label}
                             </Button>
@@ -410,7 +410,7 @@ const DoctorAppointments: React.FC = () => {
                         <Button 
                           onClick={applyFilters}
                           disabled={!hasUnsavedChanges}
-                          className="w-full"
+                          className="w-full border-2 border-gray-300 shadow-sm"
                         >
                           Filtreleri Uygula
                         </Button>
@@ -419,7 +419,7 @@ const DoctorAppointments: React.FC = () => {
                           <Button 
                             variant="outline"
                             onClick={clearAllFilters}
-                            className="w-full"
+                            className="w-full border-2 border-gray-300 shadow-sm rounded-md"
                           >
                            Filtreleri Kaldır
                           </Button>
@@ -456,6 +456,7 @@ const DoctorAppointments: React.FC = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => {/* Randevuyu başlat işlemi */}}
+                            className="border-2 border-gray-300 shadow-sm"
                           >
                             <Play className="w-4 h-4 mr-1" />
                             Randevuyu Başlat
@@ -545,14 +546,14 @@ const DoctorAppointments: React.FC = () => {
                             setSelectedAppointment(appointments.find(app => isCurrentAppointment(app)) || null);
                             setShowDetail(true);
                           }}
-                          className="flex-1"
+                          className="flex-1 border-2 border-gray-300 shadow-sm"
                         >
                           <Eye className="w-4 h-4 mr-1" />
                         Randevu Detayı
                         </Button>
                                      <Button 
                      variant="outline" 
-                     className="flex-1"
+                     className="flex-1 border-2 border-gray-300 shadow-sm"
                      onClick={handleOpenPatientHistory}
                    >
                      <FileText className="w-4 h-4 mr-1" />
@@ -585,7 +586,7 @@ const DoctorAppointments: React.FC = () => {
                <div><b>Branş:</b> {selectedAppointment.specialty}</div>
                <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
              </div>
-             <Button onClick={() => setShowDetail(false)}>Kapat</Button>
+             <Button onClick={() => setShowDetail(false)} className="border-2 border-gray-300 shadow-sm">Kapat</Button>
            </DialogContent>
          </Dialog>
        )}
@@ -641,7 +642,7 @@ const DoctorAppointments: React.FC = () => {
              );
            })()}
            <DialogFooter>
-             <Button onClick={() => setShowPatientHistory(false)}>Kapat</Button>
+             <Button onClick={() => setShowPatientHistory(false)} className="border-2 border-gray-300 shadow-sm">Kapat</Button>
            </DialogFooter>
          </DialogContent>
        </Dialog>
@@ -664,10 +665,10 @@ const DoctorAppointments: React.FC = () => {
             </p>
           </div>
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={cancelExit}>
+            <Button variant="outline" onClick={cancelExit} className="border-2 border-gray-300 shadow-sm">
               İptal
             </Button>
-            <Button variant="destructive" onClick={confirmExit}>
+            <Button variant="destructive" onClick={confirmExit} className="border-2 border-gray-300 shadow-sm">
               Çık
             </Button>
           </DialogFooter>

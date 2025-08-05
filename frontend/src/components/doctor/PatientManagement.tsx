@@ -88,14 +88,16 @@ const PatientManagement: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [activeSearchTerm, setActiveSearchTerm] = useState('');
+  const [activeFilterStatus, setActiveFilterStatus] = useState<string>('all');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
 
   const filteredPatients = patients.filter(patient => {
-    const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.phone.includes(searchTerm);
-    const matchesStatus = filterStatus === 'all' || patient.status === filterStatus;
+    const matchesSearch = patient.name.toLowerCase().includes(activeSearchTerm.toLowerCase()) ||
+                         patient.email.toLowerCase().includes(activeSearchTerm.toLowerCase()) ||
+                         patient.phone.includes(activeSearchTerm);
+    const matchesStatus = activeFilterStatus === 'all' || patient.status === activeFilterStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -110,6 +112,18 @@ const PatientManagement: React.FC = () => {
     };
     setPatients([...patients, patient]);
     setIsAddPatientOpen(false);
+  };
+
+  const handleSearch = () => {
+    setActiveSearchTerm(searchTerm);
+    setActiveFilterStatus(filterStatus);
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    setFilterStatus('all');
+    setActiveSearchTerm('');
+    setActiveFilterStatus('all');
   };
 
   const handleDeletePatient = (patientId: string) => {
@@ -142,30 +156,72 @@ const PatientManagement: React.FC = () => {
 
       {/* Search and Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            {/* Search Input */}
+            <div className="relative flex-1 w-full border-2 border-gray-300 rounded-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Hasta ara (isim, email, telefon)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
+                className="pl-10 h-10"
               />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tümü</SelectItem>
-                <SelectItem value="active">Aktif</SelectItem>
-                <SelectItem value="inactive">Pasif</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            {/* Filter Dropdown */}
+            <div className="w-full md:w-40">
+              <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value)}>
+                <SelectTrigger className="h-10 border-2 border-gray-300 rounded-md">
+                  <SelectValue placeholder="Durum" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="inactive">Pasif</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Search Button */}
+            <Button 
+              className="w-full md:w-32 h-10 border-2 border-gray-300 shadow-sm rounded-md " 
+              onClick={handleSearch}
+            >
+              <Search className="w-4 h-4 mr-2" />
+              Ara
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Search Results Info */}
+      {(activeSearchTerm || activeFilterStatus !== 'all') && (
+        <Card className="p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 flex-1">
+              <Search className="w-4 h-4 text-gray-600" />
+              <span className="text-sm text-gray-700">
+                Arama sonuçları: 
+                {activeSearchTerm && ` "${activeSearchTerm}"`}
+                {activeFilterStatus !== 'all' && ` - ${activeFilterStatus === 'active' ? 'Aktif' : 'Pasif'}`}
+                {` (${filteredPatients.length} hasta bulundu)`}
+              </span>
+            </div>
+            <button
+              onClick={clearSearch}
+              className="px-3 py-1.5 text-gray-600 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 rounded-md text-sm font-medium transition-colors"
+            >
+              Temizle
+            </button>
+          </div>
+        </Card>
+      )}
 
       {/* Patients Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

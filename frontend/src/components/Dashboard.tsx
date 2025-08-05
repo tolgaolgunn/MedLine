@@ -30,7 +30,7 @@ import {
 import { Profile } from "./Profile";
 import { AIDiagnosis } from "./AIDiagnosis";
 import { DoctorSearch } from "./DoctorSearch";
-import { Appointments } from "./Appointments";
+import Appointments from "./Appointments";
 import { MedicalRecords } from "./MedicalRecords";
 import { Prescriptions } from "./prescriptions";
 import { Pharmacy } from "./pharmacy";
@@ -353,7 +353,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                 <p>Yaklaşan randevunuz bulunmuyor</p>
                           <Button 
                             variant="outline" 
-                  className="mt-4"
+                  className="mt-4 !border !border-black hover:!border-gray-700 hover:!bg-gray-50"
                   onClick={() => setActiveSection('doctor-search')}
                           >
                   Doktor Ara
@@ -435,7 +435,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
             </div>
                                                                                                                                                                        <Button 
                         variant="outline"
-                        className="w-full mt-4 !border-2 !border-black !border-solid hover:!border-gray-700 hover:!bg-gray-50 !text-black !font-semibold"
+                        className="w-full mt-4 !border !border-black hover:!border-gray-700 hover:!bg-gray-50"
                         style={{ borderWidth: '2px', borderColor: 'black', borderStyle: 'solid' }}
                         onClick={() => setActiveSection('ai-diagnosis')}
                       >
@@ -443,44 +443,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                       </Button>
           </Card>
 
-          {/* Hızlı Eylemler */}
-          <Card className="p-6 transition-colors duration-200 border-2 ">
-            <h2 className="text-xl font-semibold mb-4">Hızlı Eylemler</h2>
-            <div className="space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start border-green-300 hover:bg-green-100 hover:border-green-400 text-green-700"
-                onClick={() => setActiveSection('doctor-search')}
-              >
-                <Stethoscope className="w-4 h-4 mr-2" />
-                Doktor Ara
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start border-blue-300 hover:bg-blue-100 hover:border-blue-400 text-blue-700"
-                onClick={() => setActiveSection('appointments')}
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                Randevu Al
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start border-purple-300 hover:bg-purple-100 hover:border-purple-400 text-purple-700"
-                onClick={() => setActiveSection('prescriptions')}
-              >
-                <Pill className="w-4 h-4 mr-2" />
-                Reçetelerim
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start border-orange-300 hover:bg-orange-100 hover:border-orange-400 text-orange-700"
-                onClick={() => setActiveSection('medical-records')}
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Tıbbi Kayıtlar
-              </Button>
-            </div>
-          </Card>
+
         </div>
       </div>
     </div>

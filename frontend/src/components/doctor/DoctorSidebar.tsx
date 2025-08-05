@@ -100,12 +100,16 @@ const DoctorSidebar: React.FC = () => {
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          {!collapsed && (
+          {!collapsed ? (
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Stethoscope className="w-5 h-5 text-white" />
               </div>
               <span className="font-semibold text-lg text-gray-900">MedLine</span>
+            </div>
+          ) : (
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Stethoscope className="w-5 h-5 text-white" />
             </div>
           )}
           <Button
