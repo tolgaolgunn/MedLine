@@ -41,4 +41,10 @@ exports.getAppointmentsByUser = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}; 
+};
+
+// Doktorun belirli bir tarihteki randevularını getirir
+exports.getDoctorAppointmentsByDate = async (req, res) => {
+  // TODO: Implement logic to fetch doctor's appointments by date
+  res.status(200).json({ message: 'getDoctorAppointmentsByDate endpoint is working.' });
+};

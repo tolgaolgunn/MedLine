@@ -38,6 +38,7 @@ import { Notifications } from "./notifications";
 import { Feedback } from "./feedback";    
 import { Topbar } from "./Topbar";
 import { DoctorAppointments, DoctorDashboard } from "./doctor";
+import { DoctorProfile } from "./doctor/DoctorProfile";
 import DoctorReports from "./DoctorReports";
 import PatientVideoCallButton from "./PatientVideoCallButton";
 
@@ -183,7 +184,7 @@ export function Dashboard() {
           />
         );
       case "profile":
-        return <Profile />;
+        return userRole === 'doctor' ? <DoctorProfile /> : <Profile />;
       case "ai-diagnosis":
         return <AIDiagnosis />;
       case "doctor-search":
