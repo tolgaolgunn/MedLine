@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
+import { PageHeader } from './ui/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { MoreHorizontal, Edit, Trash2, Send } from 'lucide-react';
 import {
@@ -138,6 +139,10 @@ const FeedbackPage: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <PageHeader 
+        title="Geri Bildirim"
+        subtitle="Deneyimlerinizi paylaşın ve önerilerinizi iletin."
+      />
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sol: Geri Bildirim Formu */}
         <Card className="flex-1">

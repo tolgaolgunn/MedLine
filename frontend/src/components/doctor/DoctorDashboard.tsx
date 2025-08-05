@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
+import { PageHeader } from '../ui/PageHeader';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -18,8 +19,6 @@ import {
   TrendingUp,
   Heart,
   Thermometer,
-  Sun,
-  Moon,
   Users,
   BarChart3,
   Stethoscope,
@@ -313,15 +312,11 @@ const DoctorDashboard: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Başlık */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Doktor Paneli</h1>
-          <p className="text-gray-600">Hoş geldiniz, {userName}.</p>
-          <p className="text-gray-600">Sağlıklı günler dileriz.</p>
-          
-        </div>
-      </div>
-
+      <PageHeader 
+        title="Doktor Paneli"
+        subtitle={`Hoş geldiniz, ${userName}. Sağlıklı günler dileriz.`}
+        showBackButton={false}
+      />
       {/* İstatistikler */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
