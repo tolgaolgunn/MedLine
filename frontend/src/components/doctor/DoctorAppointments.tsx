@@ -30,6 +30,7 @@ interface Appointment {
   specialty: string;
   date: string;
   time: string;
+  datetime?: string; // Orijinal datetime'ı optional olarak sakla
   type: 'online' | 'face_to_face';
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
 }
@@ -83,6 +84,7 @@ const DoctorAppointments: React.FC = () => {
               specialty: item.specialty,
               date: dateObj.toLocaleDateString('tr-TR'),
               time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+              datetime: item.datetime, // Orijinal datetime'ı da sakla
               type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
               status: item.status,
             };
@@ -104,12 +106,15 @@ const DoctorAppointments: React.FC = () => {
 
   // Check if appointment is currently active (within 30 minutes)
   const isCurrentAppointment = (appointment: Appointment) => {
+    // Tarih ve saat bilgilerini birleştir
     const [day, month, year] = appointment.date.split('.');
     const [hour, minute] = appointment.time.split(':');
-    const appointmentDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    const appointmentDateTime = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
     const now = new Date();
-    const diff = (appointmentDate.getTime() - now.getTime()) / 60000;
-    return diff <= 10 && diff >= -30;
+    const diff = (appointmentDateTime.getTime() - now.getTime()) / 60000; // dakika cinsinden fark
+    
+    // Randevu zamanından 30 dakika önce ve 10 dakika sonrasına kadar aktif say
+    return diff >= -30 && diff <= 10;
   };
 
   // Filter options for date range selection
@@ -451,17 +456,7 @@ const DoctorAppointments: React.FC = () => {
                       </div>
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
-                        {isCurrentAppointment(appointment) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {/* Randevuyu başlat işlemi */}}
-                            className="border-2 border-gray-300 shadow-sm"
-                          >
-                            <Play className="w-4 h-4 mr-1" />
-                            Randevuyu Başlat
-                          </Button>
-                        )}
+
                         <button
                           type="button"
                           onClick={() => {
@@ -546,14 +541,14 @@ const DoctorAppointments: React.FC = () => {
                             setSelectedAppointment(appointments.find(app => isCurrentAppointment(app)) || null);
                             setShowDetail(true);
                           }}
-                          className="flex-1 border-2 border-gray-300 shadow-sm"
+                          className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
                         >
                           <Eye className="w-4 h-4 mr-1" />
                         Randevu Detayı
                         </Button>
                                      <Button 
                      variant="outline" 
-                     className="flex-1 border-2 border-gray-300 shadow-sm"
+                     className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
                      onClick={handleOpenPatientHistory}
                    >
                      <FileText className="w-4 h-4 mr-1" />

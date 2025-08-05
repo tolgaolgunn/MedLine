@@ -34,11 +34,11 @@ import Appointments from "./Appointments";
 import { MedicalRecords } from "./MedicalRecords";
 import { Prescriptions } from "./prescriptions";
 import { Pharmacy } from "./pharmacy";
-import { Notifications } from "./notifications";
-import { Feedback } from "./feedback";    
+import { Notifications } from "./notifications";   
 import { Topbar } from "./Topbar";
 import { DoctorAppointments, DoctorDashboard } from "./doctor";
 import DoctorReports from "./DoctorReports";
+import  Feedback  from "./feedback"; 
 import PatientVideoCallButton from "./PatientVideoCallButton";
 
 interface Appointment {

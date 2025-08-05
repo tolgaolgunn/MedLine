@@ -4,7 +4,7 @@ import LandingPage from "./components/LandingPage";
 import { HealthAuthForm } from "./components/HealthAuthForm";
 import { Dashboard } from "./components/Dashboard";
 import { DoctorDashboard, DoctorAppointments, PatientManagement, DoctorPrescription, DoctorLayout } from "./components/doctor";
-import { Feedback } from "./components/feedback";
+import Feedback from "./components/feedback";
 import { Profile } from "./components/Profile";
 import DoctorReports from "./components/DoctorReports";
 import { Notifications } from "./components/notifications";
