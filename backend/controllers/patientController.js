@@ -67,7 +67,6 @@ exports.getAppointmentsByUser = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-  };
 
 exports.getDoctorAppointmentsByDate = async (req, res) => {
   try {
@@ -105,3 +104,4 @@ exports.getPatientAppointmentsByDate = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 }; 
+

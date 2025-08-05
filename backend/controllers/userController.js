@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const { getUserByEmail, createUser, getUserById, updateUserProfile, updateUserPassword } = require("../models/userModel");
 const { sendResetMail } = require('../services/mailService'); 
 const { createPatientProfile, updatePatientProfile, getPatientProfileByUserId } = require("../models/patientProfileModel");
-const { createDoctorProfile, getAllDoctorsWithUser } = require("../models/doctorProfileModel");
+const { createDoctorProfile, getAllDoctorsWithUser,getDoctorProfileByUserId } = require("../models/doctorProfileModel");
 
 exports.register = async (req, res) => {
   const { full_name, email, password, phone_number, role, birth_date, gender, address, specialty, license_number, experience_years, biography, city, district, hospital_name } = req.body;
@@ -88,37 +88,21 @@ exports.login = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const userId = req.user.user_id;
-    console.log('Getting profile for user_id:', userId);
-    
     const user = await getUserById(userId);
     if (!user) {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
-    
-    console.log('User data from database:', user);
-    
+
     let profile = {};
     if (user.role === "patient") {
       profile = await getPatientProfileByUserId(userId) || {};
-      console.log('Patient profile data:', profile);
-      
-      // Doğum tarihini kontrol et ve düzgün formatta olduğundan emin ol
-      if (profile.birth_date) {
-        console.log('Doğum tarihi (ham):', profile.birth_date);
-        // PostgreSQL'den gelen tarih formatını düzelt
-        if (profile.birth_date instanceof Date) {
-          profile.birth_date = profile.birth_date.toISOString().split('T')[0];
-        }
-        console.log('Doğum tarihi (düzeltilmiş):', profile.birth_date);
-      }
+    } else if (user.role === "doctor") {
+      profile = { doctor_profile: await getDoctorProfileByUserId(userId) || {} };
     }
-    
+
     const responseData = { ...user, ...profile };
-    console.log('Final response data:', responseData);
-    
     res.json(responseData);
   } catch (err) {
-    console.error('Get profile error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -126,56 +110,39 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const user_id = req.user.user_id;
-    const { full_name, email, phone_number, birth_date, gender, address } = req.body;
-
-    console.log('Profil güncelleme isteği alındı:');
-    console.log('birth_date (gelen):', birth_date, typeof birth_date);
+    const { full_name, email, phone_number, birth_date, gender, address, specialty, license_number, experience_years, biography, city, district, hospital_name } = req.body;
 
     // User tablosunu güncelle
     const updatedUser = await updateUserProfile(user_id, { full_name, email, phone_number });
 
-    let updatedPatient = null;
+    // Patient profile'ı güncelle (eğer patient ise)
     if (req.user.role === "patient") {
-      updatedPatient = await updatePatientProfile(user_id, { 
-        birth_date, 
-        gender, 
-        address 
-      });
-      
-      // Veritabanından tekrar çekerek formatı garantiye al
-      const dbPatient = await getPatientProfileByUserId(user_id);
-      if (dbPatient) {
-        updatedPatient = {
-          ...dbPatient,
-          birth_date: dbPatient.birth_date ? formatDate(dbPatient.birth_date) : null
-        };
-      }
+      await updatePatientProfile(user_id, { birth_date, gender, address });
     }
 
-    res.json({
-      message: "Profil güncellendi",
-      user: {
-        ...updatedUser,
-        ...(updatedPatient || {})
-      }
-    });
+    // Doctor profile'ı güncelle (eğer doctor ise)
+    let updatedDoctorProfile = null;
+    if (req.user.role === "doctor") {
+      const { updateDoctorProfile } = require("../models/doctorProfileModel");
+      updatedDoctorProfile = await updateDoctorProfile(user_id, {
+        specialty,
+        license_number,
+        experience_years,
+        biography,
+        city,
+        district,
+        hospital_name,
+        approved_by_admin: undefined 
+      });
+    }
 
+    res.json({ message: "Profil güncellendi", user: updatedUser, doctor_profile: updatedDoctorProfile });
   } catch (err) {
     console.error('Profile update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// Yardımcı fonksiyon
-function formatDate(date) {
-  if (!date) return null;
-  // Eğer zaten string ise
-  if (typeof date === 'string') return date.split('T')[0];
-  // Date objesi ise
-  if (date instanceof Date) return date.toISOString().split('T')[0];
-  // Diğer durumlar
-  return new Date(date).toISOString().split('T')[0];
-}
 exports.changePassword = async (req, res) => {
   try {
     const user_id = req.user.user_id;

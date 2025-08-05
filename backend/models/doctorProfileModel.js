@@ -17,14 +17,28 @@ const getDoctorProfileByUserId = async (user_id) => {
   return result.rows[0];
 };
 
-const updateDoctorProfile = async (user_id, { specialty, license_number, experience_years, biography, city, district, hospital_name, approved_by_admin }) => {
-  const result = await db.query(
-    `UPDATE doctor_profiles
-     SET specialty = $1, license_number = $2, experience_years = $3, biography = $4, city = $5, district = $6, hospital_name = $7, approved_by_admin = $8, updated_at = CURRENT_TIMESTAMP
-     WHERE user_id = $9
-     RETURNING *`,
-    [specialty, license_number, experience_years, biography, city, district, hospital_name, approved_by_admin, user_id]
-  );
+const updateDoctorProfile = async (user_id, fields) => {
+  // Sadece gönderilen alanları güncelle
+  const allowedFields = [
+    'specialty', 'license_number', 'experience_years', 'biography', 'city', 'district', 'hospital_name', 'approved_by_admin'
+  ];
+  const setClauses = [];
+  const values = [];
+  let idx = 1;
+  for (const key of allowedFields) {
+    if (fields[key] !== undefined) {
+      setClauses.push(`${key} = $${idx}`);
+      values.push(fields[key]);
+      idx++;
+    }
+  }
+  if (setClauses.length === 0) {
+    throw new Error('Güncellenecek alan yok.');
+  }
+  setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
+  const query = `UPDATE doctor_profiles SET ${setClauses.join(', ')} WHERE user_id = $${idx} RETURNING *`;
+  values.push(user_id);
+  const result = await db.query(query, values);
   return result.rows[0];
 };
 
