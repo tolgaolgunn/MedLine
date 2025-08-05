@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { PageHeader } from '../ui/PageHeader';
 import { 
   Calendar, 
   Clock, 
@@ -313,10 +314,10 @@ const DoctorAppointments: React.FC = () => {
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Randevu Yönetimi</h1>
-        <p className="text-muted-foreground">Hasta randevularınızı yönetin ve takip edin.</p>
-      </div>
+      <PageHeader 
+        title="Randevu Yönetimi"
+        subtitle="Hasta randevularınızı yönetin ve takip edin."
+      />
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

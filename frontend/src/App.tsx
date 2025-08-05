@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import LandingPage from "./components/LandingPage";
 import { HealthAuthForm } from "./components/HealthAuthForm";
 import { Dashboard } from "./components/Dashboard";
@@ -85,6 +85,7 @@ function App(): React.ReactElement {
                 </ProtectedRoute>
               }
             />
+            
           </Routes>
 
           <ToastContainer position="top-right" autoClose={3000} />

@@ -388,15 +388,13 @@ export function Profile() {
                     onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
                     placeholder="Mevcut şifrenizi girin"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                  </button>
                 </div>
               </div>
 
@@ -412,15 +410,13 @@ export function Profile() {
                     onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
                     placeholder="Yeni şifrenizi girin"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
                   >
                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                  </button>
                 </div>
               </div>
 
@@ -434,15 +430,13 @@ export function Profile() {
                     onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
                     placeholder="Yeni şifrenizi tekrar girin"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                  </button>
                 </div>
               </div>
 
@@ -450,7 +444,7 @@ export function Profile() {
                 <ul className="list-disc list-inside space-y-1">
                   {passwordRequirements.map(req => {
                     const errors = getPasswordErrors(passwordData.newPassword);
-                    if (!errors[req.key]) return null;
+                    if (!errors[req.key as keyof typeof errors]) return null;
                     return <li key={req.key} className="text-red-600">{req.label}</li>;
                   })}
                 </ul>

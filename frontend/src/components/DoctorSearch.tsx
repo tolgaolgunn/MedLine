@@ -395,7 +395,7 @@ export function DoctorSearch() {
           <div className="relative w-full border-2 border-gray-300 rounded-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Doktor adı,il,ilçe veya uzmanlık alanı..."
+              placeholder="Doktor adı, il, ilçe veya uzmanlık alanı..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={(e) => {

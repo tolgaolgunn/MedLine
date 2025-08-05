@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
+import { PageHeader } from '../ui/PageHeader';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
@@ -92,6 +93,8 @@ const PatientManagement: React.FC = () => {
   const [activeFilterStatus, setActiveFilterStatus] = useState<string>('all');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [formHasChanges, setFormHasChanges] = useState(false);
 
   const filteredPatients = patients.filter(patient => {
     const matchesSearch = patient.name.toLowerCase().includes(activeSearchTerm.toLowerCase()) ||
@@ -114,6 +117,15 @@ const PatientManagement: React.FC = () => {
     setIsAddPatientOpen(false);
   };
 
+  const confirmExit = () => {
+    setIsAddPatientOpen(false);
+    setShowExitConfirm(false);
+  };
+
+  const cancelExit = () => {
+    setShowExitConfirm(false);
+  };
+
   const handleSearch = () => {
     setActiveSearchTerm(searchTerm);
     setActiveFilterStatus(filterStatus);
@@ -126,19 +138,29 @@ const PatientManagement: React.FC = () => {
     setActiveFilterStatus('all');
   };
 
-  const handleDeletePatient = (patientId: string) => {
-    setPatients(patients.filter(p => p.id !== patientId));
-  };
+
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Hasta Yönetimi</h1>
-          <p className="text-gray-600">Hastalarınızı görüntüleyin ve yönetin</p>
-        </div>
-        <Dialog open={isAddPatientOpen} onOpenChange={setIsAddPatientOpen}>
+        <PageHeader 
+          title="Hasta Yönetimi"
+          subtitle="Hastalarınızı görüntüleyin ve yönetin"
+          showBackButton={true}
+        />
+        <Dialog open={isAddPatientOpen} onOpenChange={(open) => {
+          if (!open) {
+            if (formHasChanges) {
+              setShowExitConfirm(true);
+            } else {
+              setIsAddPatientOpen(false);
+            }
+          } else {
+            setIsAddPatientOpen(true);
+            setFormHasChanges(false); // Reset when opening
+          }
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -149,7 +171,10 @@ const PatientManagement: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Yeni Hasta Ekle</DialogTitle>
             </DialogHeader>
-            <AddPatientForm onSubmit={handleAddPatient} />
+            <AddPatientForm 
+              onSubmit={handleAddPatient} 
+              onFormChange={setFormHasChanges}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -192,6 +217,7 @@ const PatientManagement: React.FC = () => {
             <Button 
               className="w-full md:w-32 h-10 border-2 border-gray-300 shadow-sm rounded-md " 
               onClick={handleSearch}
+              disabled={!searchTerm.trim() && filterStatus === 'all'}
             >
               <Search className="w-4 h-4 mr-2" />
               Ara
@@ -279,15 +305,6 @@ const PatientManagement: React.FC = () => {
                   <Eye className="w-4 h-4 mr-1" />
                   Görüntüle
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 bg-red-50"
-                  onClick={() => handleDeletePatient(patient.id)}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Sil
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -368,13 +385,39 @@ const PatientManagement: React.FC = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Çıkış Onay Modalı */}
+      <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Kaydetmeden Çıkış</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-600">
+              Kaydetmeden çıkmak istediğinizden emin misiniz? <br />
+              Girilen bilgiler kaybolacaktır.
+            </p>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={cancelExit}>
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={confirmExit}>
+              Çık
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 // Add Patient Form Component
-const AddPatientForm: React.FC<{ onSubmit: (patient: Omit<Patient, 'id'>) => void }> = ({ onSubmit }) => {
-  const [formData, setFormData] = useState({
+const AddPatientForm: React.FC<{ 
+  onSubmit: (patient: Omit<Patient, 'id'>) => void;
+  onFormChange: (hasChanges: boolean) => void;
+}> = ({ onSubmit, onFormChange }) => {
+  const initialFormData = {
     firstName: '',
     lastName: '',
     email: '',
@@ -387,9 +430,32 @@ const AddPatientForm: React.FC<{ onSubmit: (patient: Omit<Patient, 'id'>) => voi
     medicalHistory: '',
     allergies: '',
     medications: ''
-  });
+  };
+  
+  const [formData, setFormData] = useState(initialFormData);
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  // Check if form has any changes
+  const hasChanges = () => {
+    return formData.firstName !== initialFormData.firstName ||
+           formData.lastName !== initialFormData.lastName ||
+           formData.email !== initialFormData.email ||
+           formData.phone !== initialFormData.phone ||
+           formData.phoneCountry !== initialFormData.phoneCountry ||
+           formData.birthDate !== initialFormData.birthDate ||
+           formData.gender !== initialFormData.gender ||
+           formData.address !== initialFormData.address ||
+           formData.bloodType !== initialFormData.bloodType ||
+           formData.medicalHistory !== initialFormData.medicalHistory ||
+           formData.allergies !== initialFormData.allergies ||
+           formData.medications !== initialFormData.medications;
+  };
+
+  // Notify parent component about form changes
+  React.useEffect(() => {
+    onFormChange(hasChanges());
+  }, [formData, onFormChange]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -480,7 +546,7 @@ const AddPatientForm: React.FC<{ onSubmit: (patient: Omit<Patient, 'id'>) => voi
           <Label htmlFor="firstName" className="mb-2 block">Ad</Label>
           <Input
             id="firstName"
-            className={`border ${errors.firstName ? 'border-red-500' : 'border-border'}`}
+            className="border border-gray-300 rounded-md"
             type="text"
             placeholder="Adınız"
             value={formData.firstName}
