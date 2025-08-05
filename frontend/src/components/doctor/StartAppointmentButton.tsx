@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Play, Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../ui/dialog";
+import { Play, Mic, MicOff, Video, VideoOff, PhoneOff, Star } from "lucide-react";
 import getSocket from "../../lib/socket";
 
 interface Appointment {
@@ -32,7 +32,14 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
   const [camOn, setCamOn] = useState(true);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [socketId, setSocketId] = useState<string | null>(null);
-  const [patientId, setPatientId] = useState<string | null>(null);
+  const [patientId, setPatientId] = useState<string>("");
+  
+  // Yeni state'ler
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [showRatingExitConfirm, setShowRatingExitConfirm] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
 
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -43,15 +50,79 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
 
   // ✅ Socket bağlantısı ve ID alma
   useEffect(() => {
-    socket.on("connect", () => {
-      setSocketId(socket.id);
+    const handleConnect = () => {
+      setSocketId(socket.id || null);
       console.log("Socket connected:", socket.id);
-    });
+    };
+
+    socket.on("connect", handleConnect);
+
+    // Eğer socket zaten bağlıysa ID'yi hemen al
+    if (socket.connected) {
+      setSocketId(socket.id || null);
+    }
 
     return () => {
-      socket.off("connect");
+      socket.off("connect", handleConnect);
     };
-  }, [socket]);
+  }, []);
+
+  // Çıkış işlemi
+  const handleExit = () => {
+    setShowExitConfirm(true);
+  };
+
+  // Çıkışı onayla
+  const confirmExit = () => {
+    setShowExitConfirm(false);
+    setOpen(false);
+    setShowRating(true);
+  };
+
+  // Çıkışı iptal et
+  const cancelExit = () => {
+    setShowExitConfirm(false);
+  };
+
+  // Değerlendirme modalından çıkış isteği
+  const handleRatingExit = () => {
+    setShowRatingExitConfirm(true);
+  };
+
+  // Değerlendirme çıkışını onayla
+  const confirmRatingExit = () => {
+    setShowRatingExitConfirm(false);
+    setShowRating(false);
+    setRating(0);
+    setComment("");
+  };
+
+  // Değerlendirme çıkışını iptal et
+  const cancelRatingExit = () => {
+    setShowRatingExitConfirm(false);
+  };
+
+  // Değerlendirmeyi gönder
+  const submitRating = () => {
+    console.log("Değerlendirme gönderildi:", { rating, comment });
+    // Geri bildirim kısmına değerlendirme gönder
+    const feedback = {
+      type: 'değerlendirme' as const,
+      title: `Canlı Görüşme Değerlendirmesi - ${rating} Yıldız`,
+      message: comment || `Değerlendirme: ${rating} yıldız`,
+      status: 'Gönderildi' as const,
+      createdAt: new Date().toISOString()
+    };
+    
+    // LocalStorage'dan mevcut geri bildirimleri al
+    const existingFeedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+    existingFeedbacks.push(feedback);
+    localStorage.setItem('feedbacks', JSON.stringify(existingFeedbacks));
+    
+    setShowRating(false);
+    setRating(0);
+    setComment("");
+  };
 
   // ✅ Video görüşmesi başlat
   const startVideoCall = async () => {
@@ -60,7 +131,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
     // Find current appointment and set patientId
     const current = appointments.find((app) => isCurrentAppointment(app));
     if (!current) return;
-    setPatientId(current.patientId.toString());
+    setPatientId(String(current.patientId));
 
     try {
       // Kamera ve mikrofon erişimi
@@ -110,7 +181,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
         socket.emit("signal", { to: patientId, data: { type: "offer", offer } });
       }
 
-      // ✅ Signaling eventleri dinle
+      // Signaling eventleri dinle
       const handleSignal = async ({ from, data }: any) => {
         if (!peerRef.current) return;
 
@@ -130,13 +201,9 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
       };
 
       socket.on("signal", handleSignal);
-
-      // Cleanup on close
-      return () => {
-        socket.off("signal", handleSignal);
-      };
     } catch (err) {
       console.error("Camera access error:", err);
+      setOpen(false); // Hata durumunda dialog'u kapat
     }
   };
 
@@ -172,6 +239,9 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
         peerRef.current = null;
       }
       setRemoteStream(null);
+      
+      // Signal event listener'ını temizle
+      socket.off("signal");
     }
   }, [open]);
 
@@ -179,7 +249,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
     <>
       <Button
         variant="outline"
-        className="w-full bg-white hover:bg-gray-50"
+        className="w-full border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
         onClick={() => {
           const current = appointments.find((app) =>
             isCurrentAppointment(app)
@@ -194,8 +264,11 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
         Online Randevuyu Başlat
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-full w-full">
+      <Dialog open={open} onOpenChange={() => {}}>
+        <DialogContent 
+          className="max-w-full w-full [&>button]:hidden" 
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Görüntülü Sohbet</DialogTitle>
           </DialogHeader>
@@ -239,7 +312,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
                 )}
               </Button>
               <Button
-                onClick={() => setOpen(false)}
+                onClick={handleExit}
                 variant="destructive"
                 size="icon"
               >
@@ -249,6 +322,135 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Çıkış Onay Modalı */}
+      <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Çıkış Onayı</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Görüşmeden çıkış yapacaksınız. Onaylıyor musunuz?
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={cancelExit} className="border-2 border-gray-300 shadow-sm">
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={confirmExit} className="border-2 border-gray-300 shadow-sm">
+              Evet, Çıkış Yap
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Değerlendirme Modalı */}
+      <Dialog open={showRating} onOpenChange={() => {}}>
+        <DialogContent 
+          className="max-w-md [&>button]:hidden" 
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>MedLine Değerlendirme</DialogTitle>
+            <DialogDescription>
+              Bizi değerlendirin ve yorumunuzu paylaşın.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            
+            {/* Yıldız Değerlendirmesi */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Değerlendirme
+              </label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className="text-2xl hover:scale-110 transition-transform"
+                  >
+                                         <Star
+                       className={`w-6 h-6 ${
+                         star <= rating
+                           ? "text-black fill-current"
+                           : "text-gray-300"
+                       }`}
+                     />
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {rating === 0 && "Değerlendirme seçin"}
+                {rating === 1 && "Çok Kötü"}
+                {rating === 2 && "Kötü"}
+                {rating === 3 && "Orta"}
+                {rating === 4 && "İyi"}
+                {rating === 5 && "Çok İyi"}
+              </p>
+            </div>
+
+            {/* Yorum Alanı */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Yorum
+              </label>
+                             <textarea
+                 value={comment}
+                 onChange={(e) => setComment(e.target.value)}
+                 placeholder="MedLine hakkında yorumunuzu yazın..."
+                 className="w-full p-3 border border-black rounded-md resize-none focus:outline-none focus:ring-0 focus:border-black"
+                 rows={3}
+                 maxLength={500}
+               />
+              <p className="text-xs text-gray-500 mt-1">
+                {comment.length}/500 karakter
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleRatingExit} 
+              className="border-2 border-gray-300 shadow-sm"
+            >
+              İptal
+            </Button>
+            <Button 
+              onClick={submitRating}
+              disabled={rating === 0}
+              className="border-2 border-gray-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Değerlendirmeyi Gönder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Değerlendirme Çıkış Onay Modalı */}
+      <Dialog open={showRatingExitConfirm} onOpenChange={setShowRatingExitConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Çıkış Onayı</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Değerlendirme sayfasından çıkış yapacaksınız. Onaylıyor musunuz?
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={cancelRatingExit} className="border-2 border-gray-300 shadow-sm">
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={confirmRatingExit} className="border-2 border-gray-300 shadow-sm">
+              Evet, Çıkış Yap
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </>
   );
 };
