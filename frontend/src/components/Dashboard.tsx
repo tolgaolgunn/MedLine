@@ -41,6 +41,7 @@ import { DoctorProfile } from "./doctor/DoctorProfile";
 import DoctorReports from "./DoctorReports";
 import  Feedback  from "./feedback"; 
 import PatientVideoCallButton from "./PatientVideoCallButton";
+import { Settings } from "./Settings";
 
 interface Appointment {
   id: number;
@@ -203,6 +204,8 @@ export function Dashboard() {
         return <Feedback />;
       case "reports":
         return userRole === 'doctor' ? <DoctorReports /> : <div>Raporlar</div>;
+      case "settings":
+        return <Settings />;
       default:
         return userRole === 'doctor' ? (
           <DoctorDashboard />

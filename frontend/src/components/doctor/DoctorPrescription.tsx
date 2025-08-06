@@ -1033,7 +1033,7 @@ const EditPrescriptionForm: React.FC<{
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="nextVisit">Sonraki Ziyaret (Opsiyonel)</Label>
+          <Label htmlFor="nextVisit">Sonraki Ziyaret (Opsiyonel) </Label>
           <Input
             id="nextVisit"
             className="w-full border-2 border-gray-300 shadow-sm rounded-md mt-2" 

@@ -11,6 +11,18 @@ exports.createAppointment = async (req, res) => {
       return res.status(400).json({ message: 'Tüm alanlar zorunludur.' });
     }
 
+    // Geçmiş saat için randevu alınamaz kontrolü
+    const appointmentDate = new Date(datetime);
+    const now = new Date();
+    if (
+      appointmentDate.toDateString() === now.toDateString() &&
+      appointmentDate.getTime() <= now.getTime()
+    ) {
+      return res.status(409).json({
+        message: 'Geçmiş bir saat için randevu alamazsınız.'
+      });
+    }
+
     // Doktorun bu saatte randevusu var mı kontrol et
     const doctorConflictCheck = await db.query(
       `SELECT COUNT(*) as count FROM appointments 

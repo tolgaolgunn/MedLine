@@ -257,7 +257,20 @@ export function DoctorSearch() {
 
   const isTimeSlotDisabled = (time: string): boolean => {
     if (!selectedDate || !selectedDoctor || !time) return false;
-    
+
+    // Eğer seçilen tarih bugünse ve seçilen saat şu andan önceyse, buton disabled
+    const today = new Date();
+    const selectedDateOnly = new Date(selectedDate);
+    const isToday = today.toDateString() === selectedDateOnly.toDateString();
+    if (isToday) {
+      const [hour, minute] = time.split(":").map(Number);
+      const slotDate = new Date(selectedDateOnly);
+      slotDate.setHours(hour, minute, 0, 0);
+      if (slotDate.getTime() <= today.getTime()) {
+        return true;
+      }
+    }
+
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const expectedDateTime = `${dateStr} ${time}:00`;
     
@@ -763,7 +776,11 @@ export function DoctorSearch() {
                                            : "outline"
                                        }
                                        size="sm"
-                                       className={`h-10 text-sm font-medium w-full ${
+                                       className={`h-10 text-sm font-medium w-full border border-black ${
+                                         selectedTime === time
+                                           ? 'border-black'
+                                           : 'border-gray-400'
+                                       } ${
                                          isDisabled ? 'opacity-50 cursor-not-allowed' : ''
                                        }`}
                                        onClick={() => {
@@ -785,14 +802,9 @@ export function DoctorSearch() {
                                    </div>
                                  );
                                })}
-                             </div>
-                             {selectedTime && (
-                               <p className="text-sm text-green-600 mt-2">
-                                 Seçilen saat: {selectedTime}
-                               </p>
-                             )}
-                           </div>
-                         )}
+                            </div>
+                          </div>
+                        )}
 
                           <div className="space-y-3">
                            <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
