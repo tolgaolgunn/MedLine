@@ -23,7 +23,7 @@ import {
 } from './ui/form'  ;
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
-type AuthMode = "login" | "register" | "forgot-password" | "reset-success";
+type AuthMode = "login" | "register" | "forgot-password" | "reset-password" | "reset-success";
 
 function filterNameInput(value: string) {
   return value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '');
@@ -58,6 +58,15 @@ export function HealthAuthForm() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [resetPasswordData, setResetPasswordData] = useState({
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmResetPassword, setShowConfirmResetPassword] = useState(false);
+  const [isCheckingPassword, setIsCheckingPassword] = useState(false);
+  const [isSamePassword, setIsSamePassword] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -78,7 +87,9 @@ export function HealthAuthForm() {
       setMode('register');
     } else if (pathname === '/forgot-password') {
       setMode('forgot-password');
-    } else if (pathname === '/reset-password' || pathname === '/reset-success') {
+    } else if (pathname === '/reset-password') {
+      setMode('reset-password');
+    } else if (pathname === '/reset-success') {
       setMode('reset-success');
     } else {
       setMode('login');
@@ -94,6 +105,17 @@ export function HealthAuthForm() {
       if (rememberedEmail && isRemembered) {
         setFormData(prev => ({ ...prev, email: rememberedEmail }));
         setRememberMe(true);
+      }
+    }
+  }, [mode]);
+
+  // Reset password token'ını URL'den al
+  useEffect(() => {
+    if (mode === 'reset-password') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      if (token) {
+        setResetToken(token);
       }
     }
   }, [mode]);
@@ -215,6 +237,7 @@ export function HealthAuthForm() {
   const isLogin = mode === "login";
   const isRegister = mode === "register";
   const isForgotPassword = mode === "forgot-password";
+  const isResetPassword = mode === "reset-password";
   const isResetSuccess = mode === "reset-success";
 
   // Şifremi unuttum formu
@@ -251,6 +274,87 @@ export function HealthAuthForm() {
       setIsSubmitting(false);
     }
   }
+
+  // Şifre kontrolü fonksiyonu
+  const checkPassword = async (password: string) => {
+    if (!resetToken || !password) {
+      setIsSamePassword(false);
+      return;
+    }
+
+    try {
+      setIsCheckingPassword(true);
+      const response = await fetch(`${API_URL}/check-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: resetToken,
+          password: password
+        })
+      });
+      
+      const data = await response.json();
+      setIsSamePassword(response.status === 400 && data.message === "Şifreniz önceki şifrenizle aynı olamaz.");
+    } catch (error) {
+      setIsSamePassword(false);
+    } finally {
+      setIsCheckingPassword(false);
+    }
+  };
+
+  // Şifre sıfırlama fonksiyonu
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetToken) {
+      sonnerToast.error('Geçersiz veya eksik token.');
+      return;
+    }
+
+    if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
+      sonnerToast.error('Şifreler eşleşmiyor.');
+      return;
+    }
+
+    // Şifre gereksinimleri kontrolü
+    const errors = getPasswordErrors(resetPasswordData.newPassword);
+    if (Object.values(errors).some(Boolean)) {
+      sonnerToast.error('Şifre gereksinimlerini karşılayınız.');
+      return;
+    }
+
+    // Aynı şifre kontrolü
+    if (isSamePassword) {
+      sonnerToast.error('Şifreniz önceki şifrenizle aynı olamaz.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`${API_URL}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: resetToken,
+          password: resetPasswordData.newPassword
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        sonnerToast.error(data.message || 'Şifre sıfırlama başarısız. Lütfen tekrar deneyin.');
+        return;
+      }
+      
+      sonnerToast.success('Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.');
+      navigate("/login");
+    } catch (error) {
+      sonnerToast.error('Sunucu hatası. Lütfen tekrar deneyin.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -339,7 +443,7 @@ export function HealthAuthForm() {
             </div>
 
             {/* Back Button for Forgot Password */}
-            {(isForgotPassword || isResetSuccess) && (
+            {(isForgotPassword || isResetPassword || isResetSuccess) && (
               <button
                 onClick={() => navigate("/login")}
                 className="flex items-center gap-2 text-gray-600 hover:text-slate-800 mb-6 transition-colors"
@@ -354,13 +458,11 @@ export function HealthAuthForm() {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 {isLogin && "Hesabınıza Giriş Yapın"}
                 {isRegister && "Yeni Hesabınızı Oluşturun"}
-                {/* {isForgotPassword && "Şifremi Unuttum"} */}
-                {/* {isResetSuccess && "E-posta Gönderildi"} */}
+              
               </h2>
               <p className="text-gray-600">
                 {isRegister && "Sağlıklı yaşam yolculuğunuza başlayın"}
-                {/* {isForgotPassword && "E-posta adresinizi girin, size şifre sıfırlama bağlantısı gönderelim"} */}
-                {/* {isResetSuccess && "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi"} */}
+               
               </p>
             </div>
 
@@ -380,7 +482,7 @@ export function HealthAuthForm() {
                   <Button
                     onClick={() => navigate("/login")}
                     variant="outline"
-                    className="w-full mt-6 border-slate-300 text-slate-800 hover:bg-slate-50"
+                    className="w-42 mt-6 !border-2 !border-gray-300 text-slate-800 hover:bg-slate-50"
                   >
                     Giriş Sayfasına Dön
                   </Button>
@@ -388,52 +490,212 @@ export function HealthAuthForm() {
               </div>
             )}
 
+            {/* Reset Password Form */}
+            {isResetPassword && (
+              <>
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Yeni Şifre Belirleyin
+                  </h2>
+                  <p className="text-gray-600">
+                    Güvenliğiniz için güçlü bir şifre seçin.
+                  </p>
+                </div>
+
+                <form onSubmit={handleResetPassword} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword" className="text-gray-700">Yeni Şifre</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                             <Input
+                         id="newPassword"
+                         type={showNewPassword ? "text" : "password"}
+                         placeholder="••••••••"
+                         value={resetPasswordData.newPassword}
+                         onChange={e => {
+                           const newPassword = e.target.value;
+                           setResetPasswordData(prev => ({ ...prev, newPassword }));
+                           // Şifre değiştiğinde kontrol et (debounce ile)
+                           if (newPassword.length >= 8) {
+                             setTimeout(() => checkPassword(newPassword), 500);
+                           } else {
+                             setIsSamePassword(false);
+                           }
+                         }}
+                         onKeyPress={(e) => {
+                           if (e.key === 'Enter') {
+                             e.preventDefault();
+                             handleResetPassword(e as any);
+                           }
+                         }}
+                         className="pl-9 pr-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
+                         required
+                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                                         {/* Şifre gereksinimleri */}
+                     <ul className="text-xs mt-1 ml-4 list-disc space-y-1">
+                       {passwordRequirements.map(req => {
+                         const errors = getPasswordErrors(resetPasswordData.newPassword);
+                         if (!errors[req.key]) return null;
+                         return (
+                           <li key={req.key} className="text-red-600">{req.label}</li>
+                         );
+                       })}
+                     </ul>
+                     
+                     {/* Aynı şifre uyarısı */}
+                     {isSamePassword && (
+                       <div className="flex items-center gap-1 text-xs text-red-600 mt-1">
+                         <span>⚠️</span>
+                         Şifreniz önceki şifrenizle aynı olamaz.
+                       </div>
+                     )}
+                     
+                     {/* Şifre kontrol ediliyor mesajı */}
+                     {isCheckingPassword && (
+                       <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
+                         <span>⏳</span>
+                         Şifre kontrol ediliyor...
+                       </div>
+                     )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmResetPassword" className="text-gray-700">Şifre Tekrar</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="confirmResetPassword"
+                        type={showConfirmResetPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={resetPasswordData.confirmPassword}
+                        onChange={e => setResetPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleResetPassword(e as any);
+                          }
+                        }}
+                        className="pl-9 pr-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmResetPassword(!showConfirmResetPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
+                      >
+                        {showConfirmResetPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {resetPasswordData.newPassword && resetPasswordData.confirmPassword && resetPasswordData.newPassword !== resetPasswordData.confirmPassword && (
+                      <div className="flex items-center gap-1 text-xs text-red-600 mt-1">Şifreler uyuşmamaktadır.</div>
+                    )}
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="w-full h-12 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800 hover:from-blue-950 hover:to-blue-950 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  >
+                    {isSubmitting ? "Şifre Sıfırlanıyor..." : "Şifreyi Sıfırla"}
+                  </Button>
+                </form>
+
+                {/* Switch Mode */}
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-gray-600">
+                    Şifrenizi hatırladınız mı? {" "}
+                    <button
+                      type="button"
+                      onClick={() => navigate("/login")}
+                      className="text-slate-800 hover:text-slate-900 hover:underline font-semibold transition-colors"
+                    >
+                      Giriş Yap
+                    </button>
+                  </p>
+                </div>
+              </>
+            )}
+
             {/* Forgot Password Form */}
             {isForgotPassword && (
-              <div className="flex min-h-[40vh] h-full w-full items-center justify-center px-4">
-                <Card className="mx-auto max-w-sm w-full bg-blue-900/90">
-                  <CardHeader>
-                    <CardTitle className="text-2xl text-center text-white">Şifremi Unuttum</CardTitle>
-                    <CardDescription className="text-center text-white">
-                      Şifre sıfırlama bağlantısı almak için e-posta adresinizi girin.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ShadForm {...forgotForm}>
-                      <form onSubmit={forgotForm.handleSubmit(onForgotSubmit)} className="space-y-8">
-                        <div className="grid gap-4">
-                          <FormField
-                            control={forgotForm.control}
-                            name="email"
-                            render={({ field }: { field: any }) => (
-                              <FormItem className="grid gap-2">
-                                <FormLabel htmlFor="email" className="text-white">E-posta</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    id="email"
-                                    placeholder="ornek@email.com"
-                                    type="email"
-                                    autoComplete="email"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <Button 
-                            type="submit" 
-                            disabled={isSubmitting}
-                            className="w-full text-white bg-slate-800 hover:bg-slate-900 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isSubmitting ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
-                          </Button>
-                        </div>
-                      </form>
-                    </ShadForm>
-                  </CardContent>
-                </Card>
-              </div>
+              <>
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Şifremi Unuttum
+                  </h2>
+                  <p className="text-gray-600">
+                    Şifre sıfırlama bağlantısı almak için e-posta adresinizi girin.
+                  </p>
+                </div>
+
+                <ShadForm {...forgotForm}>
+                  <form onSubmit={forgotForm.handleSubmit(onForgotSubmit)} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-gray-700">E-posta Adresi</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <FormField
+                          control={forgotForm.control}
+                          name="email"
+                          render={({ field }: { field: any }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input
+                                  id="email"
+                                  type="email"
+                                  placeholder="ornek@email.com"
+                                  className="pl-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
+                                  autoComplete="email"
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      forgotForm.handleSubmit(onForgotSubmit)();
+                                    }
+                                  }}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting}
+                      className="w-full h-12 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800 hover:from-blue-950 hover:to-blue-950 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
+                    >
+                      {isSubmitting ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
+                    </Button>
+                  </form>
+                </ShadForm>
+
+                {/* Switch Mode */}
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-gray-600">
+                    Şifrenizi hatırladınız mı? {" "}
+                    <button
+                      type="button"
+                      onClick={() => navigate("/login")}
+                      className="text-slate-800 hover:text-slate-900 hover:underline font-semibold transition-colors"
+                    >
+                      Giriş Yap
+                    </button>
+                  </p>
+                </div>
+              </>
             )}
 
             {/* Login/Register Form */}
@@ -482,6 +744,12 @@ export function HealthAuthForm() {
                         placeholder="ornek@email.com"
                         value={formData.email}
                         onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSubmit(e as any);
+                          }
+                        }}
                         className="pl-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
                         required
                       />
@@ -584,16 +852,22 @@ export function HealthAuthForm() {
                         placeholder="••••••••"
                         value={formData.password}
                         onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSubmit(e as any);
+                          }
+                        }}
                         className="pl-9 pr-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
                         required
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
+                                             <button
+                         type="button"
+                         onClick={() => setShowPassword(!showPassword)}
+                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
+                       >
+                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                       </button>
                     </div>
                     {/* Şifre gereksinimleri */}
                     {isRegister && (
@@ -621,6 +895,7 @@ export function HealthAuthForm() {
                       <Label 
                         htmlFor="rememberMe" 
                         className="text-sm text-gray-600 cursor-pointer"
+                        onClick={() => setRememberMe(!rememberMe)}
                       >
                         Beni Hatırla
                       </Label>
@@ -639,16 +914,22 @@ export function HealthAuthForm() {
                           placeholder="••••••••"
                           value={formData.confirmPassword}
                           onChange={e => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSubmit(e as any);
+                            }
+                          }}
                           className="pl-9 pr-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
                           required
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800"
-                        >
-                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                                                 <button
+                           type="button"
+                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
+                         >
+                           {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                         </button>
                       </div>
                       {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
                         <div className="flex items-center gap-1 text-xs text-red-600 mt-1">Şifreler uyuşmamaktadır.</div>

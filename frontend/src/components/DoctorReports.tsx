@@ -1,14 +1,15 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { PageHeader } from './ui/PageHeader';
 import { BarChart3 } from 'lucide-react';
 
 const DoctorReports: React.FC = () => {
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Raporlar</h1>
-        <p className="text-muted-foreground">Hasta ve randevu istatistiklerinizi görüntüleyin.</p>
-      </div>
+      <PageHeader 
+        title="Raporlar"
+        subtitle="Hasta ve randevu istatistiklerinizi görüntüleyin."
+      />
 
       <Card className="p-6">
         <CardHeader>

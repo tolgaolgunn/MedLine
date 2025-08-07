@@ -62,6 +62,7 @@ exports.createAppointment = async (req, res) => {
   }
 };
 
+
 exports.getAppointmentsByUser = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -80,3 +81,39 @@ exports.getAppointmentsByUser = async (req, res) => {
   }
 };
 
+exports.getDoctorAppointmentsByDate = async (req, res) => {
+  try {
+    const { doctor_id, date } = req.params;
+    const result = await db.query(
+      `SELECT a.*, u.full_name AS patient_name
+       FROM appointments a
+       JOIN users u ON a.patient_id = u.user_id
+       WHERE a.doctor_id = $1 AND DATE(a.datetime) = $2
+       ORDER BY a.datetime ASC`,
+      [doctor_id, date]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Veritabanı hatası:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getPatientAppointmentsByDate = async (req, res) => {
+  try {
+    const { patient_id, date } = req.params;
+    const result = await db.query(
+      `SELECT a.*, u.full_name AS doctor_name, d.specialty AS doctor_specialty
+       FROM appointments a
+       JOIN users u ON a.doctor_id = u.user_id
+       JOIN doctor_profiles d ON u.user_id = d.user_id
+       WHERE a.patient_id = $1 AND DATE(a.datetime) = $2
+       ORDER BY a.datetime ASC`,
+      [patient_id, date]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Veritabanı hatası:", err);
+    res.status(500).json({ message: err.message });
+  }
+};

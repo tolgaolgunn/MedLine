@@ -198,6 +198,32 @@ exports.forgotPassword = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+exports.checkPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ message: "Token ve şifre gereklidir." });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await getUserByEmail(decoded.email);
+    if (!user) {
+      return res.status(404).json({ message: "Kullanıcı bulunamadı." });
+    }
+
+    // Mevcut şifre ile yeni şifreyi karşılaştır
+    const isSamePassword = await bcrypt.compare(password, user.password_hash);
+    if (isSamePassword) {
+      return res.status(400).json({ message: "Şifreniz önceki şifrenizle aynı olamaz." });
+    }
+
+    return res.json({ message: "Şifre uygun." });
+  } catch (error) {
+    console.error(error);
+    return res.status(400).json({ message: error.message || "Şifre kontrolü başarısız." });
+  }
+};
+
 exports.resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
@@ -209,6 +235,12 @@ exports.resetPassword = async (req, res) => {
     const user = await getUserByEmail(decoded.email);
     if (!user) {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
+    }
+
+    // Mevcut şifre ile yeni şifreyi karşılaştır
+    const isSamePassword = await bcrypt.compare(password, user.password_hash);
+    if (isSamePassword) {
+      return res.status(400).json({ message: "Şifreniz önceki şifrenizle aynı olamaz." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
