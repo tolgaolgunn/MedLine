@@ -11,6 +11,44 @@ exports.createAppointment = async (req, res) => {
       return res.status(400).json({ message: 'Tüm alanlar zorunludur.' });
     }
 
+    // Geçmiş saat için randevu alınamaz kontrolü
+    const appointmentDate = new Date(datetime);
+    const now = new Date();
+    if (
+      appointmentDate.toDateString() === now.toDateString() &&
+      appointmentDate.getTime() <= now.getTime()
+    ) {
+      return res.status(409).json({
+        message: 'Geçmiş bir saat için randevu alamazsınız.'
+      });
+    }
+
+    // Doktorun bu saatte randevusu var mı kontrol et
+    const doctorConflictCheck = await db.query(
+      `SELECT COUNT(*) as count FROM appointments 
+       WHERE doctor_id = $1 AND datetime = $2`,
+      [doctor_id, datetime]
+    );
+
+    if (parseInt(doctorConflictCheck.rows[0].count) > 0) {
+      return res.status(409).json({ 
+        message: 'Bu saatte doktorun başka bir randevusu bulunmaktadır.' 
+      });
+    }
+
+    // Hastanın bu saatte başka randevusu var mı kontrol et
+    const patientConflictCheck = await db.query(
+      `SELECT COUNT(*) as count FROM appointments 
+       WHERE patient_id = $1 AND datetime = $2`,
+      [patient_id, datetime]
+    );
+
+    if (parseInt(patientConflictCheck.rows[0].count) > 0) {
+      return res.status(409).json({ 
+        message: 'Bu saatte başka bir randevunuz bulunmaktadır.' 
+      });
+    }
+
     const result = await db.query(
       `INSERT INTO appointments (patient_id, doctor_id, datetime, type) VALUES ($1, $2, $3, $4) RETURNING *`,
       [patient_id, doctor_id, datetime, type]
@@ -23,7 +61,6 @@ exports.createAppointment = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 exports.getAppointmentsByUser = async (req, res) => {
   try {
