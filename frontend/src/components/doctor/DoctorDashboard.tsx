@@ -26,6 +26,7 @@ import {
   User,
   Bell,
   Play,
+  History,
 } from 'lucide-react';
 import axios from 'axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
@@ -59,6 +60,9 @@ const DoctorDashboard: React.FC = () => {
   const [pendingAppointments, setPendingAppointments] = useState<number>(0);
   const [todayAppointmentCount, setTodayAppointmentCount] = useState<number>(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<Array<{text: string, timestamp: number}>>([]);
+  const [searchFilter, setSearchFilter] = useState<string>('all');
 
   const [patients, setPatients] = useState<Patient[]>([
     {
@@ -207,6 +211,25 @@ const DoctorDashboard: React.FC = () => {
     }
   }, []);
 
+  // Geçmiş aramaları yükle
+  useEffect(() => {
+    const savedSearches = localStorage.getItem('recentSearches_doctor');
+    if (savedSearches) {
+      try {
+        const parsed = JSON.parse(savedSearches);
+        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
+          const converted = parsed.map((text: string) => ({ text, timestamp: Date.now() }));
+          setRecentSearches(converted);
+        } else {
+          setRecentSearches(parsed);
+        }
+      } catch (error) {
+        console.error('Error parsing recent searches:', error);
+        setRecentSearches([]);
+      }
+    }
+  }, []);
+
   // Toplam hasta sayısını veritabanından çek
   useEffect(() => {
     if (doctorId) {
@@ -294,20 +317,72 @@ const DoctorDashboard: React.FC = () => {
     }
   }, [doctorId]);
 
-     const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
-     try {
-       await axios.patch(`http://localhost:3005/api/doctor/appointments/${appointmentId}/status`, { status: newStatus });
-       // Güncel randevuları tekrar çek veya local state'i güncelle
-       setAppointments(prev =>
-         prev.map(app =>
-           app.id === appointmentId ? { ...app, status: newStatus } : app
-         )
-       );
-       toast.success('Randevu durumu güncellendi!');
-     } catch (e) {
-       toast.error('Durum güncellenemedi!');
-     }
-   };
+       const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
+    try {
+      await axios.patch(`http://localhost:3005/api/doctor/appointments/${appointmentId}/status`, { status: newStatus });
+      // Güncel randevuları tekrar çek veya local state'i güncelle
+      setAppointments(prev =>
+        prev.map(app =>
+          app.id === appointmentId ? { ...app, status: newStatus } : app
+        )
+      );
+      toast.success('Randevu durumu güncellendi!');
+    } catch (e) {
+      toast.error('Durum güncellenemedi!');
+    }
+  };
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    
+    // Geçersiz tarih kontrolü
+    if (isNaN(diffInMs) || diffInMs < 0) {
+      return 'Az önce';
+    }
+    
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor(diffInHours * 60);
+      return `${diffInMinutes} dakika önce`;
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)} saat önce`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays} gün önce`;
+    }
+  };
+
+  // Filtrelenmiş aramaları hesapla
+  const getFilteredSearches = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getFullYear(), now.getMonth() - 1, now.getDate());
+    const yearAgo = new Date(today.getFullYear() - 1, now.getMonth(), now.getDate());
+
+    return recentSearches.filter(search => {
+      const searchDate = new Date(search.timestamp);
+      
+      switch (searchFilter) {
+        case 'today':
+          return searchDate >= today;
+        case 'yesterday':
+          return searchDate >= yesterday && searchDate < today;
+        case 'week':
+          return searchDate >= weekAgo;
+        case 'month':
+          return searchDate >= monthAgo;
+        case 'year':
+          return searchDate >= yearAgo;
+        default:
+          return true;
+      }
+    });
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -507,7 +582,7 @@ const DoctorDashboard: React.FC = () => {
                 variant="outline" 
                 className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-green-50 hover:border-green-300 transition-colors"
                 onClick={() => {
-                  navigate('/doctor/patients');
+                  navigate('/doctor/patients', { state: { from: '/doctor/dashboard' } });
                 }}
               >
                 <Users className="w-5 h-5 text-green-600" />
@@ -518,36 +593,21 @@ const DoctorDashboard: React.FC = () => {
                 variant="outline" 
                 className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-purple-50 hover:border-purple-300 transition-colors"
                 onClick={() => {
-                  navigate('/doctor/prescriptions');
+                  navigate('/doctor/prescriptions', { state: { from: '/doctor/dashboard' } });
                 }}
               >
                 <Pill className="w-5 h-5 text-purple-600" />
                 <span className="text-sm font-medium">Reçete Yönetimi</span>
               </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-red-50 hover:border-red-300 transition-colors"
-                onClick={() => {
-                  navigate('/doctor/feedback');
-                }}
-              >
-                <MessageSquare className="w-5 h-5 text-red-600" />
-                <span className="text-sm font-medium">Geri Bildirim</span>
-              </Button>
-               
+
               <Button 
                 variant="outline" 
                 className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-orange-50 hover:border-orange-300 transition-colors"
-                onClick={() => {
-                  navigate('/doctor/reports');
-                }}
+                onClick={() => setShowHistoryModal(true)}
               >
-                <BarChart3 className="w-5 h-5 text-orange-600" />
-                <span className="text-sm font-medium">Raporlar</span>
-                
+                <History className="w-5 h-5 text-orange-600" />
+                <span className="text-sm font-medium">Geçmiş Aramalar</span>
               </Button>
-              
             </div>
           </CardContent>
         </Card>
@@ -581,7 +641,7 @@ const DoctorDashboard: React.FC = () => {
                 )}
               </div>
               
-                             {/* Status Değiştirme Butonları */}
+            {/* Status Değiştirme Butonları */}
                <div className="border-t pt-4">
                                    <div className="flex items-center gap-4">
                     <h4 className="font-semibold text-gray-900 whitespace-nowrap">Durum Değiştir:</h4>
@@ -670,18 +730,131 @@ const DoctorDashboard: React.FC = () => {
                  </div>
                </div>
             </div>
-                         <DialogFooter>
+             <DialogFooter>
                <Button 
                  variant="outline" 
                  onClick={handleCloseDetail}
-                 className="border-2 border-gray-300 hover:border-gray-400"
-               >
+                 className="border-2 border-gray-300 hover:border-gray-400">
                  Kapat
                </Button>
              </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Geçmiş Aramalar Modal */}
+      <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Geçmiş Aramalar</DialogTitle>
+          </DialogHeader>
+          
+          {/* Filtre Butonları */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Button
+              variant={searchFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSearchFilter('all')}
+            >
+              Tümü
+            </Button>
+            <Button
+              variant={searchFilter === 'today' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSearchFilter('today')}
+            >
+              Bugün
+            </Button>
+            <Button
+              variant={searchFilter === 'yesterday' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSearchFilter('yesterday')}
+            >
+              Dün
+            </Button>
+            <Button
+              variant={searchFilter === 'week' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSearchFilter('week')}
+            >
+              Bu Hafta
+            </Button>
+            <Button
+              variant={searchFilter === 'month' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSearchFilter('month')}
+            >
+              Bu Ay
+            </Button>
+            <Button
+              variant={searchFilter === 'year' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSearchFilter('year')}
+            >
+              Bu Yıl
+            </Button>
+          </div>
+
+          <div className="py-4">
+            {getFilteredSearches().length > 0 ? (
+              <div className="space-y-3">
+                {getFilteredSearches().map((search, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{search.text}</div>
+                        <div className="text-sm text-gray-500">{formatDate(search.timestamp)}</div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        // Arama yapmak için topbar'daki search fonksiyonunu tetikle
+                        window.dispatchEvent(new CustomEvent('setSearchValue', { 
+                          detail: { value: search.text } 
+                        }));
+                        setShowHistoryModal(false);
+                      }}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      Tekrar Ara
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <History className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>{searchFilter === 'all' ? 'Henüz arama geçmişi yok' : 'Bu filtrede arama bulunamadı'}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                setRecentSearches([]);
+                localStorage.removeItem('recentSearches_doctor');
+                setShowHistoryModal(false);
+              }}
+              disabled={recentSearches.length === 0}
+            >
+              Aramaları Temizle
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowHistoryModal(false)}
+            >
+              Kapat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Çıkış Onayı Modal */}
       <Dialog open={showExitConfirm} onOpenChange={(open) => {

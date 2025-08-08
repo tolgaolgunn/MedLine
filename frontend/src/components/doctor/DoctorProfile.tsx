@@ -240,10 +240,6 @@ export function DoctorProfile() {
       toast.error('Uzmanlık alanı boş bırakılamaz');
       return false;
     }
-    if (!doctorData.license_number.trim()) {
-      toast.error('Lisans numarası boş bırakılamaz');
-      return false;
-    }
     if (!doctorData.city.trim()) {
       toast.error('Şehir boş bırakılamaz');
       return false;
@@ -273,7 +269,6 @@ export function DoctorProfile() {
         address: formData.address,
         birth_date: formData.birthDate || null,
         specialty: doctorData.specialty,
-        license_number: doctorData.license_number,
         experience_years: doctorData.experience_years ? parseInt(doctorData.experience_years) : 0,
         biography: doctorData.biography,
         city: doctorData.city,
@@ -440,13 +435,12 @@ export function DoctorProfile() {
                   placeholder="Uzmanlık alanınızı giriniz"
                 />
 
-                <Label htmlFor="license_number">Lisans Numarası</Label>
-                <Input
-                  id="license_number"
-                  value={doctorData.license_number}
-                  onChange={e => handleDoctorInputChange('license_number', e.target.value)}
-                  placeholder="Lisans numaranızı giriniz"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="license_number" className="text-sm">Lisans Numarası</Label>
+                  <div className="p-1">
+                    {doctorData.license_number || "Lisans numarası bulunamadı"}
+                  </div>
+                </div>
 
                 <Label htmlFor="experience_years">Deneyim Yılı</Label>
                 <Input

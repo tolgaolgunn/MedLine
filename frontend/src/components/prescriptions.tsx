@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { PageHeader } from "./ui/PageHeader";
 import { Search, Download } from "lucide-react";
 
 interface Prescription {
@@ -93,10 +94,11 @@ export function Prescriptions() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">Reçetelerim</h1>
-      <p className="text-muted-foreground mb-6">
-        Tüm reçetelerinizi görüntüleyin ve detaylarını inceleyin.
-      </p>
+      <PageHeader 
+        title="Reçetelerim"
+        subtitle="Tüm reçetelerinizi görüntüleyin ve detaylarını inceleyin"
+        showBackButton={true}
+      />
       
       {/* Search and Filters */}
       <Card>

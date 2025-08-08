@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from './ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -26,6 +27,7 @@ import {
   BarChart3,
   Stethoscope,
   MessageSquare,
+  History,
 } from 'lucide-react';
 import { Profile } from "./Profile";
 import { AIDiagnosis } from "./AIDiagnosis";
@@ -71,12 +73,18 @@ export function Dashboard() {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const userObj = JSON.parse(userStr);
-        setUserRole(userObj.role || 'patient');
+        const role = userObj.role || 'patient';
+        setUserRole(role);
+        
+        // Eğer doktor ise ve /dashboard sayfasındaysa /doctor/dashboard'a yönlendir
+        if (role === 'doctor' && window.location.pathname === '/dashboard') {
+          navigate('/doctor/dashboard');
+        }
       }
     } catch (error) {
       console.error('Error parsing user data:', error);
     }
-  }, []);
+  }, [navigate]);
 
   // Hasta randevu verilerini al
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
@@ -259,6 +267,9 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
 
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<Array<{text: string, timestamp: number}>>([]);
+  const [searchFilter, setSearchFilter] = useState<string>('all');
   try {
     const userStr = localStorage.getItem('user');
     if (userStr) {
@@ -270,6 +281,77 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
       }
     }
   } catch {}
+
+  // Geçmiş aramaları yükle
+  useEffect(() => {
+    const savedSearches = localStorage.getItem('recentSearches_patient');
+    if (savedSearches) {
+      try {
+        const parsed = JSON.parse(savedSearches);
+        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
+          const converted = parsed.map((text: string) => ({ text, timestamp: Date.now() }));
+          setRecentSearches(converted);
+        } else {
+          setRecentSearches(parsed);
+        }
+      } catch (error) {
+        console.error('Error parsing recent searches:', error);
+        setRecentSearches([]);
+      }
+    }
+  }, []);
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    
+    // Geçersiz tarih kontrolü
+    if (isNaN(diffInMs) || diffInMs < 0) {
+      return 'Az önce';
+    }
+    
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor(diffInHours * 60);
+      return `${diffInMinutes} dakika önce`;
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)} saat önce`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays} gün önce`;
+    }
+  };
+
+  // Filtrelenmiş aramaları hesapla
+  const getFilteredSearches = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getFullYear(), now.getMonth() - 1, now.getDate());
+    const yearAgo = new Date(today.getFullYear() - 1, now.getMonth(), now.getDate());
+
+    return recentSearches.filter(search => {
+      const searchDate = new Date(search.timestamp);
+      
+      switch (searchFilter) {
+        case 'today':
+          return searchDate >= today;
+        case 'yesterday':
+          return searchDate >= yesterday && searchDate < today;
+        case 'week':
+          return searchDate >= weekAgo;
+        case 'month':
+          return searchDate >= monthAgo;
+        case 'year':
+          return searchDate >= yearAgo;
+        default:
+          return true;
+      }
+    });
+  };
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
@@ -413,6 +495,39 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
   </Dialog>
 )}
         <div className="space-y-6">
+          {/* Hızlı İşlemler */}
+          <Card className="p-6 transition-colors duration-200">
+            <h2 className="text-xl font-semibold mb-4">Hızlı İşlemler</h2>
+            <div className="space-y-3">
+              <Button 
+                variant="outline" 
+                className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                onClick={() => setActiveSection('doctor-search')}
+              >
+                <Users className="w-5 h-5 text-blue-600" />
+                <span className="text-sm font-medium">Doktor Ara</span>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-green-50 hover:border-green-300 transition-colors"
+                onClick={() => setActiveSection('appointments')}
+              >
+                <Calendar className="w-5 h-5 text-green-600" />
+                <span className="text-sm font-medium">Randevu Al</span>
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-orange-50 hover:border-orange-300 transition-colors"
+                onClick={() => setShowHistoryModal(true)}
+              >
+                <History className="w-5 h-5 text-orange-600" />
+                <span className="text-sm font-medium">Geçmiş Aramalar</span>
+              </Button>
+            </div>
+          </Card>
+
           <Card className="p-6 transition-colors duration-200">
             <h2 className="text-xl font-semibold mb-4">Sağlık Durumu</h2>
               <div className="space-y-4">
@@ -446,6 +561,119 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                       </Button>
           </Card>
 
+          {/* Geçmiş Aramalar Modal */}
+          <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Geçmiş Aramalar</DialogTitle>
+              </DialogHeader>
+              
+              {/* Filtre Butonları */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button
+                  variant={searchFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSearchFilter('all')}
+                >
+                  Tümü
+                </Button>
+                <Button
+                  variant={searchFilter === 'today' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSearchFilter('today')}
+                >
+                  Bugün
+                </Button>
+                <Button
+                  variant={searchFilter === 'yesterday' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSearchFilter('yesterday')}
+                >
+                  Dün
+                </Button>
+                <Button
+                  variant={searchFilter === 'week' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSearchFilter('week')}
+                >
+                  Bu Hafta
+                </Button>
+                <Button
+                  variant={searchFilter === 'month' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSearchFilter('month')}
+                >
+                  Bu Ay
+                </Button>
+                <Button
+                  variant={searchFilter === 'year' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSearchFilter('year')}
+                >
+                  Bu Yıl
+                </Button>
+              </div>
+
+              <div className="py-4">
+                {getFilteredSearches().length > 0 ? (
+                  <div className="space-y-3">
+                    {getFilteredSearches().map((search, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{search.text}</div>
+                            <div className="text-sm text-gray-500">{formatDate(search.timestamp)}</div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            // Arama yapmak için topbar'daki search fonksiyonunu tetikle
+                            window.dispatchEvent(new CustomEvent('setSearchValue', { 
+                              detail: { value: search.text } 
+                            }));
+                            setShowHistoryModal(false);
+                          }}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          Tekrar Ara
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <History className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>{searchFilter === 'all' ? 'Henüz arama geçmişi yok' : 'Bu filtrede arama bulunamadı'}</p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="flex gap-2">
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    setRecentSearches([]);
+                    localStorage.removeItem('recentSearches_patient');
+                    setShowHistoryModal(false);
+                  }}
+                  disabled={recentSearches.length === 0}
+                >
+                  Aramaları Temizle
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  Kapat
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
         </div>
       </div>
