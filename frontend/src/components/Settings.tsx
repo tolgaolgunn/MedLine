@@ -6,6 +6,7 @@ import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
+import { PageHeader } from "./ui/PageHeader";
 import { 
   Settings as SettingsIcon, 
   Bell, 
@@ -30,7 +31,6 @@ interface SettingsData {
   marketingEmails: boolean;
   
   // Gizlilik Ayarları
-  profileVisibility: 'public' | 'private' | 'doctors_only';
   shareMedicalData: boolean;
   allowResearchData: boolean;
   
@@ -58,7 +58,6 @@ export function Settings() {
     marketingEmails: false,
     
     // Gizlilik Ayarları
-    profileVisibility: 'doctors_only',
     shareMedicalData: true,
     allowResearchData: false,
     
@@ -172,15 +171,11 @@ export function Settings() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-          <SettingsIcon className="w-8 h-8 text-blue-600" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Ayarlar</h1>
-          <p className="text-gray-600">Hesap ve uygulama ayarlarınızı yönetin</p>
-        </div>
-      </div>
+      <PageHeader 
+        title="Ayarlar"
+        subtitle="Hesap ve uygulama ayarlarınızı yönetin"
+        showBackButton={true}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bildirim Ayarları */}
@@ -252,27 +247,8 @@ export function Settings() {
               Verilerinizin nasıl kullanılacağını kontrol edin
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Profil Görünürlüğü</Label>
-              <Select
-                value={settings.profileVisibility}
-                onValueChange={(value: 'public' | 'private' | 'doctors_only') => 
-                  handleSettingChange('profileVisibility', value)
-                }
-              >
-                <SelectTrigger className="w-32 hover:border-black">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="public">Herkese Açık</SelectItem>
-                  <SelectItem value="doctors_only">Sadece Doktorlar</SelectItem>
-                  <SelectItem value="private">Gizli</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-center justify-between">
+                     <CardContent className="space-y-4">
+             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Tıbbi Veri Paylaşımı</Label>
                 <p className="text-sm text-gray-500">Doktorlarınızla tıbbi verilerinizi paylaş</p>

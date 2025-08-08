@@ -28,6 +28,8 @@ const DoctorLayout: React.FC = () => {
       setActiveSection('profile');
     } else if (path.includes('/doctor/notifications')) {
       setActiveSection('notifications');
+    } else if (path.includes('/doctor/settings')) {
+      setActiveSection('settings');
     }
   }, [location.pathname]);
 
@@ -38,31 +40,35 @@ const DoctorLayout: React.FC = () => {
   };
 
   const handleSectionChange = (section: string) => {
+    console.log('handleSectionChange çağrıldı:', section);
     setActiveSection(section);
     switch (section) {
       case 'dashboard':
         navigate('/doctor/dashboard');
         break;
       case 'appointments':
-        navigate('/doctor/appointments');
+        navigate('/doctor/appointments', { state: { from: '/doctor/dashboard' } });
         break;
       case 'patients':
-        navigate('/doctor/patients');
+        navigate('/doctor/patients', { state: { from: '/doctor/dashboard' } });
         break;
       case 'prescriptions':
-        navigate('/doctor/prescriptions');
+        navigate('/doctor/prescriptions', { state: { from: '/doctor/dashboard' } });
         break;
       case 'reports':
-        navigate('/doctor/reports');
+        navigate('/doctor/reports', { state: { from: '/doctor/dashboard' } });
         break;
       case 'feedback':
-        navigate('/doctor/feedback');
+        navigate('/doctor/feedback', { state: { from: '/doctor/dashboard' } });
         break;
       case 'profile':
-        navigate('/doctor/profile');
+        navigate('/doctor/profile', { state: { from: '/doctor/dashboard' } });
         break;
       case 'notifications':
-        navigate('/doctor/notifications');
+        navigate('/doctor/notifications', { state: { from: '/doctor/dashboard' } });
+        break;
+      case 'settings':
+        navigate('/doctor/settings', { state: { from: '/doctor/dashboard' } });
         break;
       default:
         console.log('Unknown section:', section);

@@ -50,7 +50,10 @@ export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCol
   const doctorMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Ana Sayfa', icon: Heart },
     { id: 'appointments', label: 'Randevular', icon: Calendar },
+    { id: 'patients', label: 'Hasta Yönetimi', icon: User },
     { id: 'reports', label: 'Raporlar', icon: BarChart3 },
+    { id: 'feedback', label: 'Geri Bildirim', icon: MessageSquare },
+    { id:'prescriptions', label: 'Reçeteler', icon: Pill },
   ];
 
   // Use appropriate menu items based on user role
@@ -105,7 +108,10 @@ return (
       <Button
         variant="ghost"
         className={`w-full ${isCollapsed ? 'justify-center px-2' : 'justify-start gap-3 px-3'}`}
-        onClick={() => setActiveSection('settings')}
+        onClick={() => {
+          console.log('Ayarlar butonuna tıklandı');
+          setActiveSection('settings');
+        }}
       >
         <Settings className="w-4 h-4 flex-shrink-0" />
         {!isCollapsed && <span>Ayarlar</span>}

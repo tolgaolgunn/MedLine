@@ -16,7 +16,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Doktor rolü kontrolü
+  // Doktor rolü kontrolü - doktor olarak giriş yapmışsa ve /dashboard sayfasındaysa /doctor/dashboard'a yönlendir
+  if (location.pathname === '/dashboard' && user && user.role === 'doctor') {
+    return <Navigate to="/doctor/dashboard" replace />;
+  }
+
+  // Doktor sayfalarına hasta erişmeye çalışıyorsa dashboard'a yönlendir
   if (location.pathname.startsWith('/doctor') && (!user || user.role !== 'doctor')) {
     return <Navigate to="/dashboard" replace />;
   }
