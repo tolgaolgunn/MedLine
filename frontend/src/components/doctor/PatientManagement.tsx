@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Search, Plus, Filter, Eye, Trash2, Phone, Mail, Calendar } from 'lucide-react';
+import { Search, Plus, Eye, Phone, Mail, Calendar } from 'lucide-react';
 
 // Filter functions from HealthAuthForm
 function filterNameInput(value: string) {
@@ -20,98 +20,187 @@ function filterPhoneInput(value: string) {
   return value.replace(/[^0-9\s]/g, '');
 }
 
+// Patient interface'ini güncelle
 interface Patient {
-  id: string;
-  name: string;
-  age: number;
-  gender: string;
-  phone: string;
+  patient_id: string;      // backend'den gelen alan adı
+  patient_name: string;    // backend'den gelen alan adı
   email: string;
+  phone_number: string;    // backend'den gelen alan adı
+  birth_date: string;
+  gender: string;
   address: string;
-  bloodType: string;
-  lastVisit: string;
-  nextAppointment?: string;
-  status: 'active' | 'inactive';
-  medicalHistory: string[];
-  allergies: string[];
-  medications: string[];
+  medical_history: string;
+  doctor_id: string;
+  total_appointments: number;
+  last_appointment_date: string;
+  first_appointment_date: string;
 }
 
-const PatientManagement: React.FC = () => {
-  const [patients, setPatients] = useState<Patient[]>([
-    {
-      id: 'P001',
-      name: 'Ahmet Yılmaz',
-      age: 45,
-      gender: 'Erkek',
-      phone: '+90 532 123 4567',
-      email: 'ahmet.yilmaz@email.com',
-      address: 'İstanbul, Türkiye',
-      bloodType: 'A+',
-      lastVisit: '2024-01-10',
-      nextAppointment: '2024-01-20',
-      status: 'active',
-      medicalHistory: ['Hipertansiyon', 'Diyabet'],
-      allergies: ['Penisilin'],
-      medications: ['Metformin', 'Lisinopril']
-    },
-    {
-      id: 'P002',
-      name: 'Fatma Demir',
-      age: 32,
-      gender: 'Kadın',
-      phone: '+90 533 987 6543',
-      email: 'fatma.demir@email.com',
-      address: 'Ankara, Türkiye',
-      bloodType: 'O+',
-      lastVisit: '2024-01-08',
-      status: 'active',
-      medicalHistory: ['Astım'],
-      allergies: ['Lateks'],
-      medications: ['Salbutamol']
-    },
-    {
-      id: 'P003',
-      name: 'Mehmet Kaya',
-      age: 58,
-      gender: 'Erkek',
-      phone: '+90 534 555 1234',
-      email: 'mehmet.kaya@email.com',
-      address: 'İzmir, Türkiye',
-      bloodType: 'B+',
-      lastVisit: '2024-01-15',
-      status: 'active',
-      medicalHistory: ['Koroner arter hastalığı'],
-      allergies: [],
-      medications: ['Aspirin', 'Atorvastatin']
-    }
-  ]);
+// Hasta kartı içeriğini güncelle
+const PatientCard = ({ patient }: { patient: Patient }) => {
+  return (
+    <Card key={patient.patient_id} className="hover:shadow-lg transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg">{patient.patient_name}</CardTitle>
+            <p className="text-sm text-gray-600">ID: {patient.patient_id}</p>
+          </div>
+          <Badge className={getAppointmentStatusColor(patient.total_appointments)}>
+            {patient.total_appointments > 0 ? 'Aktif' : 'Pasif'}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col h-full">
+        <div className="flex-1 space-y-3">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <span>{calculateAge(patient.birth_date)} yaş</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-400">Cinsiyet:</span>
+              <span>{patient.gender}</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2 text-sm">
+            <Phone className="w-4 h-4 text-gray-400" />
+            <span>{patient.phone_number}</span>
+          </div>
+          
+          <div className="flex items-center space-x-2 text-sm">
+            <Mail className="w-4 h-4 text-gray-400" />
+            <span className="truncate">{patient.email}</span>
+          </div>
 
+          <div className="pt-2">
+            <p className="text-xs text-gray-500">
+              Son randevu: {formatDate(patient.last_appointment_date)}
+            </p>
+            <p className="text-xs text-gray-500">
+              Toplam randevu: {patient.total_appointments}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Yardımcı fonksiyonlar
+const calculateAge = (birthDate: string) => {
+  if (!birthDate) return 0;
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+const formatDate = (date: string) => {
+  if (!date) return 'Bilgi yok';
+  return new Date(date).toLocaleDateString('tr-TR');
+};
+
+const getAppointmentStatusColor = (totalAppointments: number) => {
+  return totalAppointments > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+};
+
+const PatientManagement: React.FC = () => {
+  // 1. All hooks at the top
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [activeSearchTerm, setActiveSearchTerm] = useState('');
-  const [activeFilterStatus, setActiveFilterStatus] = useState<string>('all');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [formHasChanges, setFormHasChanges] = useState(false);
 
-  const filteredPatients = patients.filter(patient => {
-    const matchesSearch = patient.name.toLowerCase().includes(activeSearchTerm.toLowerCase()) ||
-                         patient.email.toLowerCase().includes(activeSearchTerm.toLowerCase()) ||
-                         patient.phone.includes(activeSearchTerm);
-    const matchesStatus = activeFilterStatus === 'all' || patient.status === activeFilterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // 2. Remove redundant state
+  // Remove activeSearchTerm and activeFilterStatus states
+  // Use searchTerm and filterStatus directly
 
-  const getStatusColor = (status: string) => {
-    return status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-  };
+  // 3. Use useMemo for doctor ID
+  const currentDoctorId = useMemo(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return '';
+      const userData = JSON.parse(userStr);
+      return userData?.user_id || userData?.id || '';
+    } catch (error) {
+      console.error('Error getting doctor ID:', error);
+      return '';
+    }
+  }, []);
 
-  const handleAddPatient = (newPatient: Omit<Patient, 'id'>) => {
+  // 4. Data fetching effect
+  useEffect(() => {
+    const fetchPatients = async () => {
+      if (!currentDoctorId) {
+        setError('Doktor ID bulunamadı');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await fetch(`http://localhost:3005/api/doctor/patients/${currentDoctorId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setPatients(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching patients:', err);
+        setError('Hasta verileri yüklenirken bir hata oluştu');
+        setPatients([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPatients();
+  }, [currentDoctorId]);
+
+  // 5. Filtered patients with useMemo
+  const filteredPatients = useMemo(() => {
+    return patients.filter(patient => {
+      if (!patient || !patient.patient_name || !patient.email) {
+        return false;
+      }
+
+      const matchesDoctor = patient.doctor_id === currentDoctorId;
+      const matchesSearch = searchTerm ? (
+        patient.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient.phone_number && patient.phone_number.includes(searchTerm))
+      ) : true;
+      
+      return matchesDoctor && matchesSearch;
+    });
+  }, [patients, currentDoctorId, searchTerm]);
+
+  // 6. Helper functions (not hooks)
+  const handleAddPatient = (newPatient: Omit<Patient, 'id' | 'doctorId'>) => {
     const patient: Patient = {
       ...newPatient,
-      id: `P${String(patients.length + 1).padStart(3, '0')}`
+      patient_id: `P${String(patients.length + 1).padStart(3, '0')}`,
+      doctor_id: currentDoctorId
     };
     setPatients([...patients, patient]);
     setIsAddPatientOpen(false);
@@ -126,19 +215,29 @@ const PatientManagement: React.FC = () => {
     setShowExitConfirm(false);
   };
 
-  const handleSearch = () => {
-    setActiveSearchTerm(searchTerm);
-    setActiveFilterStatus(filterStatus);
-  };
+  // Yükleme durumu
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          <p className="mt-2 text-gray-600">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const clearSearch = () => {
-    setSearchTerm('');
-    setFilterStatus('all');
-    setActiveSearchTerm('');
-    setActiveFilterStatus('all');
-  };
-
-
+  // Hata durumu
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <p className="font-medium">Hata!</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -190,57 +289,29 @@ const PatientManagement: React.FC = () => {
                 placeholder="Hasta ara (isim, email, telefon)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearch();
-                  }
-                }}
                 className="pl-10 h-10"
               />
             </div>
             
-            {/* Filter Dropdown */}
-            <div className="w-full md:w-40">
-              <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value)}>
-                <SelectTrigger className="h-10 border-2 border-gray-300 rounded-md">
-                  <SelectValue placeholder="Durum" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tümü</SelectItem>
-                  <SelectItem value="active">Aktif</SelectItem>
-                  <SelectItem value="inactive">Pasif</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Remove Filter Dropdown */}
             
-            {/* Search Button */}
-            <Button 
-              className="w-full md:w-32 h-10 border-2 border-gray-300 shadow-sm rounded-md " 
-              onClick={handleSearch}
-              disabled={!searchTerm.trim() && filterStatus === 'all'}
-            >
-              <Search className="w-4 h-4 mr-2" />
-              Ara
-            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Search Results Info */}
-      {(activeSearchTerm || activeFilterStatus !== 'all') && (
+      {/* Update Search Results Info */}
+      {searchTerm && (
         <Card className="p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 flex-1">
               <Search className="w-4 h-4 text-gray-600" />
               <span className="text-sm text-gray-700">
-                Arama sonuçları: 
-                {activeSearchTerm && ` "${activeSearchTerm}"`}
-                {activeFilterStatus !== 'all' && ` - ${activeFilterStatus === 'active' ? 'Aktif' : 'Pasif'}`}
+                Arama sonuçları: "{searchTerm}"
                 {` (${filteredPatients.length} hasta bulundu)`}
               </span>
             </div>
             <button
-              onClick={clearSearch}
+              onClick={() => setSearchTerm('')}
               className="px-3 py-1.5 text-gray-600 border border-gray-300 hover:bg-gray-100 hover:border-gray-400 rounded-md text-sm font-medium transition-colors"
             >
               Temizle
@@ -252,62 +323,7 @@ const PatientManagement: React.FC = () => {
       {/* Patients Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredPatients.map((patient) => (
-          <Card key={patient.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">{patient.name}</CardTitle>
-                  <p className="text-sm text-gray-600">ID: {patient.id}</p>
-                </div>
-                <Badge className={getStatusColor(patient.status)}>
-                  {patient.status === 'active' ? 'Aktif' : 'Pasif'}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col h-full">
-              <div className="flex-1 space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span>{patient.age} yaş</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-400">Kan:</span>
-                    <span>{patient.bloodType}</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2 text-sm">
-                  <Phone className="w-4 h-4 text-gray-400" />
-                  <span>{patient.phone}</span>
-                </div>
-                
-                <div className="flex items-center space-x-2 text-sm">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <span className="truncate">{patient.email}</span>
-                </div>
-
-                <div className="pt-2">
-                  <p className="text-xs text-gray-500">Son ziyaret: {patient.lastVisit}</p>
-                  {patient.nextAppointment && (
-                    <p className="text-xs text-blue-600">Sonraki randevu: {patient.nextAppointment}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex space-x-2 pt-4 mt-auto">
-                <Button
-                  size="sm"
-                  className="text-black hover:text-black border border-black hover:border-black"
-                  variant="outline"
-                  onClick={() => setSelectedPatient(patient)}
-                >
-                  <Eye className="w-4 h-4 mr-1" />
-                  Görüntüle
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <PatientCard key={patient.patient_id} patient={patient} />
         ))}
       </div>
 
@@ -316,7 +332,7 @@ const PatientManagement: React.FC = () => {
         <Dialog open={!!selectedPatient} onOpenChange={() => setSelectedPatient(null)}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Hasta Detayları - {selectedPatient.name}</DialogTitle>
+              <DialogTitle>Hasta Detayları - {selectedPatient.patient_name}</DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -326,7 +342,7 @@ const PatientManagement: React.FC = () => {
                     <p><span className="font-medium">Yaş:</span> {selectedPatient.age}</p>
                     <p><span className="font-medium">Cinsiyet:</span> {selectedPatient.gender}</p>
                     <p><span className="font-medium">Kan Grubu:</span> {selectedPatient.bloodType}</p>
-                    <p><span className="font-medium">Telefon:</span> {selectedPatient.phone}</p>
+                    <p><span className="font-medium">Telefon:</span> {selectedPatient.phone_number}</p>
                     <p><span className="font-medium">Email:</span> {selectedPatient.email}</p>
                     <p><span className="font-medium">Adres:</span> {selectedPatient.address}</p>
                   </div>
@@ -414,7 +430,7 @@ const PatientManagement: React.FC = () => {
 
 // Add Patient Form Component
 const AddPatientForm: React.FC<{ 
-  onSubmit: (patient: Omit<Patient, 'id'>) => void;
+  onSubmit: (patient: Omit<Patient, 'id' | 'doctorId'>) => void;
   onFormChange: (hasChanges: boolean) => void;
 }> = ({ onSubmit, onFormChange }) => {
   const initialFormData = {
@@ -780,4 +796,4 @@ const AddPatientForm: React.FC<{
   );
 };
 
-export default PatientManagement; 
+export default PatientManagement;

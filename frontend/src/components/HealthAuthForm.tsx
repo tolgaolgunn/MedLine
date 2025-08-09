@@ -122,6 +122,7 @@ export function HealthAuthForm() {
 
   const API_URL = "http://localhost:3005/api";
 
+  // Login işlemini güncelle
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === "login") {
@@ -134,13 +135,29 @@ export function HealthAuthForm() {
             password: formData.password
           })
         });
+
         const data = await response.json();
+        
         if (!response.ok) {
           toast.error(data.message || "Giriş Başarısız.");
           return;
         }
+
+        // Token'ı kaydet
         localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        
+        // User verisini kontrol et ve kaydet
+        const userData = {
+          user_id: data.user.id || data.user.user_id, // her iki format için kontrol
+          email: data.user.email,
+          role: data.user.role,
+          full_name: data.user.full_name
+        };
+
+        console.log('Login response:', data); // Debug için
+        console.log('Parsed user data:', userData); // Debug için
+
+        localStorage.setItem('user', JSON.stringify(userData));
         
         // Beni hatırla özelliği
         if (rememberMe) {
@@ -154,6 +171,7 @@ export function HealthAuthForm() {
         toast.success("Giriş Başarılı");
         navigate("/dashboard");
       } catch (err) {
+        console.error('Login error:', err);
         toast.error("Sunucu Hatası:" + (err instanceof Error ? err.message : String(err)));
       }
     }
@@ -508,30 +526,29 @@ export function HealthAuthForm() {
                     <Label htmlFor="newPassword" className="text-gray-700">Yeni Şifre</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                             <Input
-                         id="newPassword"
-                         type={showNewPassword ? "text" : "password"}
-                         placeholder="••••••••"
-                         value={resetPasswordData.newPassword}
-                         onChange={e => {
-                           const newPassword = e.target.value;
-                           setResetPasswordData(prev => ({ ...prev, newPassword }));
-                           // Şifre değiştiğinde kontrol et (debounce ile)
-                           if (newPassword.length >= 8) {
-                             setTimeout(() => checkPassword(newPassword), 500);
-                           } else {
-                             setIsSamePassword(false);
-                           }
-                         }}
-                         onKeyPress={(e) => {
-                           if (e.key === 'Enter') {
-                             e.preventDefault();
-                             handleResetPassword(e as any);
-                           }
-                         }}
-                         className="pl-9 pr-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
-                         required
-                       />
+                      <Input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={resetPasswordData.newPassword}
+                        onChange={e => {
+                          const newPassword = e.target.value;
+                          setResetPasswordData(prev => ({ ...prev, newPassword }));
+                          if (newPassword.length >= 8) {
+                            setTimeout(() => checkPassword(newPassword), 500);
+                          } else {
+                            setIsSamePassword(false);
+                          }
+                        }}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleResetPassword(e as any);
+                          }
+                        }}
+                        className="pl-9 pr-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
+                        required
+                      />
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
@@ -540,32 +557,33 @@ export function HealthAuthForm() {
                         {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
-                                         {/* Şifre gereksinimleri */}
-                     <ul className="text-xs mt-1 ml-4 list-disc space-y-1">
-                       {passwordRequirements.map(req => {
-                         const errors = getPasswordErrors(resetPasswordData.newPassword);
-                         if (!errors[req.key]) return null;
-                         return (
-                           <li key={req.key} className="text-red-600">{req.label}</li>
-                         );
-                       })}
-                     </ul>
-                     
-                     {/* Aynı şifre uyarısı */}
-                     {isSamePassword && (
-                       <div className="flex items-center gap-1 text-xs text-red-600 mt-1">
-                         <span>⚠️</span>
-                         Şifreniz önceki şifrenizle aynı olamaz.
-                       </div>
-                     )}
-                     
-                     {/* Şifre kontrol ediliyor mesajı */}
-                     {isCheckingPassword && (
-                       <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
-                         <span>⏳</span>
-                         Şifre kontrol ediliyor...
-                       </div>
-                     )}
+
+                    {/* Şifre gereksinimleri */}
+                    <ul className="text-xs mt-1 ml-4 list-disc space-y-1">
+                      {passwordRequirements.map(req => {
+                        const errors = getPasswordErrors(resetPasswordData.newPassword);
+                        if (!errors[req.key]) return null;
+                        return (
+                          <li key={req.key} className="text-red-600">{req.label}</li>
+                        );
+                      })}
+                    </ul>
+
+                    {/* Aynı şifre uyarısı */}
+                    {isSamePassword && (
+                      <div className="flex items-center gap-1 text-xs text-red-600 mt-1">
+                        <span>⚠️</span>
+                        Şifreniz önceki şifrenizle aynı olamaz.
+                      </div>
+                    )}
+
+                    {/* Şifre kontrol ediliyor mesajı */}
+                    {isCheckingPassword && (
+                      <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
+                        <span>⏳</span>
+                        Şifre kontrol ediliyor...
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -861,13 +879,13 @@ export function HealthAuthForm() {
                         className="pl-9 pr-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
                         required
                       />
-                                             <button
-                         type="button"
-                         onClick={() => setShowPassword(!showPassword)}
-                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
-                       >
-                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                     {/* Şifre gereksinimleri */}
                     {isRegister && (
@@ -923,13 +941,13 @@ export function HealthAuthForm() {
                           className="pl-9 pr-9 h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
                           required
                         />
-                                                 <button
-                           type="button"
-                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
-                         >
-                           {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                       {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
                         <div className="flex items-center gap-1 text-xs text-red-600 mt-1">Şifreler uyuşmamaktadır.</div>

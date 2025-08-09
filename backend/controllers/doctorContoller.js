@@ -113,6 +113,38 @@ exports.getAppointmentsByDoctor = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// Doktora randevu yapan hastaların bilgilerini getir
+exports.getPatientsByDoctor = async (req, res) => {
+  try {
+    const doctorId = req.params.doctorId;
+    const result = await db.query(
+      `SELECT DISTINCT
+              u.user_id AS patient_id,
+              u.full_name AS patient_name,
+              u.email,
+              u.phone_number,
+              p.birth_date,
+              p.gender,
+              p.address,
+              p.medical_history,
+              a.doctor_id,
+              COUNT(a.appointment_id) AS total_appointments,
+              MAX(a.datetime) AS last_appointment_date,
+              MIN(a.datetime) AS first_appointment_date
+       FROM appointments a
+       JOIN users u ON a.patient_id = u.user_id
+       LEFT JOIN patient_profiles p ON u.user_id = p.user_id
+       WHERE a.doctor_id = $1
+       GROUP BY u.user_id, u.full_name, u.email, u.phone_number, p.birth_date, p.gender, p.address, p.medical_history, a.doctor_id`,
+      [doctorId]
+    );
+    
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Hasta bilgileri getirilirken hata oluştu:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // Doktor: Randevu durumunu güncelle
 exports.updateAppointmentStatus = async (req, res) => {
@@ -132,6 +164,61 @@ exports.updateAppointmentStatus = async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getDoctorPatients = async (req, res) => {
+  try {
+    const doctorId = req.params.doctorId;
+    const result = await db.query(`
+      SELECT DISTINCT 
+        p.user_id,
+        u.full_name as name,
+        u.email,
+        u.phone_number as phone,
+        pp.birth_date,
+        pp.gender,
+        pp.address,
+        pp.medical_history,
+        EXTRACT(YEAR FROM AGE(CURRENT_DATE, pp.birth_date)) as age,
+        (
+          SELECT TO_CHAR(MAX(datetime), 'YYYY-MM-DD')
+          FROM appointments a2
+          WHERE a2.patient_id = p.user_id 
+          AND a2.doctor_id = $1
+          AND a2.status = 'completed'
+        ) as last_visit,
+        (
+          SELECT TO_CHAR(MIN(datetime), 'YYYY-MM-DD')
+          FROM appointments a3
+          WHERE a3.patient_id = p.user_id 
+          AND a3.doctor_id = $1
+          AND a3.datetime > CURRENT_TIMESTAMP
+          AND a3.status = 'confirmed'
+        ) as next_appointment,
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM appointments a4
+            WHERE a4.patient_id = p.user_id 
+            AND a4.doctor_id = $1
+            AND a4.status IN ('pending', 'confirmed')
+          ) THEN 'active'
+          ELSE 'inactive'
+        END as status
+      FROM appointments a
+      JOIN users p ON a.patient_id = p.user_id
+      JOIN users d ON a.doctor_id = d.user_id
+      JOIN users u ON p.user_id = u.user_id
+      JOIN patient_profiles pp ON p.user_id = pp.user_id
+      WHERE a.doctor_id = $1
+      AND u.role = 'patient'
+      GROUP BY p.user_id, u.full_name, u.email, u.phone_number, pp.birth_date, pp.gender, pp.address, pp.medical_history
+    `, [doctorId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching doctor patients:', err);
+    res.status(500).json({ message: 'Hastalar getirilirken bir hata oluştu' });
   }
 };
 
