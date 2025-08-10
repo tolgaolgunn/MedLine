@@ -43,3 +43,33 @@ CREATE TABLE IF NOT EXISTS appointments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Reçeteler
+CREATE TABLE prescriptions (
+    prescription_id SERIAL PRIMARY KEY,
+    appointment_id INTEGER REFERENCES appointments(appointment_id) ON DELETE CASCADE,
+    doctor_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    patient_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    prescription_code VARCHAR(50) UNIQUE, -- Reçete kodu (TCKN + tarih gibi)
+    diagnosis TEXT, -- Teşhis bilgisi eklendi
+    general_instructions TEXT, -- Genel talimatlar eklendi
+    usage_instructions TEXT, -- Kullanım talimatları eklendi
+    next_visit_date DATE, -- Sonraki ziyaret tarihi eklendi
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'used', 'expired', 'cancelled')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Reçete içerikleri (ilaçlar)
+CREATE TABLE prescription_items (
+    item_id SERIAL PRIMARY KEY,
+    prescription_id INTEGER REFERENCES prescriptions(prescription_id) ON DELETE CASCADE,
+    medicine_name VARCHAR(255) NOT NULL,
+    dosage VARCHAR(100) NOT NULL, -- 10mg gibi
+    frequency VARCHAR(100) NOT NULL, -- Günde 2 kez gibi (yeni eklendi)
+    duration VARCHAR(100) NOT NULL, -- 7 gün gibi (yeni eklendi)
+    usage_instructions TEXT,
+    side_effects TEXT,
+    quantity INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

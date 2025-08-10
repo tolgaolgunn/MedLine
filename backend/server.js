@@ -19,7 +19,6 @@ app.use(express.json());
 app.use('/api', userRoutes);
 app.use('/api', patientRoutes);
 app.use('/api/doctor', doctorRoutes);
-
 initializeDatabase().then(() => {
     const PORT = process.env.PORT || 3005;
     const server = app.listen(PORT, () => {
