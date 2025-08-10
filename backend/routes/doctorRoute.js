@@ -15,4 +15,13 @@ router.patch('/appointments/:appointmentId/status', doctorController.updateAppoi
 // Hasta bilgileri
 router.get('/patients/:doctorId', doctorController.getPatientsByDoctor);
 
+// Reçete işlemleri
+router.post('/prescriptions', doctorController.addPrescription);
+router.get('/prescriptions', doctorController.getAllPrescriptions);
+router.get('/prescriptions/:id', doctorController.getPrescriptionById);
+router.put('/prescriptions/:id', doctorController.updatePrescription);
+router.delete('/prescriptions/:id', doctorController.deletePrescription);
+router.get('/patients/:patientId/prescriptions', doctorController.getPatientPrescriptions);
+router.patch('/prescriptions/:id/status', doctorController.updatePrescriptionStatus);
+
 module.exports = router;

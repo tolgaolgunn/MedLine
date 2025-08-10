@@ -53,6 +53,38 @@ async function initializeDatabase() {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        // PRESCRIPTIONS TABLOSU
+        await client.query(`
+      CREATE TABLE IF NOT EXISTS prescriptions (
+        prescription_id SERIAL PRIMARY KEY,
+        appointment_id INTEGER REFERENCES appointments(appointment_id) ON DELETE CASCADE,
+        doctor_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+        patient_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+        prescription_code VARCHAR(50) UNIQUE,
+        diagnosis TEXT,
+        general_instructions TEXT,
+        usage_instructions TEXT,
+        next_visit_date DATE,
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'used', 'expired', 'cancelled')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+        // PRESCRIPTION_ITEMS TABLOSU
+        await client.query(`
+      CREATE TABLE IF NOT EXISTS prescription_items (
+        item_id SERIAL PRIMARY KEY,
+        prescription_id INTEGER REFERENCES prescriptions(prescription_id) ON DELETE CASCADE,
+        medicine_name VARCHAR(255) NOT NULL,
+        dosage VARCHAR(100) NOT NULL,
+        frequency VARCHAR(100) NOT NULL,
+        duration VARCHAR(100) NOT NULL,
+        usage_instructions TEXT,
+        side_effects TEXT,
+        quantity INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
         // APPOINTMENTS TABLOSU
         await client.query(`
@@ -93,7 +125,7 @@ async function initializeDatabase() {
         }
 
         client.release();
-        console.log('Users, patient_profiles, doctor_profiles tables ensured');
+        console.log('Users, patient_profiles, doctor_profiles, prescriptions, prescription_items, appointments tables ensured');
     } catch (error) {
         console.error('Database initialization error:', error);
         process.exit(1);
