@@ -13,7 +13,7 @@ import { Plus, Search, FileText, Calendar, User, Pill, Printer, Download, Edit, 
 import { toast } from 'react-toastify';
 
 interface Patient {
-  patient_id: string;
+  patient_id: number; // Changed from string to number
   patient_name: string;
   email: string;
   phone_number: string;
@@ -184,24 +184,10 @@ const PrescriptionManagement: React.FC = () => {
         return;
       }
 
-      if (!newPrescription.diagnosis.trim()) {
-        toast.error('Tanı alanı zorunludur');
-        return;
-      }
-
-      if (!newPrescription.medications || newPrescription.medications.length === 0) {
-        toast.error('En az bir ilaç eklenmelidir');
-        return;
-      }
-
-      const invalidMedications = newPrescription.medications.filter(med => 
-        !med.name.trim() || !med.dosage.trim()
-      );
-
-      if (invalidMedications.length > 0) {
-        toast.error('Tüm ilaçlar için en az ad ve doz gereklidir');
-        return;
-      }
+      // Reçete kodu oluştur
+      const timestamp = new Date().getTime().toString(36);
+      const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase();
+      const prescriptionCode = `RX-${timestamp}-${randomStr}`;
 
       const prescriptionData = {
         ...newPrescription,
@@ -209,6 +195,9 @@ const PrescriptionManagement: React.FC = () => {
         patientName: String(newPrescription.patientName),
         doctorId: currentDoctorId,
         doctorName: currentDoctorName,
+        prescriptionCode: prescriptionCode, // Benzersiz kod ekle
+        date: new Date().toISOString().split('T')[0],
+        status: 'active' as const,
         medications: newPrescription.medications.map(med => ({
           name: med.name.trim(),
           dosage: med.dosage.trim(),
@@ -218,14 +207,18 @@ const PrescriptionManagement: React.FC = () => {
         }))
       };
 
+      console.log('Sending prescription data:', prescriptionData); // Debug için
+
       const response = await axios.post(`${API_BASE_URL}/prescriptions`, prescriptionData);
       
-             if (response.data) {
-         setPrescriptions(prev => [...prev, response.data]);
-         setIsAddPrescriptionOpen(false);
-         setFormKey(prev => prev + 1);
-         toast.success('Reçete başarıyla oluşturuldu');
-       }
+
+      if (response.data) {
+        // Yeni reçeteyi state'e ekle
+        setPrescriptions(prev => [response.data, ...prev]);
+        setIsAddPrescriptionOpen(false);
+        toast.success('Reçete başarıyla oluşturuldu');
+      }
+
     } catch (error) {
       console.error('Error creating prescription:', error);
       toast.error(`Reçete oluşturulurken hata: ${error.response?.data?.message || error.message}`);
@@ -233,18 +226,51 @@ const PrescriptionManagement: React.FC = () => {
   };
 
   const handleUpdatePrescription = async (updatedPrescription: Prescription) => {
-    try {
-      const response = await axios.put(`${API_BASE_URL}/prescriptions/${updatedPrescription.id}`, updatedPrescription);
-             setPrescriptions(prescriptions.map(p => 
-         p.id === updatedPrescription.id ? response.data : p
-       ));
-       setIsEditPrescriptionOpen(false);
-       setEditingPrescription(null);
-       setEditFormKey(prev => prev + 1);
-       toast.success('Reçete başarıyla güncellendi');
+ 
+      console.log('Updating prescription:', updatedPrescription); // Debug için
+
+      const response = await axios.put(
+        `${API_BASE_URL}/prescriptions/${updatedPrescription.id}`, 
+        {
+          ...updatedPrescription,
+          patientId: Number(updatedPrescription.patientId), // ID'yi number'a çevir
+          doctorId: currentDoctorId,
+          doctorName: currentDoctorName,
+          date: updatedPrescription.date || new Date().toISOString().split('T')[0]
+        }
+      );
+
+      if (response.data) {
+        // State'i güncelle
+        setPrescriptions(prevPrescriptions => 
+          prevPrescriptions.map(p => 
+            p.id === updatedPrescription.id ? response.data : p
+          )
+        );
+
+        // Modal'ları kapat
+        setIsEditPrescriptionOpen(false);
+        setEditingPrescription(null);
+
+        // Başarı mesajı göster
+        toast.success('Reçete başarıyla güncellendi');
+
+        // Reçeteleri yeniden yükle
+        const refreshResponse = await axios.get(`${API_BASE_URL}/prescriptions`, {
+          params: { doctorId: currentDoctorId }
+        });
+        
+        if (refreshResponse.data) {
+          setPrescriptions(Array.isArray(refreshResponse.data) ? 
+            refreshResponse.data : 
+            refreshResponse.data.data || []
+          );
+        }
+      }
+
     } catch (error) {
       console.error('Error updating prescription:', error);
-      toast.error('Reçete güncellenirken hata');
+      toast.error('Reçete güncellenirken hata oluştu');
     }
   };
 
@@ -337,16 +363,19 @@ const PrescriptionManagement: React.FC = () => {
       setFormData({ ...formData, medications: updatedMedications });
     };
 
-    const handlePatientSelect = (patientId: string) => {
+    const handlePatientSelect = (patientId: number) => {
       const selectedPatient = patients.find(p => p.patient_id === patientId);
+      
       if (!selectedPatient) {
         toast.error('Geçersiz hasta seçimi');
+        console.log('Selected ID:', patientId); // Debug için
+        console.log('Available patients:', patients); // Debug için
         return;
       }
       
       setFormData({
         ...formData,
-        patientId,
+        patientId: patientId, // Artık number olarak saklıyoruz
         patientName: selectedPatient.patient_name,
         medications: formData.medications
       });
@@ -392,6 +421,31 @@ const PrescriptionManagement: React.FC = () => {
 
 
 
+      // Reçete verilerini hazırla
+      const prescriptionData = {
+        patientId: formData.patientId,
+        patientName: formData.patientName,
+        diagnosis: formData.diagnosis.trim(),
+        instructions: formData.instructions.trim(),
+        nextVisit: formData.nextVisit,
+        medications: validMedications,
+        status: 'active' as const
+      };
+
+      onSubmit(prescriptionData);
+
+      // Formu sıfırla
+      setFormData({
+        patientId: '',
+        patientName: '',
+        diagnosis: '',
+        instructions: '',
+        nextVisit: '',
+        medications: [{ name: '', dosage: '', frequency: '', duration: '', instructions: '' }]
+      });
+    };
+
+
     return (
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -418,6 +472,7 @@ const PrescriptionManagement: React.FC = () => {
                 </Button>
               </div>
             ) : (
+
                            <Select value={formData.patientId} onValueChange={handlePatientSelect}>
                <SelectTrigger className="border border-gray-300 rounded-md">
                  <SelectValue placeholder="Hasta seçin...">
@@ -640,7 +695,7 @@ const PrescriptionManagement: React.FC = () => {
       setFormData({ ...formData, medications: updatedMedications });
     };
 
-    const handlePatientSelect = (patientId: string) => {
+    const handlePatientSelect = (patientId: number) => {
       const selectedPatient = patients.find(p => p.patient_id === patientId);
       if (!selectedPatient) {
         toast.error('Geçersiz hasta seçimi');
@@ -649,7 +704,7 @@ const PrescriptionManagement: React.FC = () => {
       
       setFormData({
         ...formData,
-        patientId,
+        patientId: patientId, // Artık number olarak saklıyoruz
         patientName: selectedPatient.patient_name,
         medications: formData.medications
       });
