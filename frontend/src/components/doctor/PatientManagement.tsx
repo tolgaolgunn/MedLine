@@ -46,9 +46,6 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
             <CardTitle className="text-lg">{patient.patient_name}</CardTitle>
             <p className="text-sm text-gray-600">ID: {patient.patient_id}</p>
           </div>
-          <Badge className={getAppointmentStatusColor(patient.total_appointments)}>
-            {patient.total_appointments > 0 ? 'Aktif' : 'Pasif'}
-          </Badge>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col h-full">
@@ -404,22 +401,24 @@ const PatientManagement: React.FC = () => {
 
       {/* Çıkış Onay Modalı */}
       <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md [&>button]:hidden">
           <DialogHeader>
             <DialogTitle>Kaydetmeden Çıkış</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-gray-600">
               Kaydetmeden çıkmak istediğinizden emin misiniz? <br />
-              Girilen bilgiler kaybolacaktır.
+              Yapılan değişiklikler kaybolacaktır.
             </p>
           </div>
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={cancelExit}>
+            <Button variant="outline" 
+            className="!border-2 !border-gray-300 !rounded-md"
+            onClick={cancelExit}>
               İptal
             </Button>
             <Button variant="destructive" onClick={confirmExit}>
-              Çık
+              Çıkış Yap
             </Button>
           </div>
         </DialogContent>
