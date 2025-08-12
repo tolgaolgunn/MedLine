@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -15,10 +13,10 @@ import { Plus, Search, FileText, Calendar, User, Pill, Printer, Download, Edit, 
 import { toast } from 'react-toastify';
 
 interface Patient {
-  patient_id: string;      // backend'den gelen alan adı
-  patient_name: string;    // backend'den gelen alan adı
+  patient_id: string;
+  patient_name: string;
   email: string;
-  phone_number: string;    // backend'den gelen alan adı
+  phone_number: string;
   birth_date: string;
   gender: string;
   address: string;
@@ -51,17 +49,9 @@ interface Medication {
   instructions: string;
 }
 
-interface Patient {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-}
-
 const API_BASE_URL = 'http://localhost:3005/api/doctor';
 
 const PrescriptionManagement: React.FC = () => {
-  // State'ler
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,30 +65,29 @@ const PrescriptionManagement: React.FC = () => {
   const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
 
   const currentDoctorId = useMemo(() => {
-      try {
-        const userStr = localStorage.getItem('user');
-        if (!userStr) return '';
-        const userData = JSON.parse(userStr);
-        return userData?.user_id || userData?.id || '';
-      } catch (error) {
-        console.error('Error getting doctor ID:', error);
-        return '';
-      }
-    }, []);
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return '';
+      const userData = JSON.parse(userStr);
+      return userData?.user_id || userData?.id || '';
+    } catch (error) {
+      console.error('Error getting doctor ID:', error);
+      return '';
+    }
+  }, []);
 
-const currentDoctorName = useMemo(() => {
-  try {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) return 'Dr. Bilinmiyor';
-    const userData = JSON.parse(userStr);
-    return userData?.full_name || userData?.name || 'Dr. Bilinmiyor';
-  } catch (error) {
-    console.error('Error getting doctor name:', error);
-    return 'Dr. Bilinmiyor';
-  }
-}, []);
+  const currentDoctorName = useMemo(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return 'Dr. Bilinmiyor';
+      const userData = JSON.parse(userStr);
+      return userData?.full_name || userData?.name || 'Dr. Bilinmiyor';
+    } catch (error) {
+      console.error('Error getting doctor name:', error);
+      return 'Dr. Bilinmiyor';
+    }
+  }, []);
 
-  // API'den reçeteleri çek
   useEffect(() => {
     const fetchPrescriptions = async () => {
       try {
@@ -114,13 +103,12 @@ const currentDoctorName = useMemo(() => {
         } else if (Array.isArray(response.data)) {
           fetchedPrescriptions = response.data;
         } else {
-          console.warn('Beklenmeyen API yanıt formatı:', response.data);
+          console.warn('Unexpected API response format:', response.data);
           setPrescriptions([]);
-          setError('Beklenmeyen veri formatı alındı');
+          setError('Received unexpected data format');
           return;
         }
 
-        // Fix missing doctorName by filling with currentDoctorName
         const fixedPrescriptions = fetchedPrescriptions.map(prescription => ({
           ...prescription,
           doctorName: prescription.doctorName && prescription.doctorName.trim() !== '' ? prescription.doctorName : currentDoctorName
@@ -128,9 +116,9 @@ const currentDoctorName = useMemo(() => {
 
         setPrescriptions(fixedPrescriptions);
       } catch (error) {
-        console.error('Reçeteler yüklenirken hata:', error);
-        setError('Reçeteler yüklenirken bir hata oluştu');
-        toast.error(`Reçeteler yüklenirken bir hata oluştu: ${error.response?.status || error.message}`);
+        console.error('Error loading prescriptions:', error);
+        setError('Error loading prescriptions');
+        toast.error(`Error loading prescriptions: ${error.response?.status || error.message}`);
       } finally {
         setLoading(false);
       }
@@ -141,38 +129,33 @@ const currentDoctorName = useMemo(() => {
     }
   }, [currentDoctorId, currentDoctorName]);
 
-  // Hastaları API'den çek
   const fetchPatients = async () => {
-  try {
-    setPatientsLoading(true);
-    const response = await axios.get(`${API_BASE_URL}/patients/${currentDoctorId}`, {
-      params: { doctorId: currentDoctorId }
-    });
-    
-    console.log("Hasta verileri:", response.data); // Log ekleyin
-    
-    const patientsData = response.data?.data || response.data;
-    if (!Array.isArray(patientsData)) {
-      throw new Error('API beklenen formatta hasta verisi dönmedi');
-    }
+    try {
+      setPatientsLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/patients/${currentDoctorId}`, {
+        params: { doctorId: currentDoctorId }
+      });
+      
+      const patientsData = response.data?.data || response.data;
+      if (!Array.isArray(patientsData)) {
+        throw new Error('API did not return patient data in expected format');
+      }
 
-    setPatients(patientsData);
-  } catch (error) {
-    console.error('Hastalar yüklenirken hata:', error);
-    toast.error(`Hastalar yüklenirken hata: ${error.message}`);
-  } finally {
-    setPatientsLoading(false);
-  }
-};
-  // Reçete ekleme dialog açıldığında hastaları çek
+      setPatients(patientsData);
+    } catch (error) {
+      console.error('Error loading patients:', error);
+      toast.error(`Error loading patients: ${error.message}`);
+    } finally {
+      setPatientsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (isAddPrescriptionOpen && patients.length === 0 && currentDoctorId) {
+    if ((isAddPrescriptionOpen || isEditPrescriptionOpen) && patients.length === 0 && currentDoctorId) {
       fetchPatients();
     }
-  }, [isAddPrescriptionOpen, currentDoctorId]);
+  }, [isAddPrescriptionOpen, isEditPrescriptionOpen, currentDoctorId]);
 
-
-  // Filtreleme fonksiyonu
   const filteredPrescriptions = prescriptions.filter(prescription => {
     const matchesSearch = prescription.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
@@ -180,64 +163,60 @@ const currentDoctorName = useMemo(() => {
     return matchesSearch && matchesStatus;
   });
 
-  // Reçete oluşturma fonksiyonu
   const handleAddPrescription = async (newPrescription: Omit<Prescription, 'id'>) => {
-  try {
-    // Gelişmiş form validasyonu
-    if (!newPrescription.patientId || !newPrescription.patientName.trim()) {
-      toast.error('Lütfen geçerli bir hasta seçin');
-      return;
+    try {
+      if (!newPrescription.patientId || !newPrescription.patientName.trim()) {
+        toast.error('Lütfen geçerli bir hasta seçin');
+        return;
+      }
+
+      if (!newPrescription.diagnosis.trim()) {
+        toast.error('Tanı alanı zorunludur');
+        return;
+      }
+
+      if (!newPrescription.medications || newPrescription.medications.length === 0) {
+        toast.error('En az bir ilaç eklenmelidir');
+        return;
+      }
+
+      const invalidMedications = newPrescription.medications.filter(med => 
+        !med.name.trim() || !med.dosage.trim()
+      );
+
+      if (invalidMedications.length > 0) {
+        toast.error('Tüm ilaçlar için en az ad ve doz gereklidir');
+        return;
+      }
+
+      const prescriptionData = {
+        ...newPrescription,
+        patientId: String(newPrescription.patientId),
+        patientName: String(newPrescription.patientName),
+        doctorId: currentDoctorId,
+        doctorName: currentDoctorName,
+        medications: newPrescription.medications.map(med => ({
+          name: med.name.trim(),
+          dosage: med.dosage.trim(),
+          frequency: med.frequency?.trim() || '',
+          duration: med.duration?.trim() || '',
+          instructions: med.instructions?.trim() || ''
+        }))
+      };
+
+      const response = await axios.post(`${API_BASE_URL}/prescriptions`, prescriptionData);
+      
+      if (response.data) {
+        setPrescriptions(prev => [...prev, response.data]);
+        setIsAddPrescriptionOpen(false);
+        toast.success('Reçete başarıyla oluşturuldu');
+      }
+    } catch (error) {
+      console.error('Error creating prescription:', error);
+      toast.error(`Reçete oluşturulurken hata: ${error.response?.data?.message || error.message}`);
     }
+  };
 
-    if (!newPrescription.diagnosis.trim()) {
-      toast.error('Teşhis bilgisi gereklidir');
-      return;
-    }
-
-    if (!newPrescription.medications || newPrescription.medications.length === 0) {
-      toast.error('En az bir ilaç eklemelisiniz');
-      return;
-    }
-
-    // İlaçların gerekli alanlarını kontrol et
-    const invalidMedications = newPrescription.medications.filter(med => 
-      !med.name.trim() || !med.dosage.trim()
-    );
-
-    if (invalidMedications.length > 0) {
-      toast.error('Tüm ilaçlar için en az isim ve doz bilgisi gereklidir');
-      return;
-    }
-
-    const prescriptionData = {
-      ...newPrescription,
-      patientId: String(newPrescription.patientId),
-      patientName: String(newPrescription.patientName),
-      doctorId: currentDoctorId,
-      doctorName: currentDoctorName,
-      medications: newPrescription.medications.map(med => ({
-        name: med.name.trim(),
-        dosage: med.dosage.trim(),
-        frequency: med.frequency?.trim() || '',
-        duration: med.duration?.trim() || '',
-        instructions: med.instructions?.trim() || ''
-      }))
-    };
-
-    const response = await axios.post(`${API_BASE_URL}/prescriptions`, prescriptionData);
-    
-    if (response.data) {
-      setPrescriptions(prev => [...prev, response.data]);
-      setIsAddPrescriptionOpen(false);
-      toast.success('Reçete başarıyla oluşturuldu');
-    }
-  } catch (error) {
-    console.error('Reçete oluşturma hatası:', error);
-    toast.error(`Reçete oluşturulurken bir hata oluştu: ${error.response?.data?.message || error.message}`);
-  }
-};
-
-  // Reçete güncelleme fonksiyonu
   const handleUpdatePrescription = async (updatedPrescription: Prescription) => {
     try {
       const response = await axios.put(`${API_BASE_URL}/prescriptions/${updatedPrescription.id}`, updatedPrescription);
@@ -248,12 +227,11 @@ const currentDoctorName = useMemo(() => {
       setEditingPrescription(null);
       toast.success('Reçete başarıyla güncellendi');
     } catch (error) {
-      console.error('Reçete güncelleme hatası:', error);
-      toast.error('Reçete güncellenirken bir hata oluştu');
+      console.error('Error updating prescription:', error);
+      toast.error('Reçete güncellenirken hata');
     }
   };
 
-  // Durum renkleri
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -263,9 +241,8 @@ const currentDoctorName = useMemo(() => {
     }
   };
 
-  // Reçete silme fonksiyonu
   const handleDeletePrescription = async (id: string) => {
-    if (!confirm('Bu reçeteyi silmek istediğinizden emin misiniz?')) {
+    if (!confirm('Bu reçeteyi silmek istediğinize emin misiniz?')) {
       return;
     }
     
@@ -274,19 +251,16 @@ const currentDoctorName = useMemo(() => {
       setPrescriptions(prescriptions.filter(p => p.id !== id));
       toast.success('Reçete başarıyla silindi');
     } catch (error) {
-      console.error('Reçete silme hatası:', error);
-      toast.error('Reçete silinirken bir hata oluştu');
+      console.error('Error deleting prescription:', error);
+      toast.error('Reçete silinirken hata');
     }
   };
 
-  // Reçete yazdırma fonksiyonu
   const printPrescription = (prescription: Prescription) => {
-    // Burada yazdırma işlemi yapılabilir
     console.log('Printing prescription:', prescription.id);
-    toast.info('Reçete yazdırma işlemi başlatıldı');
+    toast.info('Reçete yazdırılıyor');
   };
 
-  // Yeni Reçete Formu
   const AddPrescriptionForm = ({ onSubmit }: { 
     onSubmit: (prescription: Omit<Prescription, 'id'>) => void;
   }) => {
@@ -321,39 +295,48 @@ const currentDoctorName = useMemo(() => {
       setFormData({ ...formData, medications: updatedMedications });
     };
 
-    // Hasta seçildiğinde ismi otomatik doldur
     const handlePatientSelect = (patientId: string) => {
-  const selectedPatient = patients.find(p => p.patient_id === patientId);
-  if (!selectedPatient) {
-    toast.error('Geçersiz hasta seçimi');
-    return;
-  }
-  
-  setFormData({
-    ...formData,
-    patientId,
-    patientName: selectedPatient.patient_name,
-    medications: formData.medications // Mevcut ilaçları koru
-  });
-};
+      const selectedPatient = patients.find(p => p.patient_id === patientId);
+      if (!selectedPatient) {
+        toast.error('Geçersiz hasta seçimi');
+        return;
+      }
+      
+      setFormData({
+        ...formData,
+        patientId,
+        patientName: selectedPatient.patient_name,
+        medications: formData.medications
+      });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       
-      // Form validasyonu
       if (!formData.patientId || !formData.diagnosis.trim()) {
-        toast.error('Lütfen hasta seçin ve teşhis girin');
+        toast.error('Lütfen bir hasta seçin ve tanı girin');
         return;
       }
 
       const validMedications = formData.medications.filter(med => med.name.trim() && med.dosage.trim());
       
       if (validMedications.length === 0) {
-        toast.error('En az bir ilaç eklemelisiniz');
+        toast.error('En az bir ilaç gereklidir');
         return;
       }
 
-      
-      // Form'u sıfırla
+      onSubmit({
+        patientId: formData.patientId,
+        patientName: formData.patientName,
+        diagnosis: formData.diagnosis,
+        instructions: formData.instructions,
+        nextVisit: formData.nextVisit,
+        medications: validMedications,
+        status: 'active' as const,
+        date: new Date().toISOString().split('T')[0],
+        prescriptionCode: `RX-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+      });
+
       setFormData({
         patientId: '',
         patientName: '',
@@ -366,10 +349,9 @@ const currentDoctorName = useMemo(() => {
 
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Form içeriği */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="patientSelect">Hasta Seçin *</Label>
+            <Label htmlFor="patientSelect">Hasta Seç *</Label>
             {patientsLoading ? (
               <div className="flex items-center space-x-2 p-2 border rounded-md">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
@@ -379,7 +361,7 @@ const currentDoctorName = useMemo(() => {
               <div className="p-2 border rounded-md bg-yellow-50 border-yellow-200">
                 <div className="flex items-center space-x-2">
                   <Users className="w-4 h-4 text-yellow-600" />
-                  <span className="text-sm text-yellow-800">Henüz kayıtlı hasta bulunmuyor</span>
+                  <span className="text-sm text-yellow-800">Henüz kayıtlı hasta yok</span>
                 </div>
                 <Button
                   type="button"
@@ -392,49 +374,39 @@ const currentDoctorName = useMemo(() => {
               </div>
             ) : (
               <Select value={formData.patientId} onValueChange={handlePatientSelect}>
-  <SelectTrigger>
-    <SelectValue placeholder="Hasta seçin...">
-      {formData.patientId ? (
-        <div className="flex items-center">
-          <User className="w-4 h-4 mr-2" />
-          {patients.find(p => p.patient_id === formData.patientId)?.patient_name}
-        </div>
-      ) : null}
-    </SelectValue>
-  </SelectTrigger>
-  <SelectContent>
-    {patientsLoading ? (
-      <SelectItem value="loading" disabled>
-        Yükleniyor...
-      </SelectItem>
-    ) : patients.length === 0 ? (
-      <SelectItem value="no-patient" disabled>
-        Kayıtlı hasta bulunamadı
-      </SelectItem>
-    ) : (
-      patients.map((patient) => (
-        <SelectItem key={patient.patient_id} value={patient.patient_id}>
-          <div className="flex items-center space-x-2">
-            <User className="w-4 h-4" />
-            <span>{patient.patient_name}</span>
-            {patient.phone_number && (
-              <span className="text-xs text-gray-500">({patient.phone_number})</span>
-            )}
-          </div>
-        </SelectItem>
-      ))
-    )}
-  </SelectContent>
-</Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Hasta seçin...">
+                    {formData.patientId ? (
+                      <div className="flex items-center">
+                        <User className="w-4 h-4 mr-2" />
+                        {patients.find(p => p.patient_id === formData.patientId)?.patient_name}
+                      </div>
+                    ) : null}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {patients.map((patient) => (
+                    <SelectItem key={patient.patient_id} value={patient.patient_id}>
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4" />
+                        <span>{patient.patient_name}</span>
+                        {patient.phone_number && (
+                          <span className="text-xs text-gray-500">({patient.phone_number})</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
           <div>
-            <Label htmlFor="diagnosis">Teşhis *</Label>
+            <Label htmlFor="diagnosis">Tanı *</Label>
             <Input
               id="diagnosis"
               value={formData.diagnosis}
               onChange={(e) => setFormData({...formData, diagnosis: e.target.value})}
-              placeholder="Hasta teşhisini girin..."
+              placeholder="Tanı girin..."
               required
             />
           </div>
@@ -451,7 +423,7 @@ const currentDoctorName = useMemo(() => {
         </div>
 
         <div>
-          <Label htmlFor="nextVisit">Sonraki Ziyaret (Opsiyonel)</Label>
+          <Label htmlFor="nextVisit">Sonraki Kontrol (Opsiyonel)</Label>
           <Input
             id="nextVisit"
             type="date"
@@ -479,7 +451,7 @@ const currentDoctorName = useMemo(() => {
                         id={`medication-name-${index}`}
                         value={medication.name}
                         onChange={(e) => updateMedication(index, 'name', e.target.value)}
-                        placeholder="İlaç adını girin..."
+                        placeholder="İlaç adı girin..."
                         required
                       />
                     </div>
@@ -489,7 +461,7 @@ const currentDoctorName = useMemo(() => {
                         id={`medication-dosage-${index}`}
                         value={medication.dosage}
                         onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
-                        placeholder="örn: 500mg"
+                        placeholder="Örn: 500mg"
                         required
                       />
                     </div>
@@ -499,7 +471,7 @@ const currentDoctorName = useMemo(() => {
                         id={`medication-frequency-${index}`}
                         value={medication.frequency}
                         onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
-                        placeholder="örn: Günde 3 kez"
+                        placeholder="Örn: Günde 3 kez"
                       />
                     </div>
                     <div>
@@ -508,7 +480,7 @@ const currentDoctorName = useMemo(() => {
                         id={`medication-duration-${index}`}
                         value={medication.duration}
                         onChange={(e) => updateMedication(index, 'duration', e.target.value)}
-                        placeholder="örn: 7 gün"
+                        placeholder="Örn: 7 gün"
                       />
                     </div>
                   </div>
@@ -518,7 +490,7 @@ const currentDoctorName = useMemo(() => {
                       id={`medication-instructions-${index}`}
                       value={medication.instructions}
                       onChange={(e) => updateMedication(index, 'instructions', e.target.value)}
-                      placeholder="Yemekten önce/sonra, özel talimatlar..."
+                      placeholder="Yemeklerden önce/sonra, özel talimatlar..."
                     />
                   </div>
                   {formData.medications.length > 1 && (
@@ -529,7 +501,7 @@ const currentDoctorName = useMemo(() => {
                       className="mt-2"
                       onClick={() => removeMedication(index)}
                     >
-                      <Trash2 className="w-4 h-4 mr-1" /> İlacı Kaldır
+                      <Trash2 className="w-4 h-4 mr-1" /> Kaldır
                     </Button>
                   )}
                 </CardContent>
@@ -554,12 +526,12 @@ const currentDoctorName = useMemo(() => {
     );
   };
 
-  // Düzenleme Formu
   const EditPrescriptionForm = ({ prescription, onSubmit }: { 
     prescription: Prescription;
     onSubmit: (prescription: Prescription) => void;
   }) => {
     const [formData, setFormData] = useState({
+      patientId: prescription.patientId,
       patientName: prescription.patientName,
       diagnosis: prescription.diagnosis,
       instructions: prescription.instructions,
@@ -590,28 +562,43 @@ const currentDoctorName = useMemo(() => {
       setFormData({ ...formData, medications: updatedMedications });
     };
 
+    const handlePatientSelect = (patientId: string) => {
+      const selectedPatient = patients.find(p => p.patient_id === patientId);
+      if (!selectedPatient) {
+        toast.error('Geçersiz hasta seçimi');
+        return;
+      }
+      
+      setFormData({
+        ...formData,
+        patientId,
+        patientName: selectedPatient.patient_name,
+        medications: formData.medications
+      });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       
-      // Form validasyonu
-      if (!formData.patientName.trim() || !formData.diagnosis.trim()) {
-        toast.error('Lütfen gerekli alanları doldurun');
+      if (!formData.patientId || !formData.diagnosis.trim()) {
+        toast.error('Lütfen bir hasta seçin ve tanı girin');
         return;
       }
 
       const validMedications = formData.medications.filter(med => med.name.trim() && med.dosage.trim());
       
       if (validMedications.length === 0) {
-        toast.error('En az bir ilaç eklemelisiniz');
+        toast.error('En az bir ilaç gereklidir');
         return;
       }
 
       onSubmit({
         ...prescription,
-        patientName: formData.patientName.trim(),
-        diagnosis: formData.diagnosis.trim(),
+        patientId: formData.patientId,
+        patientName: formData.patientName,
+        diagnosis: formData.diagnosis,
         medications: validMedications,
-        instructions: formData.instructions.trim(),
+        instructions: formData.instructions,
         nextVisit: formData.nextVisit || undefined,
         status: formData.status
       });
@@ -619,19 +606,54 @@ const currentDoctorName = useMemo(() => {
 
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Düzenleme formu içeriği */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="edit-patientName">Hasta Adı *</Label>
-            <Input
-              id="edit-patientName"
-              value={formData.patientName}
-              onChange={(e) => setFormData({...formData, patientName: e.target.value})}
-              required
-            />
+            <Label htmlFor="edit-patientSelect">Hasta Seç *</Label>
+            {patientsLoading ? (
+              <div className="flex items-center space-x-2 p-2 border rounded-md">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                <span className="text-sm text-gray-500">Hastalar yükleniyor...</span>
+              </div>
+            ) : patients.length === 0 ? (
+              <div className="p-2 border rounded-md bg-yellow-50 border-yellow-200">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-4 h-4 text-yellow-600" />
+                  <span className="text-sm text-yellow-800">Henüz kayıtlı hasta yok</span>
+                </div>
+              </div>
+            ) : (
+              <Select 
+                value={formData.patientId} 
+                onValueChange={handlePatientSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Hasta seçin...">
+                    {formData.patientId ? (
+                      <div className="flex items-center">
+                        <User className="w-4 h-4 mr-2" />
+                        {patients.find(p => p.patient_id === formData.patientId)?.patient_name}
+                      </div>
+                    ) : null}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {patients.map((patient) => (
+                    <SelectItem key={patient.patient_id} value={patient.patient_id}>
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4" />
+                        <span>{patient.patient_name}</span>
+                        {patient.phone_number && (
+                          <span className="text-xs text-gray-500">({patient.phone_number})</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div>
-            <Label htmlFor="edit-diagnosis">Teşhis *</Label>
+            <Label htmlFor="edit-diagnosis">Tanı *</Label>
             <Input
               id="edit-diagnosis"
               value={formData.diagnosis}
@@ -652,7 +674,7 @@ const currentDoctorName = useMemo(() => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="edit-nextVisit">Sonraki Ziyaret (Opsiyonel)</Label>
+            <Label htmlFor="edit-nextVisit">Sonraki Kontrol (Opsiyonel)</Label>
             <Input
               id="edit-nextVisit"
               type="date"
@@ -742,7 +764,7 @@ const currentDoctorName = useMemo(() => {
                       className="mt-2"
                       onClick={() => removeMedication(index)}
                     >
-                      <Trash2 className="w-4 h-4 mr-1" /> İlacı Kaldır
+                      <Trash2 className="w-4 h-4 mr-1" /> Kaldır
                     </Button>
                   )}
                 </CardContent>
@@ -770,7 +792,6 @@ const currentDoctorName = useMemo(() => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Başlık ve Yeni Reçete Butonu */}
       <div className="flex justify-between items-center">
         <PageHeader 
           title="Reçete Yönetimi"
@@ -791,14 +812,13 @@ const currentDoctorName = useMemo(() => {
         </Dialog>
       </div>
 
-      {/* Arama ve Filtreleme */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <Input
-                placeholder="Hasta adı veya teşhis ara..."
+                placeholder="Hasta adı veya tanıya göre ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -812,7 +832,7 @@ const currentDoctorName = useMemo(() => {
                 <SelectContent>
                   <SelectItem value="all">Tümü</SelectItem>
                   <SelectItem value="active">Aktif</SelectItem>
-                  <SelectItem value="completed">Tamamlanan</SelectItem>
+                  <SelectItem value="completed">Tamamlandı</SelectItem>
                   <SelectItem value="cancelled">İptal</SelectItem>
                 </SelectContent>
               </Select>
@@ -821,7 +841,6 @@ const currentDoctorName = useMemo(() => {
         </CardContent>
       </Card>
 
-      {/* Reçete Listesi */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
@@ -843,7 +862,7 @@ const currentDoctorName = useMemo(() => {
                 className="mt-4"
                 variant="outline"
               >
-                Yeniden Dene
+                Tekrar Dene
               </Button>
             </div>
           </CardContent>
@@ -857,7 +876,7 @@ const currentDoctorName = useMemo(() => {
                 <h3 className="text-lg font-medium">Reçete bulunamadı</h3>
                 {prescriptions.length === 0 ? (
                   <p className="text-gray-600 mt-2">
-                    Henüz hiç reçete oluşturulmamış. Yeni bir reçete oluşturmak için "Yeni Reçete" butonuna tıklayın.
+                    Henüz hiç reçete oluşturulmadı. "Yeni Reçete" butonuna tıklayarak oluşturabilirsiniz.
                   </p>
                 ) : (
                   <p className="text-gray-600 mt-2">
@@ -869,7 +888,7 @@ const currentDoctorName = useMemo(() => {
                 onClick={() => setIsAddPrescriptionOpen(true)}
                 className="mt-4"
               >
-                <Plus className="w-4 h-4 mr-2" /> İlk Reçeteni Oluştur
+                <Plus className="w-4 h-4 mr-2" /> İlk Reçetenizi Oluşturun
               </Button>
             </div>
           </CardContent>
@@ -893,7 +912,7 @@ const currentDoctorName = useMemo(() => {
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-medium">Teşhis:</span>
+                    <span className="font-medium">Tanı:</span>
                     <p className="text-gray-600">{prescription.diagnosis}</p>
                   </div>
                   <div>
@@ -918,7 +937,7 @@ const currentDoctorName = useMemo(() => {
                 {prescription.nextVisit && (
                   <div className="flex items-center space-x-2 text-sm">
                     <Calendar className="w-4 h-4 text-gray-400" />
-                    <span>Sonraki ziyaret: {prescription.nextVisit}</span>
+                    <span>Sonraki kontrol: {prescription.nextVisit}</span>
                   </div>
                 )}
 
@@ -961,7 +980,6 @@ const currentDoctorName = useMemo(() => {
         </div>
       )}
 
-      {/* Reçete Detay Dialog */}
       {selectedPrescription && (
         <Dialog open={!!selectedPrescription} onOpenChange={() => setSelectedPrescription(null)}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -976,7 +994,7 @@ const currentDoctorName = useMemo(() => {
                 </div>
                 <div>
                   <Label className="font-semibold">Doktor</Label>
-                  <p>{selectedPrescription.doctorName}</p>
+                  <p>{currentDoctorName}</p>
                 </div>
                 <div>
                   <Label className="font-semibold">Tarih</Label>
@@ -985,7 +1003,7 @@ const currentDoctorName = useMemo(() => {
               </div>
 
               <div>
-                <Label className="font-semibold">Teşhis</Label>
+                <Label className="font-semibold">Tanı</Label>
                 <p className="mt-2 p-3 bg-gray-50 rounded-lg">{selectedPrescription.diagnosis}</p>
               </div>
 
@@ -1021,7 +1039,7 @@ const currentDoctorName = useMemo(() => {
 
               {selectedPrescription.nextVisit && (
                 <div>
-                  <Label className="font-semibold">Sonraki Ziyaret</Label>
+                  <Label className="font-semibold">Sonraki Kontrol</Label>
                   <p className="mt-2 p-3 bg-gray-50 rounded-lg">{selectedPrescription.nextVisit}</p>
                 </div>
               )}
@@ -1030,7 +1048,6 @@ const currentDoctorName = useMemo(() => {
         </Dialog>
       )}
 
-      {/* Reçete Düzenleme Dialog */}
       {editingPrescription && (
         <Dialog open={isEditPrescriptionOpen} onOpenChange={(open) => {
           setIsEditPrescriptionOpen(open);
