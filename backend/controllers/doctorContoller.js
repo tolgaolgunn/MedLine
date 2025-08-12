@@ -282,11 +282,10 @@ exports.addPrescription = async (req, res) => {
       });
     }
 
-    // Create prescription record - Her zaman yeni bir kod oluştur
+    // Create prescription record
     const prescriptionData = {
       appointmentId: appointmentId || null,
       doctorId: doctorId || 1,
-      doctorName: doctorName || 'Dr. Unknown',
       patientId: parseInt(patientId),
       prescriptionCode: `RX-${uuidv4().slice(0, 8).toUpperCase()}`,
       diagnosis: diagnosis.trim(),
@@ -306,7 +305,6 @@ exports.addPrescription = async (req, res) => {
       [
         prescriptionData.appointmentId,
         prescriptionData.doctorId,
-        prescriptionData.doctorName,
         prescriptionData.patientId,
         prescriptionData.prescriptionCode,
         prescriptionData.diagnosis,
@@ -532,10 +530,11 @@ exports.updatePrescription = async (req, res) => {
       medications,
       instructions,
       nextVisit,
-      status
+      status,
+      doctorName // Added doctorName from request body
     } = req.body;
 
-    // Ana reçete bilgilerini güncelle
+    // Update main prescription info
     const updateQuery = `
       UPDATE prescriptions 
       SET diagnosis = COALESCE($1, diagnosis),
@@ -563,7 +562,7 @@ exports.updatePrescription = async (req, res) => {
       });
     }
 
-    // Mevcut items'ları sil ve yenilerini ekle
+    // Delete existing items and add new ones
     if (medications && medications.length > 0) {
       await client.query('DELETE FROM prescription_items WHERE prescription_id = $1', [id]);
       
@@ -600,10 +599,10 @@ exports.updatePrescription = async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Güncellenmiş veriyi döndür
+    // Get updated items
     const updatedItems = await db.query('SELECT * FROM prescription_items WHERE prescription_id = $1', [id]);
     
-    // Tarih formatlama fonksiyonu
+    // Date formatting function
     const formatDate = (date) => {
       if (!date) return null;
       try {
@@ -619,12 +618,25 @@ exports.updatePrescription = async (req, res) => {
       }
     };
 
+    // Get doctor info if needed
+    let doctorNameToUse = doctorName;
+    if (!doctorNameToUse) {
+      const doctorInfo = await db.query(
+        `SELECT u.full_name 
+         FROM users u
+         JOIN prescriptions p ON u.user_id = p.doctor_id
+         WHERE p.prescription_id = $1`,
+        [id]
+      );
+      doctorNameToUse = doctorInfo.rows[0]?.full_name || 'Dr. Bilinmeyen';
+    }
+
     const responseData = {
       id: prescriptionResult.rows[0].prescription_id,
       patientId: prescriptionResult.rows[0].patient_id,
       patientName: patientName,
       prescriptionCode: prescriptionResult.rows[0].prescription_code,
-      doctorName: doctorName,
+      doctorName: doctorNameToUse, // Use the resolved doctor name
       date: formatDate(prescriptionResult.rows[0].created_at),
       diagnosis: prescriptionResult.rows[0].diagnosis,
       medications: updatedItems.rows.map(item => ({
