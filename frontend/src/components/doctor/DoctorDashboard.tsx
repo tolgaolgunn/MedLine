@@ -744,7 +744,7 @@ const DoctorDashboard: React.FC = () => {
 
       {/* Geçmiş Aramalar Modal */}
       <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto [&>button]:hidden">
           <DialogHeader>
             <DialogTitle>Geçmiş Aramalar</DialogTitle>
           </DialogHeader>
@@ -848,6 +848,7 @@ const DoctorDashboard: React.FC = () => {
             </Button>
             <Button 
               variant="outline" 
+              className="!border-2 !border-gray-300 !rounded-md"
               onClick={() => setShowHistoryModal(false)}
             >
               Kapat

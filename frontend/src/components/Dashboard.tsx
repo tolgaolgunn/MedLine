@@ -562,8 +562,12 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
           </Card>
 
           {/* Geçmiş Aramalar Modal */}
-          <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+           <Dialog open={showHistoryModal} onOpenChange={(open) => {
+             if (!open) {
+               setShowHistoryModal(false);
+             }
+           }}>
+           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Geçmiş Aramalar</DialogTitle>
               </DialogHeader>

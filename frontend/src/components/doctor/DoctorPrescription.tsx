@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -63,6 +63,9 @@ const PrescriptionManagement: React.FC = () => {
   const [isAddPrescriptionOpen, setIsAddPrescriptionOpen] = useState(false);
   const [isEditPrescriptionOpen, setIsEditPrescriptionOpen] = useState(false);
   const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
+  const [formKey, setFormKey] = useState(0);
+  const [editFormKey, setEditFormKey] = useState(0);
+
 
   const currentDoctorId = useMemo(() => {
     try {
@@ -128,6 +131,17 @@ const PrescriptionManagement: React.FC = () => {
       fetchPrescriptions();
     }
   }, [currentDoctorId, currentDoctorName]);
+
+  // Yeni reçete modal'ını kapat
+  const handleCloseAddModal = () => {
+    setIsAddPrescriptionOpen(false);
+  };
+
+  // Düzenleme modal'ını kapat
+  const handleCloseEditModal = () => {
+    setIsEditPrescriptionOpen(false);
+    setEditingPrescription(null);
+  };
 
   const fetchPatients = async () => {
     try {
@@ -206,11 +220,12 @@ const PrescriptionManagement: React.FC = () => {
 
       const response = await axios.post(`${API_BASE_URL}/prescriptions`, prescriptionData);
       
-      if (response.data) {
-        setPrescriptions(prev => [...prev, response.data]);
-        setIsAddPrescriptionOpen(false);
-        toast.success('Reçete başarıyla oluşturuldu');
-      }
+             if (response.data) {
+         setPrescriptions(prev => [...prev, response.data]);
+         setIsAddPrescriptionOpen(false);
+         setFormKey(prev => prev + 1);
+         toast.success('Reçete başarıyla oluşturuldu');
+       }
     } catch (error) {
       console.error('Error creating prescription:', error);
       toast.error(`Reçete oluşturulurken hata: ${error.response?.data?.message || error.message}`);
@@ -220,12 +235,13 @@ const PrescriptionManagement: React.FC = () => {
   const handleUpdatePrescription = async (updatedPrescription: Prescription) => {
     try {
       const response = await axios.put(`${API_BASE_URL}/prescriptions/${updatedPrescription.id}`, updatedPrescription);
-      setPrescriptions(prescriptions.map(p => 
-        p.id === updatedPrescription.id ? response.data : p
-      ));
-      setIsEditPrescriptionOpen(false);
-      setEditingPrescription(null);
-      toast.success('Reçete başarıyla güncellendi');
+             setPrescriptions(prescriptions.map(p => 
+         p.id === updatedPrescription.id ? response.data : p
+       ));
+       setIsEditPrescriptionOpen(false);
+       setEditingPrescription(null);
+       setEditFormKey(prev => prev + 1);
+       toast.success('Reçete başarıyla güncellendi');
     } catch (error) {
       console.error('Error updating prescription:', error);
       toast.error('Reçete güncellenirken hata');
@@ -261,9 +277,11 @@ const PrescriptionManagement: React.FC = () => {
     toast.info('Reçete yazdırılıyor');
   };
 
-  const AddPrescriptionForm = ({ onSubmit }: { 
+  const AddPrescriptionForm = ({ onSubmit, onClose }: { 
     onSubmit: (prescription: Omit<Prescription, 'id'>) => void;
+    onClose: () => void;
   }) => {
+    const formRef = useRef<HTMLFormElement>(null);
     const [formData, setFormData] = useState({
       patientId: '',
       patientName: '',
@@ -272,6 +290,30 @@ const PrescriptionManagement: React.FC = () => {
       nextVisit: '',
       medications: [{ name: '', dosage: '', frequency: '', duration: '', instructions: '' }]
     });
+
+    // Form değişikliklerini takip etmek için
+    const hasChanges = () => {
+      return (
+        formData.patientId !== '' ||
+        formData.patientName !== '' ||
+        formData.diagnosis !== '' ||
+        formData.instructions !== '' ||
+        formData.nextVisit !== '' ||
+        formData.medications.some(med => 
+          med.name !== '' || med.dosage !== '' || med.frequency !== '' || 
+          med.duration !== '' || med.instructions !== ''
+        )
+      );
+    };
+
+
+
+    // Form kapatıldığında değişiklik kontrolü
+    const handleClose = () => {
+      onClose(); // Parent component'te kontrol edilecek
+    };
+
+
 
     const addMedication = () => {
       setFormData({
@@ -310,45 +352,48 @@ const PrescriptionManagement: React.FC = () => {
       });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      
-      if (!formData.patientId || !formData.diagnosis.trim()) {
-        toast.error('Lütfen bir hasta seçin ve tanı girin');
-        return;
-      }
+         const handleSubmit = (e: React.FormEvent) => {
+       e.preventDefault();
+       
+       if (!formData.patientId || !formData.diagnosis.trim()) {
+         toast.error('Lütfen bir hasta seçin ve tanı girin');
+         return;
+       }
 
-      const validMedications = formData.medications.filter(med => med.name.trim() && med.dosage.trim());
-      
-      if (validMedications.length === 0) {
-        toast.error('En az bir ilaç gereklidir');
-        return;
-      }
+       const validMedications = formData.medications.filter(med => med.name.trim() && med.dosage.trim());
+       
+       if (validMedications.length === 0) {
+         toast.error('En az bir ilaç gereklidir');
+         return;
+       }
 
-      onSubmit({
-        patientId: formData.patientId,
-        patientName: formData.patientName,
-        diagnosis: formData.diagnosis,
-        instructions: formData.instructions,
-        nextVisit: formData.nextVisit,
-        medications: validMedications,
-        status: 'active' as const,
-        date: new Date().toISOString().split('T')[0],
-        prescriptionCode: `RX-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-      });
+       onSubmit({
+         patientId: formData.patientId,
+         patientName: formData.patientName,
+         diagnosis: formData.diagnosis,
+         instructions: formData.instructions,
+         nextVisit: formData.nextVisit,
+         medications: validMedications,
+         status: 'active' as const,
+         date: new Date().toISOString().split('T')[0],
+         prescriptionCode: `RX-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+         doctorName: currentDoctorName
+       });
 
-      setFormData({
-        patientId: '',
-        patientName: '',
-        diagnosis: '',
-        instructions: '',
-        nextVisit: '',
-        medications: [{ name: '', dosage: '', frequency: '', duration: '', instructions: '' }]
-      });
-    };
+       setFormData({
+         patientId: '',
+         patientName: '',
+         diagnosis: '',
+         instructions: '',
+         nextVisit: '',
+         medications: [{ name: '', dosage: '', frequency: '', duration: '', instructions: '' }]
+       });
+     };
+
+
 
     return (
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="patientSelect">Hasta Seç *</Label>
@@ -373,31 +418,31 @@ const PrescriptionManagement: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              <Select value={formData.patientId} onValueChange={handlePatientSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Hasta seçin...">
-                    {formData.patientId ? (
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2" />
-                        {patients.find(p => p.patient_id === formData.patientId)?.patient_name}
-                      </div>
-                    ) : null}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((patient) => (
-                    <SelectItem key={patient.patient_id} value={patient.patient_id}>
-                      <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4" />
-                        <span>{patient.patient_name}</span>
-                        {patient.phone_number && (
-                          <span className="text-xs text-gray-500">({patient.phone_number})</span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                           <Select value={formData.patientId} onValueChange={handlePatientSelect}>
+               <SelectTrigger className="border border-gray-300 rounded-md">
+                 <SelectValue placeholder="Hasta seçin...">
+                   {formData.patientId ? (
+                     <div className="flex items-center">
+                       <User className="w-4 h-4 mr-2" />
+                       {patients.find(p => p.patient_id === formData.patientId)?.patient_name}
+                     </div>
+                   ) : null}
+                 </SelectValue>
+               </SelectTrigger>
+               <SelectContent>
+                 {patients.map((patient) => (
+                   <SelectItem key={patient.patient_id} value={patient.patient_id}>
+                     <div className="flex items-center space-x-2">
+                       <User className="w-4 h-4" />
+                       <span>{patient.patient_name}</span>
+                       {patient.phone_number && (
+                         <span className="text-xs text-gray-500">({patient.phone_number})</span>
+                       )}
+                     </div>
+                   </SelectItem>
+                 ))}
+               </SelectContent>
+             </Select>
             )}
           </div>
           <div>
@@ -405,6 +450,7 @@ const PrescriptionManagement: React.FC = () => {
             <Input
               id="diagnosis"
               value={formData.diagnosis}
+              className="border border-gray-300 rounded-md"
               onChange={(e) => setFormData({...formData, diagnosis: e.target.value})}
               placeholder="Tanı girin..."
               required
@@ -414,12 +460,17 @@ const PrescriptionManagement: React.FC = () => {
 
         <div>
           <Label htmlFor="instructions">Genel Talimatlar</Label>
-          <Textarea
-            id="instructions"
-            value={formData.instructions}
-            onChange={(e) => setFormData({...formData, instructions: e.target.value})}
-            placeholder="Genel kullanım talimatları..."
-          />
+                     <Textarea
+             id="instructions"
+             value={formData.instructions}
+             onChange={(e) => setFormData({...formData, instructions: e.target.value})}
+             placeholder="Genel kullanım talimatları..."
+             className="border border-gray-300 rounded-md py-2 px-3"
+             maxLength={200}
+           />
+          <div className="text-sm text-gray-500 mt-1 text-right">
+            {formData.instructions.length}/200
+          </div>
         </div>
 
         <div>
@@ -427,6 +478,7 @@ const PrescriptionManagement: React.FC = () => {
           <Input
             id="nextVisit"
             type="date"
+            className="border border-gray-300 rounded-md shadow-sm w-1/3"
             value={formData.nextVisit}
             onChange={(e) => setFormData({...formData, nextVisit: e.target.value})}
           />
@@ -445,53 +497,61 @@ const PrescriptionManagement: React.FC = () => {
               <Card key={index}>
                 <CardContent className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor={`medication-name-${index}`}>İlaç Adı *</Label>
-                      <Input
-                        id={`medication-name-${index}`}
-                        value={medication.name}
-                        onChange={(e) => updateMedication(index, 'name', e.target.value)}
-                        placeholder="İlaç adı girin..."
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`medication-dosage-${index}`}>Doz *</Label>
-                      <Input
-                        id={`medication-dosage-${index}`}
-                        value={medication.dosage}
-                        onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
-                        placeholder="Örn: 500mg"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`medication-frequency-${index}`}>Sıklık</Label>
-                      <Input
-                        id={`medication-frequency-${index}`}
-                        value={medication.frequency}
-                        onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
-                        placeholder="Örn: Günde 3 kez"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`medication-duration-${index}`}>Süre</Label>
-                      <Input
-                        id={`medication-duration-${index}`}
-                        value={medication.duration}
-                        onChange={(e) => updateMedication(index, 'duration', e.target.value)}
-                        placeholder="Örn: 7 gün"
-                      />
-                    </div>
+                      <div>
+                       <Label htmlFor={`medication-name-${index}`}>İlaç Adı *</Label>
+                       <Input
+                         id={`medication-name-${index}`}
+                         value={medication.name}
+                         onChange={(e) => updateMedication(index, 'name', e.target.value)}
+                         placeholder="İlaç adı girin..."
+                         className="border border-gray-300 rounded-md"
+                         required
+                       />
+                     </div>
+                     <div>
+                       <Label htmlFor={`medication-dosage-${index}`}>Doz *</Label>
+                       <Input
+                         id={`medication-dosage-${index}`}
+                         value={medication.dosage}
+                         onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
+                         placeholder="Örn: 500mg"
+                         className="border border-gray-300 rounded-md"
+                         required
+                       />
+                     </div>
+                     <div>
+                       <Label htmlFor={`medication-frequency-${index}`}>Sıklık</Label>
+                       <Input
+                         id={`medication-frequency-${index}`}
+                         value={medication.frequency}
+                         onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
+                         placeholder="Örn: Günde 3 kez"
+                         className="border border-gray-300 rounded-md"
+                       />
+                     </div>
+                                           <div>
+                        <Label htmlFor={`medication-duration-${index}`}>Süre</Label>
+                        <Input
+                          id={`medication-duration-${index}`}
+                          value={medication.duration}
+                          onChange={(e) => updateMedication(index, 'duration', e.target.value)}
+                          placeholder="Örn: 7 gün"
+                          className="border border-gray-300 rounded-md"
+                        />
+                      </div>
                   </div>
                   <div className="mt-4">
                     <Label htmlFor={`medication-instructions-${index}`}>Kullanım Talimatları</Label>
-                    <Textarea
-                      id={`medication-instructions-${index}`}
-                      value={medication.instructions}
-                      onChange={(e) => updateMedication(index, 'instructions', e.target.value)}
-                      placeholder="Yemeklerden önce/sonra, özel talimatlar..."
-                    />
+                                         <Textarea
+                       id={`medication-instructions-${index}`}
+                       value={medication.instructions}
+                       onChange={(e) => updateMedication(index, 'instructions', e.target.value)}
+                       className="border border-gray-300 rounded-md py-2 px-3"
+                       maxLength={200}
+                     />
+                                         <div className="text-sm text-gray-500 mt-1 text-right">
+                       {medication.instructions.length}/200
+                     </div>
                   </div>
                   {formData.medications.length > 1 && (
                     <Button
@@ -511,13 +571,15 @@ const PrescriptionManagement: React.FC = () => {
         </div>
 
         <div className="flex justify-end space-x-2">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => setIsAddPrescriptionOpen(false)}
-          >
-            İptal
-          </Button>
+                     <Button 
+             type="button" 
+             variant="outline" 
+             onClick={handleClose}
+             className="!border-2 !border-gray-300 !rounded-md"
+             style={{ border: '2px solid #d1d5db !important' }}
+           >
+             İptal
+           </Button>
           <Button type="submit" disabled={!formData.patientId || patientsLoading}>
             Reçete Oluştur
           </Button>
@@ -526,9 +588,10 @@ const PrescriptionManagement: React.FC = () => {
     );
   };
 
-  const EditPrescriptionForm = ({ prescription, onSubmit }: { 
+  const EditPrescriptionForm = ({ prescription, onSubmit, onClose }: { 
     prescription: Prescription;
     onSubmit: (prescription: Prescription) => void;
+    onClose: () => void;
   }) => {
     const [formData, setFormData] = useState({
       patientId: prescription.patientId,
@@ -539,6 +602,21 @@ const PrescriptionManagement: React.FC = () => {
       medications: prescription.medications,
       status: prescription.status
     });
+
+    // Form değişikliklerini takip etmek için
+    const hasChanges = () => {
+      return (
+        formData.patientId !== prescription.patientId ||
+        formData.patientName !== prescription.patientName ||
+        formData.diagnosis !== prescription.diagnosis ||
+        formData.instructions !== prescription.instructions ||
+        formData.nextVisit !== (prescription.nextVisit || '') ||
+        formData.status !== prescription.status ||
+        JSON.stringify(formData.medications) !== JSON.stringify(prescription.medications)
+      );
+    };
+
+
 
     const addMedication = () => {
       setFormData({
@@ -622,12 +700,12 @@ const PrescriptionManagement: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <Select 
-                value={formData.patientId} 
-                onValueChange={handlePatientSelect}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Hasta seçin...">
+                             <Select 
+                 value={formData.patientId} 
+                 onValueChange={handlePatientSelect}
+               >
+                 <SelectTrigger className="border border-gray-300 rounded-md">
+                   <SelectValue placeholder="Hasta seçin...">
                     {formData.patientId ? (
                       <div className="flex items-center">
                         <User className="w-4 h-4 mr-2" />
@@ -654,43 +732,51 @@ const PrescriptionManagement: React.FC = () => {
           </div>
           <div>
             <Label htmlFor="edit-diagnosis">Tanı *</Label>
-            <Input
-              id="edit-diagnosis"
-              value={formData.diagnosis}
-              onChange={(e) => setFormData({...formData, diagnosis: e.target.value})}
-              required
-            />
+                         <Input
+               id="edit-diagnosis"
+               value={formData.diagnosis}
+               onChange={(e) => setFormData({...formData, diagnosis: e.target.value})}
+               className="border border-gray-300 rounded-md"
+               required
+             />
           </div>
         </div>
 
         <div>
           <Label htmlFor="edit-instructions">Genel Talimatlar</Label>
-          <Textarea
-            id="edit-instructions"
-            value={formData.instructions}
-            onChange={(e) => setFormData({...formData, instructions: e.target.value})}
-          />
+                     <Textarea
+             id="edit-instructions"
+             value={formData.instructions}
+             onChange={(e) => setFormData({...formData, instructions: e.target.value})}
+             className="border border-gray-300 rounded-md py-2 px-3"
+             maxLength={200}
+             placeholder="Genel kullanım talimatları (maksimum 200 karakter)"
+           />
+          <div className="text-sm text-gray-500 mt-1 text-right">
+            {formData.instructions.length}/200
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="edit-nextVisit">Sonraki Kontrol (Opsiyonel)</Label>
-            <Input
-              id="edit-nextVisit"
-              type="date"
-              value={formData.nextVisit}
-              onChange={(e) => setFormData({...formData, nextVisit: e.target.value})}
-            />
+                         <Input
+               id="edit-nextVisit"
+               type="date"
+               value={formData.nextVisit}
+               onChange={(e) => setFormData({...formData, nextVisit: e.target.value})}
+               className="border border-gray-300 rounded-md"
+             />
           </div>
           <div>
             <Label htmlFor="edit-status">Durum</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => setFormData({...formData, status: value as 'active' | 'completed' | 'cancelled'})}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Durum seçin" />
-              </SelectTrigger>
+                         <Select
+               value={formData.status}
+               onValueChange={(value) => setFormData({...formData, status: value as 'active' | 'completed' | 'cancelled'})}
+             >
+               <SelectTrigger className="border border-gray-300 rounded-md">
+                 <SelectValue placeholder="Durum seçin" />
+               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Aktif</SelectItem>
                 <SelectItem value="completed">Tamamlandı</SelectItem>
@@ -713,48 +799,58 @@ const PrescriptionManagement: React.FC = () => {
               <Card key={index}>
                 <CardContent className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor={`edit-medication-name-${index}`}>İlaç Adı *</Label>
-                      <Input
-                        id={`edit-medication-name-${index}`}
-                        value={medication.name}
-                        onChange={(e) => updateMedication(index, 'name', e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`edit-medication-dosage-${index}`}>Doz *</Label>
-                      <Input
-                        id={`edit-medication-dosage-${index}`}
-                        value={medication.dosage}
-                        onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`edit-medication-frequency-${index}`}>Sıklık</Label>
-                      <Input
-                        id={`edit-medication-frequency-${index}`}
-                        value={medication.frequency}
-                        onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`edit-medication-duration-${index}`}>Süre</Label>
-                      <Input
-                        id={`edit-medication-duration-${index}`}
-                        value={medication.duration}
-                        onChange={(e) => updateMedication(index, 'duration', e.target.value)}
-                      />
-                    </div>
+                                         <div>
+                       <Label htmlFor={`edit-medication-name-${index}`}>İlaç Adı *</Label>
+                       <Input
+                         id={`edit-medication-name-${index}`}
+                         value={medication.name}
+                         onChange={(e) => updateMedication(index, 'name', e.target.value)}
+                         className="border border-gray-300 rounded-md"
+                         required
+                       />
+                     </div>
+                     <div>
+                       <Label htmlFor={`edit-medication-dosage-${index}`}>Doz *</Label>
+                       <Input
+                         id={`edit-medication-dosage-${index}`}
+                         value={medication.dosage}
+                         onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
+                         className="border border-gray-300 rounded-md"
+                         required
+                       />
+                     </div>
+                     <div>
+                       <Label htmlFor={`edit-medication-frequency-${index}`}>Sıklık</Label>
+                       <Input
+                         id={`edit-medication-frequency-${index}`}
+                         value={medication.frequency}
+                         onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
+                         className="border border-gray-300 rounded-md"
+                       />
+                     </div>
+                     <div>
+                       <Label htmlFor={`edit-medication-duration-${index}`}>Süre</Label>
+                       <Input
+                         id={`edit-medication-duration-${index}`}
+                         value={medication.duration}
+                         onChange={(e) => updateMedication(index, 'duration', e.target.value)}
+                         className="border border-gray-300 rounded-md"
+                       />
+                     </div>
                   </div>
                   <div className="mt-4">
                     <Label htmlFor={`edit-medication-instructions-${index}`}>Kullanım Talimatları</Label>
-                    <Textarea
-                      id={`edit-medication-instructions-${index}`}
-                      value={medication.instructions}
-                      onChange={(e) => updateMedication(index, 'instructions', e.target.value)}
-                    />
+                                                              <Textarea
+                        id={`edit-medication-instructions-${index}`}
+                        value={medication.instructions}
+                        onChange={(e) => updateMedication(index, 'instructions', e.target.value)}
+                        className="border border-gray-300 rounded-md py-2 px-3"
+                        maxLength={200}
+                        placeholder="Kullanım talimatları (maksimum 200 karakter)"
+                      />
+                    <div className="text-sm text-gray-500 mt-1 text-right">
+                      {medication.instructions.length}/200
+                    </div>
                   </div>
                   {formData.medications.length > 1 && (
                     <Button
@@ -773,18 +869,23 @@ const PrescriptionManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-end space-x-2">
+                 <div className="flex justify-end space-x-2">
+                                                 <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                className="!border-2 !border-gray-300 !rounded-md"
+                style={{ border: '2px solid #d1d5db !important' }}
+              >
+                İptal
+              </Button>
           <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => {
-              setIsEditPrescriptionOpen(false);
-              setEditingPrescription(null);
-            }}
+            type="submit" 
+            disabled={!hasChanges()}
+            className={!hasChanges() ? "opacity-50 cursor-not-allowed" : ""}
           >
-            İptal
+            Güncelle
           </Button>
-          <Button type="submit">Güncelle</Button>
         </div>
       </form>
     );
@@ -797,17 +898,21 @@ const PrescriptionManagement: React.FC = () => {
           title="Reçete Yönetimi"
           subtitle="Reçetelerinizi oluşturun ve yönetin"
         />
-        <Dialog open={isAddPrescriptionOpen} onOpenChange={setIsAddPrescriptionOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" /> Yeni Reçete
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                   <Dialog open={isAddPrescriptionOpen} onOpenChange={setIsAddPrescriptionOpen}>
+           <DialogTrigger asChild>
+             <Button onClick={() => setIsAddPrescriptionOpen(true)}>
+               <Plus className="w-4 h-4 mr-2" /> Yeni Reçete
+             </Button>
+           </DialogTrigger>
+           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden">
             <DialogHeader>
               <DialogTitle>Yeni Reçete Oluştur</DialogTitle>
             </DialogHeader>
-            <AddPrescriptionForm onSubmit={handleAddPrescription} />
+                                       <AddPrescriptionForm 
+                key={formKey}
+                onSubmit={handleAddPrescription}
+                onClose={handleCloseAddModal}
+              />
           </DialogContent>
         </Dialog>
       </div>
@@ -815,7 +920,7 @@ const PrescriptionManagement: React.FC = () => {
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 items-center">
-            <div className="relative flex-1 w-full">
+            <div className="relative flex-1 w-full border border-gray-300 rounded-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <Input
                 placeholder="Hasta adı veya tanıya göre ara..."
@@ -826,7 +931,7 @@ const PrescriptionManagement: React.FC = () => {
             </div>
             <div className="w-full md:w-40">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
+                <SelectTrigger className="border border-gray-300 rounded-md">
                   <SelectValue placeholder="Durum" />
                 </SelectTrigger>
                 <SelectContent>
@@ -945,6 +1050,7 @@ const PrescriptionManagement: React.FC = () => {
                   <Button
                     size="sm"
                     variant="outline"
+                    className="border border-black hover:border-black"
                     onClick={() => setSelectedPrescription(prescription)}
                   >
                     <Eye className="w-4 h-4 mr-1" /> Görüntüle
@@ -952,6 +1058,7 @@ const PrescriptionManagement: React.FC = () => {
                   <Button
                     size="sm"
                     variant="outline"
+                    className="border border-black hover:border-black"
                     onClick={() => printPrescription(prescription)}
                   >
                     <Printer className="w-4 h-4 mr-1" /> Yazdır
@@ -959,6 +1066,7 @@ const PrescriptionManagement: React.FC = () => {
                   <Button 
                     size="sm" 
                     variant="outline"
+                    className="border border-black hover:border-black"
                     onClick={() => {
                       setEditingPrescription(prescription);
                       setIsEditPrescriptionOpen(true);
@@ -969,6 +1077,7 @@ const PrescriptionManagement: React.FC = () => {
                   <Button 
                     size="sm" 
                     variant="destructive"
+                    className="border-2 border-red-300 hover:border-red-400"
                     onClick={() => handleDeletePrescription(prescription.id)}
                   >
                     <Trash2 className="w-4 h-4 mr-1" /> Sil
@@ -1012,7 +1121,7 @@ const PrescriptionManagement: React.FC = () => {
                 <div className="mt-2 space-y-3">
                   {selectedPrescription.medications.map((medication, index) => (
                     <Card key={index}>
-                      <CardContent className="p-4">
+                      <CardContent className="p-4 bg-gray-50 rounded-lg">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <p className="font-medium">{medication.name}</p>
@@ -1048,24 +1157,23 @@ const PrescriptionManagement: React.FC = () => {
         </Dialog>
       )}
 
-      {editingPrescription && (
-        <Dialog open={isEditPrescriptionOpen} onOpenChange={(open) => {
-          setIsEditPrescriptionOpen(open);
-          if (!open) {
-            setEditingPrescription(null);
-          }
-        }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                                       {editingPrescription && (
+           <Dialog open={isEditPrescriptionOpen} onOpenChange={setIsEditPrescriptionOpen}>
+           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden">
             <DialogHeader>
               <DialogTitle>Reçete Düzenle - {editingPrescription.patientName}</DialogTitle>
             </DialogHeader>
-            <EditPrescriptionForm 
-              prescription={editingPrescription}
-              onSubmit={handleUpdatePrescription}
-            />
+                                                   <EditPrescriptionForm 
+                key={editFormKey}
+                prescription={editingPrescription}
+                onSubmit={handleUpdatePrescription}
+                onClose={handleCloseEditModal}
+              />
           </DialogContent>
         </Dialog>
       )}
+
+             
     </div>
   );
 };

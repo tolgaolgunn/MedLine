@@ -420,7 +420,7 @@ export function DoctorSearch() {
             />
           </div>
 
-                      <Select
+          <Select
               value={selectedSpecialty}
               onValueChange={(value) => setSelectedSpecialty(value)}
             >
