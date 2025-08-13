@@ -9,8 +9,8 @@ router.get('/doctor-appointments/:doctor_id/:date', patientController.getDoctorA
 router.get('/patient-appointments/:patient_id/:date', patientController.getPatientAppointmentsByDate);
 
 // Prescription routes
-router.get('/prescriptions/:patientId', patientController.getMyPrescriptions);
-router.get('/prescriptions/:patientId/:prescriptionId', patientController.getPrescriptionDetail);
-router.put('/prescriptions/:patientId/:prescriptionId/status', patientController.updatePrescriptionStatus);
+router.get('/patient/prescriptions/:patientId', patientController.getMyPrescriptions);
+router.get('/patient/prescriptions/:patientId/:prescriptionId', patientController.getPrescriptionDetail);
+router.put('/patient/prescriptions/:patientId/:prescriptionId/status', patientController.updatePrescriptionStatus);
 
 module.exports = router;
