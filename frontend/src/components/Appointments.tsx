@@ -20,21 +20,22 @@ import {
   Mail
 } from 'lucide-react';
 
-// Randevu veri yapısı için interface tanımı
+// Update the Appointment interface to match backend data
 interface Appointment {
-  id: number;
-  doctorId: number;
-  doctorName: string;
-  doctorSpecialty: string;
+  appointment_id: number;
+  doctor_id: number;
+  doctor_name: string;
+  doctor_specialty: string;
+  datetime: string;
+  type: 'online' | 'face_to_face';
+  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  date?: string;
+  time?: string;
+  complaint?: string;
+  notes?: string;
   doctorPhone?: string;
   doctorEmail?: string;
   doctorAddress?: string;
-  date: string;
-  time: string;
-  type: 'online' | 'face_to_face';
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
-  complaint?: string;
-  notes?: string;
 }
 
 // Durum çevirileri için mapping
@@ -45,202 +46,87 @@ const statusMap: Record<string, string> = {
   completed: "Tamamlandı",
 };
 
-// Örnek randevu verileri
-const sampleAppointments: Appointment[] = [
-  {
-    id: 1,
-    doctorId: 1,
-    doctorName: "Dr. Ahmet Yılmaz",
-    doctorSpecialty: "Kardiyoloji",
-    doctorPhone: "0532 123 45 67",
-    doctorEmail: "ahmet.yilmaz@medline.com",
-    doctorAddress: "Atatürk Cad. No:123, Ankara",
-    date: "15.12.2024",
-    time: "14:30",
-    type: "online",
-    status: "confirmed",
-    complaint: "Göğüs ağrısı ve nefes darlığı",
-    notes: "Hasta düzenli ilaç kullanıyor"
-  },
-  {
-    id: 2,
-    doctorId: 2,
-    doctorName: "Dr. Ayşe Demir",
-    doctorSpecialty: "Dermatoloji",
-    doctorPhone: "0533 234 56 78",
-    doctorEmail: "ayse.demir@medline.com",
-    doctorAddress: "İnönü Cad. No:456, İstanbul",
-    date: "16.12.2024",
-    time: "10:00",
-    type: "face_to_face",
-    status: "pending",
-    complaint: "Cilt döküntüsü",
-    notes: "İlk kez görüşme"
-  },
-  {
-    id: 3,
-    doctorId: 3,
-    doctorName: "Dr. Mehmet Kaya",
-    doctorSpecialty: "Ortopedi",
-    doctorPhone: "0534 345 67 89",
-    doctorEmail: "mehmet.kaya@medline.com",
-    doctorAddress: "Cumhuriyet Cad. No:789, İzmir",
-    date: "14.12.2024",
-    time: "16:00",
-    type: "online",
-    status: "completed",
-    complaint: "Bel ağrısı",
-    notes: "Fizik tedavi önerildi"
-  },
-  {
-    id: 4,
-    doctorId: 4,
-    doctorName: "Dr. Fatma Özkan",
-    doctorSpecialty: "Nöroloji",
-    doctorPhone: "0535 456 78 90",
-    doctorEmail: "fatma.ozkan@medline.com",
-    doctorAddress: "Gazi Cad. No:321, Bursa",
-    date: "17.12.2024",
-    time: "11:30",
-    type: "face_to_face",
-    status: "confirmed",
-    complaint: "Baş ağrısı ve baş dönmesi",
-    notes: "Migren şüphesi"
-  },
-     {
-     id: 5,
-     doctorId: 5,
-     doctorName: "Dr. Ali Çelik",
-     doctorSpecialty: "Göz Hastalıkları",
-     doctorPhone: "0536 567 89 01",
-     doctorEmail: "ali.celik@medline.com",
-     doctorAddress: "Millet Cad. No:654, Antalya",
-     date: "18.12.2024",
-     time: "09:00",
-     type: "online",
-     status: "pending",
-     complaint: "Görme bozukluğu",
-     notes: "Göz muayenesi gerekli"
-   },
-   {
-     id: 6,
-     doctorId: 6,
-     doctorName: "Dr. Zeynep Arslan",
-     doctorSpecialty: "Psikiyatri",
-     doctorPhone: "0537 678 90 12",
-     doctorEmail: "zeynep.arslan@medline.com",
-     doctorAddress: "Bağdat Cad. No:987, İstanbul",
-     date: "19.12.2024",
-     time: "15:00",
-     type: "online",
-     status: "confirmed",
-     complaint: "Uyku problemleri ve kaygı",
-     notes: "Düzenli terapi seansları"
-   },
-   {
-     id: 7,
-     doctorId: 7,
-     doctorName: "Dr. Mustafa Özkan",
-     doctorSpecialty: "Genel Cerrahi",
-     doctorPhone: "0538 789 01 23",
-     doctorEmail: "mustafa.ozkan@medline.com",
-     doctorAddress: "Kızılay Cad. No:555, Ankara",
-     date: "20.12.2024",
-     time: "13:30",
-     type: "face_to_face",
-     status: "pending",
-     complaint: "Karın ağrısı",
-     notes: "Acil muayene gerekli"
-   },
-   {
-     id: 8,
-     doctorId: 8,
-     doctorName: "Dr. Elif Yıldız",
-     doctorSpecialty: "Kadın Hastalıkları",
-     doctorPhone: "0539 890 12 34",
-     doctorEmail: "elif.yildiz@medline.com",
-     doctorAddress: "Alsancak Cad. No:777, İzmir",
-     date: "21.12.2024",
-     time: "10:30",
-     type: "face_to_face",
-     status: "confirmed",
-     complaint: "Düzenli kontrol",
-     notes: "Yıllık jinekolojik muayene"
-   },
-   {
-     id: 9,
-     doctorId: 9,
-     doctorName: "Dr. Burak Demir",
-     doctorSpecialty: "Çocuk Sağlığı",
-     doctorPhone: "0540 901 23 45",
-     doctorEmail: "burak.demir@medline.com",
-     doctorAddress: "Nilüfer Cad. No:888, Bursa",
-     date: "22.12.2024",
-     time: "14:00",
-     type: "online",
-     status: "pending",
-     complaint: "Çocuk ateşi ve öksürük",
-     notes: "5 yaşında çocuk hasta"
-   },
-   {
-     id: 10,
-     doctorId: 10,
-     doctorName: "Dr. Seda Kaya",
-     doctorSpecialty: "Fizik Tedavi",
-     doctorPhone: "0541 012 34 56",
-     doctorEmail: "seda.kaya@medline.com",
-     doctorAddress: "Muratpaşa Cad. No:999, Antalya",
-     date: "23.12.2024",
-     time: "16:30",
-     type: "face_to_face",
-     status: "confirmed",
-     complaint: "Boyun ve omuz ağrısı",
-     notes: "Fizik tedavi seansı"
-   }
-
- ];
-
 const Appointments: React.FC = () => {
-  // Temel state yönetimi
-  const [appointments, setAppointments] = useState<Appointment[]>(sampleAppointments);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  
-  // Filtre state'leri
-  const [filter, setFilter] = useState('all'); // Varsayılan olarak tüm randevuları göster
+  // State management
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  
-  // Modal state'leri
-  const [showDetail, setShowDetail] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
-  
-  // Filtre modal state'leri
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [tempFilters, setTempFilters] = useState({
     filter: 'all',
     startDate: '',
     endDate: '',
     activeFilters: [] as string[]
   });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
 
-  // TempFilters'ı gerçek filtrelerle senkronize et
+  // Get user from localStorage
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  // Fetch appointments
+const fetchAppointments = async () => {
+  try {
+    setLoading(true);
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    if (!user.user_id) {
+      throw new Error('Kullanıcı bilgileri alınamadı');
+    }
+
+    const response = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`);
+    
+    if (!response.ok) {
+      throw new Error('Randevular yüklenirken bir hata oluştu');
+    }
+    
+    const data = await response.json();
+    
+    // API'den gelen veriyi işleyip state'e kaydedelim
+    const formattedAppointments = data.map((apt: any) => ({
+      appointment_id: apt.appointment_id,
+      doctor_id: apt.doctor_id,
+      doctor_name: apt.doctor_name,
+      doctor_specialty: apt.doctor_specialty,
+      datetime: apt.datetime,
+      type: apt.type,
+      status: apt.status,
+      // API'den gelen datetime'ı parçalayarak date ve time oluşturuyoruz
+      date: new Date(apt.datetime).toLocaleDateString('tr-TR'),
+      time: new Date(apt.datetime).toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      // Eğer API'den bu alanlar geliyorsa:
+      complaint: apt.complaint || '',
+      notes: apt.notes || ''
+    }));
+
+    setAppointments(formattedAppointments);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Fetch appointments on component mount
   useEffect(() => {
-    setTempFilters({
-      filter: filter,
-      startDate: startDate,
-      endDate: endDate,
-      activeFilters: activeFilters
-    });
-  }, [filter, startDate, endDate, activeFilters]);
+    fetchAppointments();
+  }, []);
 
   // Randevunun şu anda aktif olup olmadığını kontrol et (30 dakika öncesi ve 10 dakika sonrası)
   const isCurrentAppointment = (appointment: Appointment) => {
+    if (!appointment.date || !appointment.time) return false;
+    
     const [day, month, year] = appointment.date.split('.');
     const [hour, minute] = appointment.time.split(':');
     const appointmentDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
@@ -278,7 +164,7 @@ const Appointments: React.FC = () => {
     try {
       // Örnek veri olduğu için sadece state'i güncelle
       setAppointments(prev => prev.map(app => 
-        app.id === appointment.id 
+        app.appointment_id === appointment.appointment_id 
           ? { ...app, status: 'cancelled' as const }
           : app
       ));
@@ -392,37 +278,46 @@ const Appointments: React.FC = () => {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     return appointments.filter(appointment => {
-      // Tarih filtreleme
-      const [day, month, year] = appointment.date.split('.');
-      const appointmentDate = new Date(Number(year), Number(month) - 1, Number(day));
+      if (!appointment.date || !appointment.time) return false;
       
-             let dateFilter = true;
-       switch (filter) {
-         case 'all':
-           dateFilter = true; // Tüm randevuları göster
-           break;
-         case 'today':
-           dateFilter = appointmentDate.toDateString() === today.toDateString();
-           break;
-         case 'tomorrow':
-           dateFilter = appointmentDate.toDateString() === tomorrow.toDateString();
-           break;
-         case 'this_week':
-           dateFilter = appointmentDate >= startOfWeek && appointmentDate <= today;
-           break;
-         case 'this_month':
-           dateFilter = appointmentDate >= startOfMonth && appointmentDate <= today;
-           break;
-         case 'custom':
-           if (startDate && endDate) {
-             const start = new Date(startDate);
-             const end = new Date(endDate);
-             dateFilter = appointmentDate >= start && appointmentDate <= end;
-           }
-           break;
-         default:
-           dateFilter = true;
-       }
+      // Tarih ve saat kontrolü için appointment datetime'ını oluştur
+      const [day, month, year] = appointment.date.split('.');
+      const [hour, minute] = appointment.time.split(':');
+      const appointmentDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+      
+      // Geçmiş randevuları filtrele
+      if (appointmentDate < today) {
+        return false;
+      }
+
+      // Mevcut filtre mantığı
+      let dateFilter = true;
+      switch (filter) {
+        case 'all':
+          dateFilter = true;
+          break;
+        case 'today':
+          dateFilter = appointmentDate.toDateString() === today.toDateString();
+          break;
+        case 'tomorrow':
+          dateFilter = appointmentDate.toDateString() === tomorrow.toDateString();
+          break;
+        case 'this_week':
+          dateFilter = appointmentDate >= startOfWeek && appointmentDate <= today;
+          break;
+        case 'this_month':
+          dateFilter = appointmentDate >= startOfMonth && appointmentDate <= today;
+          break;
+        case 'custom':
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            dateFilter = appointmentDate >= start && appointmentDate <= end;
+          }
+          break;
+        default:
+          dateFilter = true;
+      }
 
       // Hızlı işlem filtreleme
       let actionFilter = true;
@@ -445,20 +340,20 @@ const Appointments: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-             {/* Sayfa Başlığı */}
-       <div className="mb-8">
-         <h1 className="text-3xl font-bold mb-2">Randevu Yönetimi</h1>
-         <p className="text-muted-foreground">Randevularınızı görüntüleyin ve yönetin.</p>
-       </div>
+      {/* Sayfa Başlığı */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Randevu Yönetimi</h1>
+        <p className="text-muted-foreground">Randevularınızı görüntüleyin ve yönetin.</p>
+      </div>
 
       {/* Ana İçerik */}
       <div className="w-full">
         {/* Randevular Bölümü */}
         <div className="w-full">
           <Card className="p-6">
-                         {/* Bölüm Başlığı ve Filtreler */}
-             <div className="flex items-center justify-between mb-6">
-               <h2 className="text-xl font-semibold">Randevular</h2>
+            {/* Bölüm Başlığı ve Filtreler */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold">Randevular</h2>
               <div className="flex items-center gap-3">
                 {/* Filtre Butonu */}
                 <Button 
@@ -467,113 +362,27 @@ const Appointments: React.FC = () => {
                   onClick={handleOpenFilterModal}
                 >
                   <Filter className="w-4 h-4" />
-                                     <span>{getActiveFiltersText()}</span>
-                   {(filter !== 'all' || activeFilters.length > 0) && (
-                     <Badge variant="secondary" className="ml-1">
-                       {activeFilters.length + (filter !== 'all' ? 1 : 0)}
-                     </Badge>
-                   )}
+                  <span>{getActiveFiltersText()}</span>
+                  {(filter !== 'all' || activeFilters.length > 0) && (
+                    <Badge variant="secondary" className="ml-1">
+                      {activeFilters.length + (filter !== 'all' ? 1 : 0)}
+                    </Badge>
+                  )}
                 </Button>
-
-                {/* Filtre Modal */}
-                <Dialog open={isFilterModalOpen} onOpenChange={handleCloseFilterModal}>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Filtreler</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-6">
-                      
-                      {/* Tarih Aralığı Filtreleri */}
-                      <div>
-                        <h3 className="font-medium mb-3">Tarih Aralığı</h3>
-                            <div className="grid grid-cols-2 gap-3">
-                           {filterOptions.map(option => (
-                             <Button
-                               key={option.value}
-                               variant={tempFilters.filter === option.value ? "default" : "outline"}
-                               size="sm"
-                               onClick={() => handleFilterChange(option.value)}
-                               className="justify-start border-2 border-gray-300 shadow-sm"
-                             >
-                               {option.label}
-                             </Button>
-                           ))}
-                         </div>
-
-                        {/* Özel Tarih Aralığı Girişleri */}
-                        {tempFilters.filter === 'custom' && (
-                          <div className="mt-3 flex gap-2">
-                            <Input 
-                              type="date" 
-                              value={tempFilters.startDate}
-                              className="w-full"
-                              onChange={(e) => {
-                                setTempFilters(prev => ({ ...prev, startDate: e.target.value }));
-                                setHasUnsavedChanges(true);
-                              }}
-                              placeholder="Başlangıç"
-                            />
-                            <Input 
-                              type="date" 
-                              value={tempFilters.endDate}
-                              className="w-full"
-                              onChange={(e) => {
-                                setTempFilters(prev => ({ ...prev, endDate: e.target.value }));
-                                setHasUnsavedChanges(true);
-                              }}
-                              placeholder="Bitiş"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Hızlı İşlem Filtreleri */}
-                      <div>
-                        <h3 className="font-medium mb-3">Hızlı İşlemler</h3>
-                        <div className="grid grid-cols-2 gap-2">
-                          {quickActions.map(action => (
-                            <Button
-                              key={action.value}
-                              variant={tempFilters.activeFilters.includes(action.value) ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleQuickActionToggle(action.value)}
-                              className="justify-start border-2 border-gray-300 shadow-sm"
-                            >
-                              {action.label}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Aksiyon Butonları */}
-                      <div className="pt-4 border-t space-y-2">
-                        <Button 
-                          onClick={applyFilters}
-                          disabled={!hasUnsavedChanges}
-                          className="w-full border-2 border-gray-300 shadow-sm"
-                        >
-                          Filtreleri Uygula
-                        </Button>
-                        
-                                                 {(tempFilters.filter !== 'all' || tempFilters.activeFilters.length > 0) && (
-                           <Button 
-                             variant="outline"
-                             onClick={clearAllFilters}
-                             className="w-full border-2 border-gray-300 shadow-sm"
-                           >
-                            Filtreleri Kaldır
-                           </Button>
-                         )}
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
               </div>
             </div>
 
             {/* Randevular Listesi */}
             <div className="space-y-4">
-              {getFilteredAppointments().length === 0 ? (
+              {loading ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Yükleniyor...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">
+                  <p>{error}</p>
+                </div>
+              ) : getFilteredAppointments().length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>Seçilen filtrelere uygun randevu bulunamadı.</p>
@@ -581,44 +390,44 @@ const Appointments: React.FC = () => {
               ) : (
                 getFilteredAppointments()
                   .map((appointment) => (
-                     <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
-                       {/* Randevu Bilgileri */}
-                       <div>
-                         <div className="flex items-center gap-3 mb-1">
-                           <p className="font-medium">{appointment.doctorName}</p>
-                            <Badge variant="outline" className="bg-black text-white border-black">
-                              {statusMap[appointment.status]}
-                            </Badge>
-                         </div>
-                         <p className="text-sm text-gray-600">{appointment.doctorSpecialty}</p>
-                         <p className="text-xs text-gray-500">{appointment.date} - {appointment.time} • {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
-                         <p className="text-xs text-gray-500">Şikayet: {appointment.complaint || 'Belirtilmemiş'}</p>
-                       </div>
+                    <div key={appointment.appointment_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
+                      {/* Randevu Bilgileri */}
+                      <div>
+                        <div className="flex items-center gap-3 mb-1">
+                          <p className="font-medium">{appointment.doctor_name}</p>
+                          <Badge variant="outline" className="bg-black text-white border-black">
+                            {statusMap[appointment.status]}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">{appointment.doctor_specialty}</p>
+                        <p className="text-xs text-gray-500">{appointment.date} - {appointment.time} • {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
+                        <p className="text-xs text-gray-500">Şikayet: {appointment.complaint || 'Belirtilmemiş'}</p>
+                      </div>
                       
                       {/* Aksiyon Butonları */}
                       <div className="flex items-center gap-2">
-                                                 {isCurrentAppointment(appointment) && appointment.type === 'online' && appointment.status === 'confirmed' && (
-                           <Button
-                             size="sm"
-                             variant="outline"
-                             onClick={() => handleStartAppointment(appointment.id)}
-                             className="border-2 border-gray-300 shadow-sm"
-                           >
-                             <Video className="w-4 h-4 mr-1" />
-                             Görüşmeye Katıl
-                           </Button>
-                         )}
+                        {isCurrentAppointment(appointment) && appointment.type === 'online' && appointment.status === 'confirmed' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStartAppointment(appointment.appointment_id)}
+                            className="border-2 border-gray-300 shadow-sm"
+                          >
+                            <Video className="w-4 h-4 mr-1" />
+                            Görüşmeye Katıl
+                          </Button>
+                        )}
                         
-                           <button
-                           type="button"
-                           onClick={() => {
-                             setSelectedAppointment(appointment);
-                             setShowDetail(true);
-                           }}
-                           className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1 px-4 rounded-md transition-all duration-200 text-sm"
-                         >
-                           Detay
-                         </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAppointment(appointment);
+                            setShowDetail(true);
+                          }}
+                          className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1 px-4 rounded-md transition-all duration-200 text-sm"
+                        >
+                          Detay
+                        </button>
                         
                         {appointment.status === 'confirmed' && !isCurrentAppointment(appointment) && (
                           <Button
@@ -640,9 +449,100 @@ const Appointments: React.FC = () => {
             </div>
           </Card>
         </div>
-
-
       </div>
+
+      {/* Filtre Modal */}
+      <Dialog open={isFilterModalOpen} onOpenChange={handleCloseFilterModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Filtreler</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Tarih Aralığı Filtreleri */}
+            <div>
+              <h3 className="font-medium mb-3">Tarih Aralığı</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {filterOptions.map(option => (
+                  <Button
+                    key={option.value}
+                    variant={tempFilters.filter === option.value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleFilterChange(option.value)}
+                    className="justify-start border-2 border-gray-300 shadow-sm"
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Özel Tarih Aralığı Girişleri */}
+              {tempFilters.filter === 'custom' && (
+                <div className="mt-3 flex gap-2">
+                  <Input 
+                    type="date" 
+                    value={tempFilters.startDate}
+                    className="w-full"
+                    onChange={(e) => {
+                      setTempFilters(prev => ({ ...prev, startDate: e.target.value }));
+                      setHasUnsavedChanges(true);
+                    }}
+                    placeholder="Başlangıç"
+                  />
+                  <Input 
+                    type="date" 
+                    value={tempFilters.endDate}
+                    className="w-full"
+                    onChange={(e) => {
+                      setTempFilters(prev => ({ ...prev, endDate: e.target.value }));
+                      setHasUnsavedChanges(true);
+                    }}
+                    placeholder="Bitiş"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Hızlı İşlem Filtreleri */}
+            <div>
+              <h3 className="font-medium mb-3">Hızlı İşlemler</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {quickActions.map(action => (
+                  <Button
+                    key={action.value}
+                    variant={tempFilters.activeFilters.includes(action.value) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleQuickActionToggle(action.value)}
+                    className="justify-start border-2 border-gray-300 shadow-sm"
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Aksiyon Butonları */}
+            <div className="pt-4 border-t space-y-2">
+              <Button 
+                onClick={applyFilters}
+                disabled={!hasUnsavedChanges}
+                className="w-full border-2 border-gray-300 shadow-sm"
+              >
+                Filtreleri Uygula
+              </Button>
+              
+              {(tempFilters.filter !== 'all' || tempFilters.activeFilters.length > 0) && (
+                <Button 
+                  variant="outline"
+                  onClick={clearAllFilters}
+                  className="w-full border-2 border-gray-300 shadow-sm"
+                >
+                  Filtreleri Kaldır
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Randevu Detay Modal */}
       {showDetail && selectedAppointment && (
@@ -659,8 +559,8 @@ const Appointments: React.FC = () => {
                   Doktor Bilgileri
                 </h3>
                 <div className="space-y-2">
-                  <p><strong>Ad Soyad:</strong> {selectedAppointment.doctorName}</p>
-                  <p><strong>Uzmanlık:</strong> {selectedAppointment.doctorSpecialty}</p>
+                  <p><strong>Ad Soyad:</strong> {selectedAppointment.doctor_name}</p>
+                  <p><strong>Uzmanlık:</strong> {selectedAppointment.doctor_specialty}</p>
                   {selectedAppointment.doctorPhone && (
                     <p className="flex items-center gap-2">
                       <Phone className="w-4 h-4" />
@@ -723,7 +623,7 @@ const Appointments: React.FC = () => {
             </p>
             {appointmentToCancel && (
               <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                <p className="font-medium">{appointmentToCancel.doctorName}</p>
+                <p className="font-medium">{appointmentToCancel.doctor_name}</p>
                 <p className="text-sm text-gray-600">{appointmentToCancel.date} - {appointmentToCancel.time}</p>
               </div>
             )}
