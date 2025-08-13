@@ -121,8 +121,17 @@ exports.getPatientAppointmentsByDate = async (req, res) => {
 // Hastanın tüm reçetelerini getir
 exports.getMyPrescriptions = async (req, res) => {
   try {
-    const patientId = req.params.patientId;
-    
+    // user_id parametresini al
+    const patientId = req.params.patientId || req.user?.user_id;
+    console.log('Patient ID:', patientId); // Debug için
+
+    if (!patientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hasta ID\'si gereklidir'
+      });
+    }
+
     const query = `
       SELECT 
         p.prescription_id,
@@ -133,84 +142,70 @@ exports.getMyPrescriptions = async (req, res) => {
         p.next_visit_date,
         p.status as prescription_status,
         p.created_at as prescription_date,
-        du.full_name as doctor_name,
+        u.full_name as doctor_name,
         dp.specialty as doctor_specialty,
         dp.hospital_name,
         dp.city,
         dp.district,
         a.datetime as appointment_date,
         a.type as appointment_type,
-        pi.medicine_name,
-        pi.dosage,
-        pi.frequency,
-        pi.duration,
-        pi.usage_instructions as medicine_instructions
+        json_agg(
+          json_build_object(
+            'item_id', pi.item_id,
+            'medicine_name', pi.medicine_name,
+            'dosage', pi.dosage,
+            'frequency', pi.frequency,
+            'duration', pi.duration,
+            'usage_instructions', pi.usage_instructions,
+            'side_effects', pi.side_effects,
+            'quantity', pi.quantity
+          )
+        ) FILTER (WHERE pi.item_id IS NOT NULL) as medicines
       FROM prescriptions p
-      INNER JOIN users du ON p.doctor_id = du.user_id
-      INNER JOIN doctor_profiles dp ON du.user_id = dp.user_id
+      LEFT JOIN users u ON p.doctor_id = u.user_id
+      LEFT JOIN doctor_profiles dp ON u.user_id = dp.user_id
       LEFT JOIN appointments a ON p.appointment_id = a.appointment_id
       LEFT JOIN prescription_items pi ON p.prescription_id = pi.prescription_id
       WHERE p.patient_id = $1
+      GROUP BY 
+        p.prescription_id,
+        p.prescription_code,
+        p.diagnosis,
+        p.general_instructions,
+        p.usage_instructions,
+        p.next_visit_date,
+        p.status,
+        p.created_at,
+        u.full_name,
+        dp.specialty,
+        dp.hospital_name,
+        dp.city,
+        dp.district,
+        a.datetime,
+        a.type
       ORDER BY p.created_at DESC`;
 
     const result = await db.query(query, [patientId]);
-    
-    // Reçeteleri grupla
-    const prescriptions = result.rows.reduce((acc, row) => {
-      const prescription = acc.find(p => p.prescription_id === row.prescription_id);
-      
-      if (prescription) {
-        // İlacı mevcut reçeteye ekle
-        prescription.medicines.push({
-          name: row.medicine_name,
-          dosage: row.dosage,
-          frequency: row.frequency,
-          duration: row.duration,
-          instructions: row.medicine_instructions
-        });
-      } else {
-        // Yeni reçete oluştur
-        acc.push({
-          prescription_id: row.prescription_id,
-          prescription_code: row.prescription_code,
-          diagnosis: row.diagnosis,
-          general_instructions: row.general_instructions,
-          usage_instructions: row.usage_instructions,
-          next_visit_date: row.next_visit_date,
-          status: row.prescription_status,
-          created_at: row.prescription_date,
-          doctor: {
-            name: row.doctor_name,
-            specialty: row.doctor_specialty,
-            hospital: row.hospital_name,
-            city: row.city,
-            district: row.district
-          },
-          appointment: {
-            date: row.appointment_date,
-            type: row.appointment_type
-          },
-          medicines: row.medicine_name ? [{
-            name: row.medicine_name,
-            dosage: row.dosage,
-            frequency: row.frequency,
-            duration: row.duration,
-            instructions: row.medicine_instructions
-          }] : []
-        });
-      }
-      return acc;
-    }, []);
+    console.log('Query result:', result.rows); // Debug için
+
+    if (result.rows.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: 'Reçete bulunamadı'
+      });
+    }
 
     res.status(200).json({
       success: true,
-      data: prescriptions
+      data: result.rows
     });
   } catch (err) {
-    console.error('Reçeteler alınırken hata:', err);
+    console.error('Error fetching prescriptions:', err);
     res.status(500).json({
       success: false,
-      message: 'Reçeteler alınırken bir hata oluştu'
+      message: 'Reçeteler alınırken bir hata oluştu',
+      error: err.message
     });
   }
 };
@@ -222,26 +217,72 @@ exports.getPrescriptionDetail = async (req, res) => {
     
     const query = `
       SELECT 
-        p.*,
-        du.full_name as doctor_name,
+        p.prescription_id,
+        p.prescription_code,
+        p.diagnosis,
+        p.general_instructions,
+        p.usage_instructions,
+        p.next_visit_date,
+        p.status as prescription_status,
+        p.created_at as prescription_date,
+        
+        u_doc.full_name as doctor_name,
         dp.specialty as doctor_specialty,
+        dp.license_number,
         dp.hospital_name,
+        dp.city,
+        dp.district,
+        dp.experience_years,
+        
+        u_pat.full_name as patient_name,
+        pp.birth_date,
+        pp.gender,
+        
         a.datetime as appointment_date,
         a.type as appointment_type,
-        json_agg(json_build_object(
-          'name', pi.medicine_name,
-          'dosage', pi.dosage,
-          'frequency', pi.frequency,
-          'duration', pi.duration,
-          'instructions', pi.usage_instructions
-        )) as medicines
+        
+        json_agg(
+          json_build_object(
+            'item_id', pi.item_id,
+            'medicine_name', pi.medicine_name,
+            'dosage', pi.dosage,
+            'frequency', pi.frequency,
+            'duration', pi.duration,
+            'usage_instructions', pi.usage_instructions,
+            'side_effects', pi.side_effects,
+            'quantity', pi.quantity
+          )
+        ) FILTER (WHERE pi.item_id IS NOT NULL) as medicines
+        
       FROM prescriptions p
-      INNER JOIN users du ON p.doctor_id = du.user_id
-      INNER JOIN doctor_profiles dp ON du.user_id = dp.user_id
+      LEFT JOIN users u_doc ON p.doctor_id = u_doc.user_id
+      LEFT JOIN doctor_profiles dp ON u_doc.user_id = dp.user_id
+      LEFT JOIN users u_pat ON p.patient_id = u_pat.user_id
+      LEFT JOIN patient_profiles pp ON u_pat.user_id = pp.user_id
       LEFT JOIN appointments a ON p.appointment_id = a.appointment_id
       LEFT JOIN prescription_items pi ON p.prescription_id = pi.prescription_id
       WHERE p.prescription_id = $1 AND p.patient_id = $2
-      GROUP BY p.prescription_id, du.full_name, dp.specialty, dp.hospital_name, a.datetime, a.type`;
+      GROUP BY 
+        p.prescription_id,
+        p.prescription_code,
+        p.diagnosis,
+        p.general_instructions,
+        p.usage_instructions,
+        p.next_visit_date,
+        p.status,
+        p.created_at,
+        u_doc.full_name,
+        dp.specialty,
+        dp.license_number,
+        dp.hospital_name,
+        dp.city,
+        dp.district,
+        dp.experience_years,
+        u_pat.full_name,
+        pp.birth_date,
+        pp.gender,
+        a.datetime,
+        a.type`;
 
     const result = await db.query(query, [prescriptionId, patientId]);
 
@@ -252,15 +293,38 @@ exports.getPrescriptionDetail = async (req, res) => {
       });
     }
 
+    const prescriptionDetail = {
+      ...result.rows[0],
+      doctor: {
+        name: result.rows[0].doctor_name,
+        specialty: result.rows[0].doctor_specialty,
+        license_number: result.rows[0].license_number,
+        hospital_name: result.rows[0].hospital_name,
+        city: result.rows[0].city,
+        district: result.rows[0].district,
+        experience_years: result.rows[0].experience_years
+      },
+      patient: {
+        name: result.rows[0].patient_name,
+        birth_date: result.rows[0].birth_date,
+        gender: result.rows[0].gender
+      },
+      appointment: {
+        date: result.rows[0].appointment_date,
+        type: result.rows[0].appointment_type
+      },
+      medicines: result.rows[0].medicines || []
+    };
+
     res.status(200).json({
       success: true,
-      data: result.rows[0]
+      data: prescriptionDetail
     });
   } catch (err) {
-    console.error('Reçete detayı alınırken hata:', err);
+    console.error('Error fetching prescription detail:', err);
     res.status(500).json({
       success: false,
-      message: 'Reçete detayı alınırken bir hata oluştu'
+      message: 'Reçete detayları alınırken bir hata oluştu'
     });
   }
 };
@@ -268,23 +332,19 @@ exports.getPrescriptionDetail = async (req, res) => {
 // Reçete durumunu güncelle
 exports.updatePrescriptionStatus = async (req, res) => {
   try {
-    const { prescriptionId, patientId } = req.params;
+    const { prescriptionId } = req.params;
     const { status } = req.body;
-
-    if (!['active', 'used', 'expired', 'cancelled'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Geçersiz reçete durumu'
-      });
-    }
 
     const query = `
       UPDATE prescriptions 
-      SET status = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE prescription_id = $2 AND patient_id = $3
-      RETURNING *`;
+      SET 
+        status = $1, 
+        updated_at = CURRENT_TIMESTAMP 
+      WHERE prescription_id = $2 
+      RETURNING *
+    `;
 
-    const result = await db.query(query, [status, prescriptionId, patientId]);
+    const result = await db.query(query, [status, prescriptionId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -299,7 +359,7 @@ exports.updatePrescriptionStatus = async (req, res) => {
       data: result.rows[0]
     });
   } catch (err) {
-    console.error('Reçete durumu güncellenirken hata:', err);
+    console.error('Error updating prescription status:', err);
     res.status(500).json({
       success: false,
       message: 'Reçete durumu güncellenirken bir hata oluştu'
