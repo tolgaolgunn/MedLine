@@ -187,7 +187,6 @@ exports.getMyPrescriptions = async (req, res) => {
       ORDER BY p.created_at DESC`;
 
     const result = await db.query(query, [patientId]);
-    console.log('Query result:', result.rows); // Debug için
 
     if (result.rows.length === 0) {
       return res.status(200).json({

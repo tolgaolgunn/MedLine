@@ -9,6 +9,11 @@ router.get('/doctor-appointments/:doctor_id/:date', patientController.getDoctorA
 router.get('/patient-appointments/:patient_id/:date', patientController.getPatientAppointmentsByDate);
 router.delete('/appointments/:patientId/:appointmentId', patientController.deleteAppointment);
 
+// Prescription routes
+router.get('/patient/prescriptions/:patientId', patientController.getMyPrescriptions);
+router.get('/patient/prescriptions/:patientId/:prescriptionId', patientController.getPrescriptionDetail);
+router.put('/patient/prescriptions/:prescriptionId/status', patientController.updatePrescriptionStatus);
+
 // Feedback routes
 router.get('/feedback/:userId', patientController.getUserFeedbacks);
 router.post('/feedback', patientController.createFeedback);
