@@ -91,27 +91,54 @@ export function Prescriptions() {
       setLoading(true);
       setError(null);
       
+      // Get user data
       const userStr = localStorage.getItem('user');
-      const userData = userStr ? JSON.parse(userStr) : null;
-      const userId = userData?.user_id;
-
-      if (!userId) {
-        setError('Kullanıcı bilgisi bulunamadı');
-        return;
+      if (!userStr) {
+        throw new Error('Oturum bulunamadı');
       }
 
-      // URL yapısını düzelt
-      const response = await api.get(`/patient/prescriptions/${userId}`);
-      console.log('API Response:', response.data); // Debug için
+      const userData = JSON.parse(userStr);
+      if (!userData?.user_id) {
+        throw new Error('Kullanıcı bilgisi bulunamadı');
+      }
 
-      if (response.data.success) {
+      // Create API instance with proper headers
+      const api = axios.create({
+        baseURL: 'http://localhost:3005/api',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        timeout: 10000 // 10 seconds timeout
+      });
+
+      // Make the API call
+      const response = await api.get(`/patient/prescriptions/${userData.user_id}`);
+      console.log('API Response:', response); // Debug için
+
+      // Check response structure
+      if (response.data && response.data.success) {
         setPrescriptions(response.data.data || []);
       } else {
-        setError('Reçeteler yüklenirken bir hata oluştu');
+        throw new Error(response.data?.message || 'Reçeteler yüklenemedi');
       }
+
     } catch (err: any) {
       console.error('Reçete yükleme hatası:', err);
-      setError(err.response?.data?.message || 'Reçeteler yüklenirken bir hata oluştu');
+      
+      // More detailed error handling
+      if (err.response) {
+        // Server responded with error
+        setError(err.response.data?.message || 'Sunucu hatası oluştu');
+      } else if (err.request) {
+        // Request made but no response
+        setError('Sunucuya ulaşılamıyor');
+      } else {
+        // Other errors
+        setError(err.message || 'Reçeteler yüklenirken bir hata oluştu');
+      }
+      
+      toast.error(err.response?.data?.message || 'Reçeteler yüklenemedi');
     } finally {
       setLoading(false);
     }
