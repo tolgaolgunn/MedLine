@@ -100,6 +100,21 @@ async function initializeDatabase() {
             )
         `);
 
+        //FEEDBACKS TABLOSU
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS feedbacks (
+                feedback_id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+                feedback_type VARCHAR(20) NOT NULL CHECK (feedback_type IN ('ui_interface', 'appointment_issue', 'technical_support', 'other')),
+                title VARCHAR(100) NOT NULL,
+                message TEXT NOT NULL CHECK (LENGTH(message) <= 500),
+                status VARCHAR(20) DEFAULT 'submitted' CHECK (status IN ('submitted', 'reviewing', 'responded', 'resolved')),
+                admin_response TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Admin kullanıcı ekleme
         const email = 'admin@healthcare.com';
         const password = 'Admin1234';
@@ -125,7 +140,7 @@ async function initializeDatabase() {
         }
 
         client.release();
-        console.log('Users, patient_profiles, doctor_profiles, prescriptions, prescription_items, appointments tables ensured');
+        console.log('Users, patient_profiles, doctor_profiles, prescriptions, prescription_items, appointments, feedbacks tables ensured');
     } catch (error) {
         console.error('Database initialization error:', error);
         process.exit(1);

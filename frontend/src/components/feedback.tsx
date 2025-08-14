@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { PageHeader } from './ui/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { MoreHorizontal, Edit, Trash2, Send } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Send, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,124 +18,250 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from './ui/dialog';
 import { toast } from 'react-toastify';
 
-type FeedbackType = "Öneri" | "Şikayet" | "Diğer";
+type FeedbackType = 'ui_interface' | 'appointment_issue' | 'technical_support' | 'other';
 
 interface Feedback {
-  id: number;
-  type: FeedbackType;
+  feedback_id: number;
+  feedback_type: FeedbackType;
   title: string;
   message: string;
-  status: "Gönderildi" | "Değerlendiriliyor" | "Cevaplandı";
-  createdAt: string;
+  status: 'submitted' | 'reviewing' | 'responded' | 'resolved';
+  created_at: string;
+  updated_at: string;
+  admin_response?: string;
 }
 
-const initialFeedbacks: Feedback[] = [
-  {
-    id: 1,
-    type: "Öneri",
-    title: "Uygulama arayüzü",
-    message: "Arayüz daha sade olabilir.",
-    status: "Gönderildi",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: 2,
-    type: "Şikayet",
-    title: "Randevu sorunu",
-    message: "Randevu alamıyorum.",
-    status: "Değerlendiriliyor",
-    createdAt: "2024-01-14",
-  },
-  {
-    id: 3,
-    type: "Diğer",
-    title: "Teknik destek",
-    message: "Video görüşme özelliği çalışmıyor.",
-    status: "Cevaplandı",
-    createdAt: "2024-01-13",
-  },
-];
-
 const FeedbackPage: React.FC = () => {
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>(initialFeedbacks);
-  const [type, setType] = useState<FeedbackType>("Öneri");
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [type, setType] = useState<FeedbackType>('ui_interface');
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingFeedback, setEditingFeedback] = useState<Feedback | null>(null);
-  const [editType, setEditType] = useState<FeedbackType>("Öneri");
+  const [editType, setEditType] = useState<FeedbackType>('ui_interface');
   const [editTitle, setEditTitle] = useState("");
   const [editMessage, setEditMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // API instance
+  const api = axios.create({
+  baseURL: 'http://localhost:3005/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000 // 10 seconds
+});
+
+  // Add request interceptor to include token
+  api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
 
   const TITLE_LIMIT = 100;
   const MESSAGE_LIMIT = 500;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !message) return;
-    const newFeedback: Feedback = {
-      id: Date.now(),
-      type,
+  // Fetch feedbacks
+const fetchFeedbacks = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+      throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+    }
+
+    const userData = JSON.parse(userStr);
+    if (!userData?.user_id) {
+      throw new Error('Kullanıcı bilgisi bulunamadı.');
+    }
+
+    // Updated endpoint to match backend route structure
+    const response = await api.get(`/feedback/${userData.user_id}`);
+    
+    // Better response handling
+    if (response.data) {
+      setFeedbacks(Array.isArray(response.data) ? response.data : []);
+    } else {
+      throw new Error('Veri formatı geçersiz');
+    }
+
+  } catch (err: any) {
+    console.error('Feedback loading error:', err);
+    const errorMessage = err.response?.data?.message || err.message || 'Geri bildirimler yüklenemedi';
+    setError(errorMessage);
+    toast.error(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  useEffect(() => {
+    fetchFeedbacks();
+  }, []);
+
+  // Submit new feedback
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  try {
+    setSubmitting(true);
+    
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+      throw new Error('Kullanıcı bilgisi bulunamadı');
+    }
+
+    const userData = JSON.parse(userStr);
+    
+    // Log the request payload for debugging
+    console.log('Sending feedback:', {
+      user_id: userData.user_id,
+      feedback_type: type,
       title,
-      message,
-      status: "Gönderildi",
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setFeedbacks([newFeedback, ...feedbacks]);
-    setTitle("");
-    setMessage("");
-  };
+      message
+    });
 
-  const handleDelete = (id: number) => {
-    setFeedbacks(feedbacks.filter(fb => fb.id !== id));
-    toast.success("Geri bildiriminiz başarıyla silindi");
-  };
+    const response = await api.post('/feedback', {
+      user_id: userData.user_id,
+      feedback_type: type,
+      title: title.trim(),
+      message: message.trim()
+    });
 
+    // Log the response for debugging
+    console.log('Server response:', response.data);
+
+    if (response.data && response.data.success) {
+      toast.success('Geri bildirim başarıyla gönderildi');
+      // Reset form
+      setTitle('');
+      setMessage('');
+      setType('ui_interface');
+      // Refresh feedback list
+      await fetchFeedbacks();
+    } else {
+      throw new Error(response.data?.message || 'Geri bildirim gönderilemedi');
+    }
+  } catch (err: any) {
+    console.error('Error submitting feedback:', err);
+    const errorMessage = err.response?.data?.message || err.message || 'Geri bildirim gönderilemedi';
+    toast.error(errorMessage);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
+  // Delete feedback
+  const handleDelete = async (id: number) => {
+    try {
+      const response = await api.delete(`/feedback/${id}`);
+      if (response.data.success) {
+        await fetchFeedbacks();
+        toast.success('Geri bildiriminiz başarıyla silindi');
+      }
+    } catch (err) {
+      console.error('Error deleting feedback:', err);
+      toast.error('Geri bildirim silinemedi');
+    }
+  };
+  
+  const handleError = (error: any) => {
+  if (axios.isAxiosError(error)) {
+    const message = error.response?.data?.message || 'An error occurred';
+    toast.error(message);
+  } else {
+    toast.error('An unexpected error occurred');
+  }
+};
+
+
+  // Update feedback
   const handleEdit = (id: number) => {
-    const feedback = feedbacks.find(fb => fb.id === id);
+    const feedback = feedbacks.find(fb => fb.feedback_id === id);
     if (feedback) {
       setEditingFeedback(feedback);
-      setEditType(feedback.type);
+      setEditType(feedback.feedback_type);
       setEditTitle(feedback.title);
       setEditMessage(feedback.message);
       setIsEditModalOpen(true);
     }
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingFeedback || !editTitle || !editMessage) return;
-    
-    const updatedFeedbacks = feedbacks.map(fb => 
-      fb.id === editingFeedback.id 
-        ? { ...fb, type: editType, title: editTitle, message: editMessage }
-        : fb
-    );
-    
-    setFeedbacks(updatedFeedbacks);
-    setIsEditModalOpen(false);
-    setEditingFeedback(null);
-    setEditType("Öneri");
-    setEditTitle("");
-    setEditMessage("");
-    toast.success("Geri bildiriminiz başarıyla güncellendi");
+
+    try {
+      const response = await api.put(`/feedback/${editingFeedback.feedback_id}`, {
+        feedback_type: editType,
+        title: editTitle,
+        message: editMessage
+      });
+
+      if (response.data.success) {
+        await fetchFeedbacks();
+        setIsEditModalOpen(false);
+        setEditingFeedback(null);
+        toast.success('Geri bildiriminiz başarıyla güncellendi');
+      }
+    } catch (err) {
+      console.error('Error updating feedback:', err);
+      toast.error('Geri bildirim güncellenemedi');
+    }
   };
 
   const hasChanges = () => {
     if (!editingFeedback) return false;
     return (
-      editType !== editingFeedback.type ||
+      editType !== editingFeedback.feedback_type ||
       editTitle !== editingFeedback.title ||
       editMessage !== editingFeedback.message
     );
   };
 
-  const getStatusColor = (status: string) => {
-    return "default"; // Tüm durumlar için siyah
+  // Helper function to map backend types to display names
+  const getFeedbackTypeDisplay = (backendType: FeedbackType): string => {
+    const displayMap: Record<FeedbackType, string> = {
+      'ui_interface': 'Öneri',
+      'appointment_issue': 'Şikayet',
+      'technical_support': 'Teknik Destek',
+      'other': 'Diğer'
+    };
+    return displayMap[backendType] || 'Diğer';
+  };
+
+  // Helper function to map backend status to display names
+  const mapStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'submitted': 'Gönderildi',
+      'reviewing': 'Değerlendiriliyor',
+      'responded': 'Cevaplandı',
+      'resolved': 'Çözüldü'
+    };
+    return statusMap[status] || status;
+  };
+
+  // Update status color function
+  const getStatusColor = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      'submitted': 'default',
+      'reviewing': 'secondary',
+      'responded': 'default',
+      'resolved': 'default'
+    };
+    return colorMap[status] || 'default';
   };
 
   return (
@@ -155,39 +282,35 @@ const FeedbackPage: React.FC = () => {
                 <label className="text-sm font-medium text-foreground">
                   Geri Bildirim Türü
                 </label>
-                <div className="border rounded p-2">
-                  <Select value={type} onValueChange={(value) => setType(value as FeedbackType)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tür seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Öneri">Öneri</SelectItem>
-                      <SelectItem value="Şikayet">Şikayet</SelectItem>
-                      <SelectItem value="Diğer">Diğer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={type} onValueChange={(value) => setType(value as FeedbackType)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tür seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ui_interface">Öneri</SelectItem>
+                    <SelectItem value="appointment_issue">Şikayet</SelectItem>
+                    <SelectItem value="technical_support">Teknik Destek</SelectItem>
+                    <SelectItem value="other">Diğer</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
                   Başlık
                 </label>
-                <div className="border rounded p-2">
-                  <Textarea
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Geri bildirim başlığını girin"
-                    required
-                    maxLength={TITLE_LIMIT}
-                    className="min-h-[40px] resize-none break-words"
-                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                  />
-                  <div className="flex justify-end text-xs mt-1">
-                    <span className="text-muted-foreground">
-                      {title.length}/{TITLE_LIMIT}
-                    </span>
-                  </div>
+                <Textarea
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Geri bildirim başlığını girin"
+                  required
+                  maxLength={TITLE_LIMIT}
+                  className="min-h-[40px] resize-none"
+                />
+                <div className="flex justify-end text-xs mt-1">
+                  <span className="text-muted-foreground">
+                    {title.length}/{TITLE_LIMIT}
+                  </span>
                 </div>
               </div>
 
@@ -195,31 +318,41 @@ const FeedbackPage: React.FC = () => {
                 <label className="text-sm font-medium text-foreground">
                   Bildiriminiz
                 </label>
-                <div className="border rounded p-2">
-                  <Textarea
-                    value={message}
-                    onChange={(e) => {
-                      if (e.target.value.length <= MESSAGE_LIMIT) {
-                        setMessage(e.target.value);
-                      }
-                    }}
-                    placeholder="Geri bildiriminizi detaylı olarak yazın..."
-                    className="min-h-[120px] resize-none break-words"
-                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                    required
-                    maxLength={MESSAGE_LIMIT}
-                  />
-                  <div className="flex justify-end text-xs mt-1">
-                    <span className="text-muted-foreground">
-                      {message.length}/{MESSAGE_LIMIT}
-                    </span>
-                  </div>
+                <Textarea
+                  value={message}
+                  onChange={(e) => {
+                    if (e.target.value.length <= MESSAGE_LIMIT) {
+                      setMessage(e.target.value);
+                    }
+                  }}
+                  placeholder="Geri bildiriminizi detaylı olarak yazın..."
+                  className="min-h-[120px] resize-none"
+                  required
+                  maxLength={MESSAGE_LIMIT}
+                />
+                <div className="flex justify-end text-xs mt-1">
+                  <span className="text-muted-foreground">
+                    {message.length}/{MESSAGE_LIMIT}
+                  </span>
                 </div>
               </div>
 
-              <Button type="submit" className="w-full">
-                <Send className="w-4 h-4 mr-2" />
-                Gönder
+              <Button 
+                type="submit" 
+                disabled={submitting || !title.trim() || !message.trim()}
+                className="w-full"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gönderiliyor...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Gönder
+                  </>
+                )}
               </Button>
             </form>
           </CardContent>
@@ -232,14 +365,31 @@ const FeedbackPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {feedbacks.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto" />
+                  <p className="mt-2 text-sm text-muted-foreground">Yükleniyor...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-destructive">{error}</p>
+                  <Button 
+                    onClick={() => fetchFeedbacks()} 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4"
+                  >
+                    Tekrar Dene
+                  </Button>
+                </div>
+              ) : feedbacks.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   Henüz geri bildirim gönderilmedi
                 </div>
               ) : (
                 feedbacks.map((feedback) => (
                   <div
-                    key={feedback.id}
+                    key={feedback.feedback_id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
@@ -247,14 +397,14 @@ const FeedbackPage: React.FC = () => {
                         <h4 className="font-medium text-sm truncate">
                           {feedback.title}
                         </h4>
-                        <Badge variant={getStatusColor(feedback.status) as any}>
-                          {feedback.status}
+                        <Badge variant={getStatusColor(feedback.status)}>
+                          {mapStatus(feedback.status)}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="capitalize">{feedback.type}</span>
+                        <span className="capitalize">{getFeedbackTypeDisplay(feedback.feedback_type)}</span>
                         <span>•</span>
-                        <span>{feedback.createdAt}</span>
+                        <span>{new Date(feedback.created_at).toLocaleDateString('tr-TR')}</span>
                       </div>
                     </div>
                     
@@ -265,12 +415,12 @@ const FeedbackPage: React.FC = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(feedback.id)}>
+                        <DropdownMenuItem onClick={() => handleEdit(feedback.feedback_id)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Düzenle
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          onClick={() => handleDelete(feedback.id)}
+                          onClick={() => handleDelete(feedback.feedback_id)}
                           className="text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -288,7 +438,7 @@ const FeedbackPage: React.FC = () => {
 
       {/* Düzenleme Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Geri Bildirim Düzenle</DialogTitle>
           </DialogHeader>
@@ -297,39 +447,35 @@ const FeedbackPage: React.FC = () => {
               <label className="text-sm font-medium text-foreground">
                 Geri Bildirim Türü
               </label>
-              <div className="border rounded p-2">
-                <Select value={editType} onValueChange={(value) => setEditType(value as FeedbackType)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tür seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Öneri">Öneri</SelectItem>
-                    <SelectItem value="Şikayet">Şikayet</SelectItem>
-                    <SelectItem value="Diğer">Diğer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={editType} onValueChange={(value) => setEditType(value as FeedbackType)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tür seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ui_interface">Öneri</SelectItem>
+                  <SelectItem value="appointment_issue">Şikayet</SelectItem>
+                  <SelectItem value="technical_support">Teknik Destek</SelectItem>
+                  <SelectItem value="other">Diğer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
                 Başlık
               </label>
-              <div className="border rounded p-2">
-                <Textarea
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="Geri bildirim başlığını girin"
-                  required
-                  maxLength={TITLE_LIMIT}
-                  className="min-h-[40px] resize-none break-words"
-                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                />
-                <div className="flex justify-end text-xs mt-1">
-                  <span className="text-muted-foreground">
-                    {editTitle.length}/{TITLE_LIMIT}
-                  </span>
-                </div>
+              <Textarea
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Geri bildirim başlığını girin"
+                required
+                maxLength={TITLE_LIMIT}
+                className="min-h-[40px] resize-none"
+              />
+              <div className="flex justify-end text-xs mt-1">
+                <span className="text-muted-foreground">
+                  {editTitle.length}/{TITLE_LIMIT}
+                </span>
               </div>
             </div>
 
@@ -337,32 +483,29 @@ const FeedbackPage: React.FC = () => {
               <label className="text-sm font-medium text-foreground">
                 Bildiriminiz
               </label>
-              <div className="border rounded p-2">
-                <Textarea
-                  value={editMessage}
-                  onChange={(e) => {
-                    if (e.target.value.length <= MESSAGE_LIMIT) {
-                      setEditMessage(e.target.value);
-                    }
-                  }}
-                  placeholder="Geri bildiriminizi detaylı olarak yazın..."
-                  className="min-h-[120px] resize-none break-words"
-                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                  required
-                  maxLength={MESSAGE_LIMIT}
-                />
-                <div className="flex justify-end text-xs mt-1">
-                  <span className="text-muted-foreground">
-                    {editMessage.length}/{MESSAGE_LIMIT}
-                  </span>
-                </div>
+              <Textarea
+                value={editMessage}
+                onChange={(e) => {
+                  if (e.target.value.length <= MESSAGE_LIMIT) {
+                    setEditMessage(e.target.value);
+                  }
+                }}
+                placeholder="Geri bildiriminizi detaylı olarak yazın..."
+                className="min-h-[120px] resize-none"
+                required
+                maxLength={MESSAGE_LIMIT}
+              />
+              <div className="flex justify-end text-xs mt-1">
+                <span className="text-muted-foreground">
+                  {editMessage.length}/{MESSAGE_LIMIT}
+                </span>
               </div>
             </div>
 
             <div className="flex gap-2 justify-end">
               <Button 
                 type="button" 
-                className="w-30 h-10 bg-white text-gray-700 border-2 border-gray-300 rounded-md hover:bg-black hover:text-white hover:border-white transition-colors"
+                variant="outline"
                 onClick={() => setIsEditModalOpen(false)}
               >
                 İptal
@@ -370,7 +513,6 @@ const FeedbackPage: React.FC = () => {
               <Button 
                 type="submit"
                 disabled={!hasChanges()}
-                className="w-30 h-10 bg-black text-white border border-black rounded-md hover:bg-white hover:text-black hover:border-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit className="w-4 h-4 mr-2" />
                 Güncelle
