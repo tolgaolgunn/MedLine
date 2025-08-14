@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const db = require('../config/db');
+const { body, validationResult, param } = require('express-validator');
 
 // Randevu oluşturma
 exports.createAppointment = async (req, res) => {
@@ -367,3 +368,223 @@ exports.updatePrescriptionStatus = async (req, res) => {
   }
 };
 
+// Randevu silme
+exports.deleteAppointment = async (req, res) => {
+  try {
+    const { appointmentId, patientId } = req.params;
+
+    // Önce randevunun varlığını ve hastaya ait olduğunu kontrol et
+    const checkQuery = `
+      SELECT * FROM appointments 
+      WHERE appointment_id = $1 AND patient_id = $2
+    `;
+    
+    const checkResult = await db.query(checkQuery, [appointmentId, patientId]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Randevu bulunamadı veya bu randevuyu silme yetkiniz yok'
+      });
+    }
+
+    // Randevuyu sil
+    const deleteQuery = `
+      DELETE FROM appointments 
+      WHERE appointment_id = $1 AND patient_id = $2 
+      RETURNING *
+    `;
+
+    const result = await db.query(deleteQuery, [appointmentId, patientId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Randevu silinirken bir hata oluştu'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Randevu başarıyla silindi',
+      data: result.rows[0]
+    });
+
+  } catch (err) {
+    console.error('Randevu silme hatası:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Randevu silinirken bir hata oluştu'
+    });
+  }
+};
+
+// Validation functions
+const validateFeedback = (req, res, next) => {
+  const errors = [];
+  const { feedback_type, title, message } = req.body;
+
+  if (!['ui_interface', 'appointment_issue', 'technical_support', 'other'].includes(feedback_type)) {
+    errors.push({ field: 'feedback_type', message: 'Invalid feedback type' });
+  }
+
+  if (!title || title.trim().length === 0 || title.trim().length > 100) {
+    errors.push({ field: 'title', message: 'Title must be between 1 and 100 characters' });
+  }
+
+  if (!message || message.trim().length === 0 || message.trim().length > 500) {
+    errors.push({ field: 'message', message: 'Message must be between 1 and 500 characters' });
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors: errors
+    });
+  }
+
+  next();
+};
+// Get user feedbacks
+exports.getUserFeedbacks = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const query = `
+      SELECT 
+        f.*,
+        u.full_name as user_name
+      FROM feedbacks f
+      JOIN users u ON f.user_id = u.user_id
+      WHERE f.user_id = $1
+      ORDER BY f.created_at DESC
+    `;
+
+    const result = await db.query(query, [userId]);
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('Error fetching feedbacks:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Geri bildirimler alınırken bir hata oluştu' 
+    });
+  }
+};
+
+// Create feedback
+exports.createFeedback = async (req, res) => {
+  try {
+    const { user_id, feedback_type, title, message } = req.body;
+
+    const query = `
+      INSERT INTO feedbacks (
+        user_id, 
+        feedback_type, 
+        title, 
+        message, 
+        status
+      )
+      VALUES ($1, $2, $3, $4, 'submitted')
+      RETURNING *
+    `;
+
+    const result = await db.query(query, [
+      user_id,
+      feedback_type,
+      title,
+      message
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Geri bildirim başarıyla oluşturuldu',
+      data: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Error creating feedback:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Geri bildirim oluşturulurken bir hata oluştu'
+    });
+  }
+};
+
+// Update feedback
+exports.updateFeedback = async (req, res) => {
+  try {
+    const { feedbackId } = req.params;
+    const { feedback_type, title, message } = req.body;
+
+    const query = `
+      UPDATE feedbacks 
+      SET 
+        feedback_type = $1,
+        title = $2,
+        message = $3,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE feedback_id = $4
+      RETURNING *
+    `;
+
+    const result = await db.query(query, [
+      feedback_type,
+      title,
+      message,
+      feedbackId
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Geri bildirim bulunamadı'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Geri bildirim başarıyla güncellendi',
+      data: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Error updating feedback:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Geri bildirim güncellenirken bir hata oluştu'
+    });
+  }
+};
+
+// Delete feedback
+exports.deleteFeedback = async (req, res) => {
+  try {
+    const { feedbackId } = req.params;
+
+    const query = `
+      DELETE FROM feedbacks 
+      WHERE feedback_id = $1 
+      RETURNING *
+    `;
+
+    const result = await db.query(query, [feedbackId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Geri bildirim bulunamadı'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Geri bildirim başarıyla silindi'
+    });
+  } catch (err) {
+    console.error('Error deleting feedback:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Geri bildirim silinirken bir hata oluştu'
+    });
+  }
+};

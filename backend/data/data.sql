@@ -73,3 +73,17 @@ CREATE TABLE prescription_items (
     quantity INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- Update or recreate the feedbacks table
+CREATE TABLE feedbacks (
+    feedback_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    feedback_type VARCHAR(20) NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'submitted',
+    admin_response TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT valid_feedback_type CHECK (feedback_type IN ('ui_interface', 'appointment_issue', 'technical_support', 'other')),
+    CONSTRAINT valid_status CHECK (status IN ('submitted', 'reviewing', 'responded', 'resolved'))
+);
