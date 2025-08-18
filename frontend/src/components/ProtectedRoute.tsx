@@ -16,6 +16,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Admin rolü kontrolü - admin olarak giriş yapmışsa ve /dashboard sayfasındaysa /admin/dashboard'a yönlendir
+  if (location.pathname === '/dashboard' && user && user.role === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
   // Doktor rolü kontrolü - doktor olarak giriş yapmışsa ve /dashboard sayfasındaysa /doctor/dashboard'a yönlendir
   if (location.pathname === '/dashboard' && user && user.role === 'doctor') {
     return <Navigate to="/doctor/dashboard" replace />;
@@ -24,6 +29,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Doktor sayfalarına hasta erişmeye çalışıyorsa dashboard'a yönlendir
   if (location.pathname.startsWith('/doctor') && (!user || user.role !== 'doctor')) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Admin sayfalarına yetkisiz erişim kontrolü
+  if (location.pathname.startsWith('/admin') && (!user || user.role !== 'admin')) {
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return children;
