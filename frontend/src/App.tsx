@@ -9,9 +9,12 @@ import { Profile } from "./components/Profile";
 import DoctorReports from "./components/DoctorReports";
 import { Notifications } from "./components/notifications";
 import { Settings } from "./components/Settings";
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
+import AdminDashboard from "./components/admin/AdminDashboard";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // Toast için stil
+
+
 
 function App(): React.ReactElement {
   return (
@@ -91,6 +94,18 @@ function App(): React.ReactElement {
               }
             />
             
+            {/* Admin Routes */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+            
+            {/* Catch-all route for 404 */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
 
           <ToastContainer position="top-right" autoClose={3000} />
