@@ -97,6 +97,37 @@ export function HealthAuthForm() {
   }, [location.pathname]);
 
   // Beni hatırla özelliği - sayfa yüklendiğinde hatırlanan email'i yükle
+  // Token kontrolü ve yenileme için useEffect
+  useEffect(() => {
+    const checkAndRefreshToken = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          // Token'ı decode et ve süresini kontrol et
+          const decodedToken = JSON.parse(atob(token.split('.')[1]));
+          const expirationTime = decodedToken.exp * 1000; // Unix timestamp'i milisaniyeye çevir
+          
+          // Token'ın süresi dolmak üzereyse (15 dakika kala) yenile
+          if (expirationTime - Date.now() < 15 * 60 * 1000) {
+            const success = await refreshToken();
+            if (!success) {
+              // Token yenilenemezse login sayfasına yönlendir
+              navigate('/login');
+            }
+          }
+        } catch (error) {
+          console.error('Token kontrol hatası:', error);
+        }
+      }
+    };
+
+    const tokenCheckInterval = setInterval(checkAndRefreshToken, 5 * 60 * 1000);
+    
+    checkAndRefreshToken();
+
+    return () => clearInterval(tokenCheckInterval);
+  }, []);
+
   useEffect(() => {
     if (mode === 'login') {
       const rememberedEmail = localStorage.getItem("rememberedEmail");
@@ -123,6 +154,35 @@ export function HealthAuthForm() {
   const API_URL = "http://localhost:3005/api";
 
   // Login işlemini güncelle
+  // Token yenileme fonksiyonu
+  const refreshToken = async () => {
+    const rememberedEmail = localStorage.getItem("rememberedEmail");
+    const isRemembered = localStorage.getItem("rememberMe") === "true";
+    
+    if (rememberedEmail && isRemembered) {
+      try {
+        const response = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: rememberedEmail,
+            password: formData.password
+          })
+        });
+
+        const data = await response.json();
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          return true;
+        }
+      } catch (error) {
+        console.error('Token yenileme hatası:', error);
+        return false;
+      }
+    }
+    return false;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === "login") {
@@ -145,17 +205,14 @@ export function HealthAuthForm() {
 
         // Token'ı kaydet
         localStorage.setItem("token", data.token);
-        
+
         // User verisini kontrol et ve kaydet
         const userData = {
-          user_id: data.user.id || data.user.user_id, // her iki format için kontrol
+          user_id: data.user.id || data.user.user_id,
           email: data.user.email,
           role: data.user.role,
           full_name: data.user.full_name
         };
-
-        console.log('Login response:', data); // Debug için
-        console.log('Parsed user data:', userData); // Debug için
 
         localStorage.setItem('user', JSON.stringify(userData));
         

@@ -1,18 +1,20 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const userController = require("../controllers/userController");
-const auth = require("../middleware/auth");
+const userController = require('../controllers/userController');
+const { authenticateToken } = require('../middleware/auth');
 
-
-router.post("/register", userController.register);
-router.post("/login", userController.login);
-router.post("/forgot-password", userController.forgotPassword);
-router.post('/check-password', userController.checkPassword);
+// Public routes
+router.post('/register', userController.register);
+router.post('/login', userController.login);
+router.post('/forgot-password', userController.forgotPassword);
 router.post('/reset-password', userController.resetPassword);
-router.get("/profile", auth, userController.getProfile);
-router.put("/profile", auth, userController.updateProfile);
-router.put("/change-password", auth, userController.changePassword);
-router.get('/doctors', userController.getAllDoctors);
 
+// Protected routes
+router.get('/profile', authenticateToken, userController.getProfile);
+router.put('/profile', authenticateToken, userController.updateProfile);
+router.put('/change-password', authenticateToken, userController.changePassword);
+
+// Doctor listing route (public)
+router.get('/doctors', userController.getAllDoctors);
 
 module.exports = router;

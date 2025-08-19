@@ -11,7 +11,27 @@ const createDoctorProfile = async (user_id, specialty, license_number, experienc
 
 const getDoctorProfileByUserId = async (user_id) => {
   const result = await db.query(
-    `SELECT * FROM doctor_profiles WHERE user_id = $1`,
+    `SELECT 
+      u.user_id,
+      u.full_name,
+      u.email,
+      u.phone_number,
+      u.created_at as user_created_at,
+      u.updated_at as user_updated_at,
+      u.is_approved,
+      d.specialty,
+      d.license_number,
+      d.experience_years,
+      d.biography,
+      d.city,
+      d.district,
+      d.hospital_name,
+      d.approved_by_admin,
+      d.created_at as profile_created_at,
+      d.updated_at as profile_updated_at
+    FROM users u
+    JOIN doctor_profiles d ON u.user_id = d.user_id
+    WHERE u.user_id = $1 AND u.role = 'doctor'`,
     [user_id]
   );
   return result.rows[0];
@@ -41,6 +61,7 @@ const updateDoctorProfile = async (user_id, fields) => {
   const result = await db.query(query, values);
   return result.rows[0];
 };
+
 
 const getAllDoctorsWithUser = async () => {
   const result = await db.query(`
