@@ -7,6 +7,7 @@ const initializeDatabase = require('./data/createUserTable');
 const userRoutes = require('./routes/userRoutes');
 const patientRoutes = require('./routes/patientRoute');
 const doctorRoutes = require('./routes/doctorRoute');
+const adminRoutes = require('./routes/adminRoute');
 
 const app = express();
 
@@ -19,6 +20,8 @@ app.use(express.json());
 app.use('/api', userRoutes);
 app.use('/api', patientRoutes);
 app.use('/api/doctor', doctorRoutes);
+app.use('/api/admin', adminRoutes);
+
 initializeDatabase().then(() => {
     const PORT = process.env.PORT || 3005;
     const server = app.listen(PORT, () => {

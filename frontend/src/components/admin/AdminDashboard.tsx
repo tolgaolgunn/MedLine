@@ -326,7 +326,7 @@ const AdminDashboard: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> 
 
       {/* Alt Bilgi */}
       <div className="text-center text-sm text-gray-500">

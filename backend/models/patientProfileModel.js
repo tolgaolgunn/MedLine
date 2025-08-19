@@ -12,14 +12,22 @@ const createPatientProfile = async (user_id, birth_date, gender, address, medica
 const getPatientProfileByUserId = async (user_id) => {
   const result = await db.query(
     `SELECT 
-       user_id,
-       to_char(birth_date, 'YYYY-MM-DD') as birth_date,
-       gender,
-       address,
-       medical_history,
-       created_at,
-       updated_at
-     FROM patient_profiles WHERE user_id = $1`,
+      u.user_id,
+      u.full_name,
+      u.email,
+      u.phone_number,
+      u.is_approved,
+      u.created_at as user_created_at,
+      u.updated_at as user_updated_at,
+      to_char(p.birth_date, 'YYYY-MM-DD') as birth_date,
+      p.gender,
+      p.address,
+      p.medical_history,
+      p.created_at as profile_created_at,
+      p.updated_at as profile_updated_at
+    FROM users u
+    LEFT JOIN patient_profiles p ON u.user_id = p.user_id
+    WHERE u.user_id = $1 AND u.role = 'patient'`,
     [user_id]
   );
   return result.rows[0];
@@ -54,7 +62,34 @@ const updatePatientProfile = async (user_id, { birth_date, gender, address }) =>
 
   return result.rows[0];
 };
+const getAllPatients = async (role) => {
+  const result = await db.query(
+    `SELECT 
+      u.user_id,
+      u.full_name,
+      u.email,
+      u.phone_number,
+      u.is_approved,
+      u.created_at as user_created_at,
+      u.updated_at as user_updated_at,
+      to_char(p.birth_date, 'YYYY-MM-DD') as birth_date,
+      p.gender,
+      p.address,
+      p.medical_history,
+      p.created_at as profile_created_at,
+      p.updated_at as profile_updated_at
+    FROM users u
+    LEFT JOIN patient_profiles p ON u.user_id = p.user_id
+    WHERE u.role = $1`,
+    [role]
+  );
+  return result.rows;
+};
+
+
+
 module.exports = {
+  getAllPatients,
   createPatientProfile,
   getPatientProfileByUserId,
   updatePatientProfile,

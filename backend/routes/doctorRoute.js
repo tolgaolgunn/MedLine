@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorContoller');
+const { authenticateToken, isDoctor } = require('../middleware/auth');
+
+router.use(authenticateToken, isDoctor);
 
 // Doktor istatistikleri
 router.get('/patients/count/:doctorId', doctorController.getPatientCount);
