@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
 const db = require('../config/db');
 const { body, validationResult, param } = require('express-validator');
+const { sendAppointmentConfirmation } = require('../services/mailService');
 
 // Randevu oluşturma
 exports.createAppointment = async (req, res) => {
@@ -12,23 +13,25 @@ exports.createAppointment = async (req, res) => {
       return res.status(400).json({ message: 'Tüm alanlar zorunludur.' });
     }
 
-    // Geçmiş saat için randevu alınamaz kontrolü
-    const appointmentDate = new Date(datetime);
+    // ISO string'i PostgreSQL timestamp'ine çevir ve geçmiş kontrolü yap
+    const parsedDate = new Date(datetime);
     const now = new Date();
-    if (
-      appointmentDate.toDateString() === now.toDateString() &&
-      appointmentDate.getTime() <= now.getTime()
-    ) {
+    if (parsedDate.getTime() <= now.getTime()) {
       return res.status(409).json({
         message: 'Geçmiş bir saat için randevu alamazsınız.'
       });
     }
 
-    // Doktorun bu saatte randevusu var mı kontrol et
+    // ISO formatında timestamp
+    const timestampStr = parsedDate.toISOString();
+    
+    // Doktorun bu saatte randevusu var mı kontrol et (15 dakikalık pencere)
     const doctorConflictCheck = await db.query(
       `SELECT COUNT(*) as count FROM appointments 
-       WHERE doctor_id = $1 AND datetime = $2`,
-      [doctor_id, datetime]
+       WHERE doctor_id = $1 
+       AND datetime BETWEEN $2::timestamp - INTERVAL '15 minutes' 
+       AND $2::timestamp + INTERVAL '15 minutes'`,
+      [doctor_id, timestampStr]
     );
 
     if (parseInt(doctorConflictCheck.rows[0].count) > 0) {
@@ -37,11 +40,13 @@ exports.createAppointment = async (req, res) => {
       });
     }
 
-    // Hastanın bu saatte başka randevusu var mı kontrol et
+    // Hastanın bu saatte başka randevusu var mı kontrol et (15 dakikalık pencere)
     const patientConflictCheck = await db.query(
       `SELECT COUNT(*) as count FROM appointments 
-       WHERE patient_id = $1 AND datetime = $2`,
-      [patient_id, datetime]
+       WHERE patient_id = $1 
+       AND datetime BETWEEN $2::timestamp - INTERVAL '15 minutes' 
+       AND $2::timestamp + INTERVAL '15 minutes'`,
+      [patient_id, timestampStr]
     );
 
     if (parseInt(patientConflictCheck.rows[0].count) > 0) {
@@ -50,9 +55,12 @@ exports.createAppointment = async (req, res) => {
       });
     }
 
+    // Randevuyu beklemede (pending) durumunda oluştur
+    // Randevuyu oluştur
     const result = await db.query(
-      `INSERT INTO appointments (patient_id, doctor_id, datetime, type) VALUES ($1, $2, $3, $4) RETURNING *`,
-      [patient_id, doctor_id, datetime, type]
+      `INSERT INTO appointments (patient_id, doctor_id, datetime, type, status) 
+       VALUES ($1, $2, $3::timestamp, $4, 'pending') RETURNING *`,
+      [patient_id, doctor_id, timestampStr, type]
     );
 
     console.log("Randevu oluşturuldu:", result.rows[0]);

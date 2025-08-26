@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
+const { sendAppointmentConfirmation } = require('../services/mailService');
 
 // Helper function for database queries
 const query = async (sql, params) => {
@@ -15,44 +16,68 @@ const query = async (sql, params) => {
 exports.getPatientCount = async (req, res) => {
   try {
     const { doctorId } = req.params;
+    console.log('Getting patient count for doctorId:', doctorId);
+
+    // Önce doktorun var olduğunu kontrol et
+    const doctorCheck = await query(
+      `SELECT user_id FROM users WHERE user_id = $1 AND role = 'doctor'`,
+      [doctorId]
+    );
+
+    if (doctorCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'Doktor bulunamadı' });
+    }
+
     const result = await query(
       `SELECT COUNT(DISTINCT patient_id) as count
        FROM appointments
        WHERE doctor_id = $1`,
       [doctorId]
     );
-    res.json({ count: parseInt(result.rows[0].count) });
+
+    console.log('Patient count result:', result.rows[0]);
+    res.json({ count: parseInt(result.rows[0].count) || 0 });
   } catch (err) {
     console.error('Error getting patient count:', err);
-    res.status(500).json({ message: 'Failed to get patient count' });
+    res.status(500).json({ message: 'Hasta sayısı alınırken hata oluştu' });
   }
 };
 
 exports.getPendingAppointmentCount = async (req, res) => {
   try {
     const { doctorId } = req.params;
+    console.log('Getting pending appointments for doctorId:', doctorId);
+
     const result = await query(
       `SELECT COUNT(*) as count
        FROM appointments
        WHERE doctor_id = $1 AND status = 'pending'`,
       [doctorId]
     );
-    res.json({ count: parseInt(result.rows[0].count) });
+
+    console.log('Pending appointments result:', result.rows[0]);
+    res.json({ count: parseInt(result.rows[0].count) || 0 });
   } catch (err) {
     console.error('Error getting pending appointments:', err);
-    res.status(500).json({ message: 'Failed to get pending appointments' });
+    res.status(500).json({ message: 'Bekleyen randevular alınırken hata oluştu' });
   }
 };
 
 exports.getTodayAppointmentCount = async (req, res) => {
   try {
     const { doctorId } = req.params;
-    const today = new Date().toISOString().split('T')[0];
+    console.log('Getting today appointments for doctorId:', doctorId);
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
     const result = await query(
       `SELECT COUNT(*) as count
        FROM appointments
-       WHERE doctor_id = $1 AND DATE(datetime) = $2`,
-      [doctorId, today]
+       WHERE doctor_id = $1 
+       AND datetime >= $2 
+       AND datetime < $3`,
+      [doctorId, todayStart.toISOString(), todayEnd.toISOString()]
     );
     res.json({ count: parseInt(result.rows[0].count) });
   } catch (err) {
@@ -96,28 +121,65 @@ exports.getActiveAppointments = async (req, res) => {
 exports.getAppointmentsByDoctor = async (req, res) => {
   try {
     const { doctorId } = req.params;
+    console.log('Fetching appointments for doctor:', doctorId);
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+
     const result = await query(
-      `SELECT a.appointment_id AS id,
-              a.patient_id,
-              u.full_name AS patientName,
-              a.datetime,
-              a.type,
-              a.status,
-              d.specialty
+      `SELECT 
+          a.appointment_id,
+          a.patient_id,
+          u.full_name AS patient_name,  // patientname yerine patient_name
+          pp.birth_date,
+          CASE 
+            WHEN pp.birth_date IS NOT NULL THEN
+              (EXTRACT(YEAR FROM age(current_date, pp.birth_date)) * 12 +
+               EXTRACT(MONTH FROM age(current_date, pp.birth_date))) / 12
+            ELSE 0
+          END as patient_age,  // patientage yerine patient_age
+          a.datetime,
+          a.type,
+          a.status,
+          d.specialty
        FROM appointments a
        JOIN users u ON a.patient_id = u.user_id
        JOIN doctor_profiles d ON a.doctor_id = d.user_id
+       LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id
        WHERE a.doctor_id = $1
+         AND a.datetime >= $2
+         AND a.status != 'cancelled'
        ORDER BY a.datetime ASC`,
-      [doctorId]
+      [doctorId, today.toISOString()]
     );
-    res.json(result.rows);
+    
+    console.log('Raw SQL result:', result.rows);
+
+    // Format the response data
+    const formattedAppointments = result.rows.map(appointment => {
+      console.log('Processing appointment:', appointment);
+      return {
+        appointment_id: appointment.appointment_id,
+        patient_id: appointment.patient_id,
+        patientName: appointment.patient_name || 'İsimsiz Hasta',  // patient_name kullan
+        patientAge: appointment.patient_age || 0,  // patient_age kullan
+        datetime: appointment.datetime,
+        type: appointment.type,
+        status: appointment.status,
+        specialty: appointment.specialty
+      };
+    });
+
+    res.json(formattedAppointments);
   } catch (err) {
     console.error('Error getting doctor appointments:', err);
-    res.status(500).json({ message: 'Failed to get doctor appointments' });
+    res.status(500).json({ 
+      message: 'Randevular alınırken bir hata oluştu',
+      error: err.message 
+    });
   }
 };
-
 exports.updateAppointmentStatus = async (req, res) => {
   try {
     const { appointmentId } = req.params;
@@ -125,6 +187,26 @@ exports.updateAppointmentStatus = async (req, res) => {
 
     if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    // Randevu, hasta ve doktor bilgilerini al
+    const appointmentResult = await query(
+      `SELECT 
+        a.*,
+        u.email AS patient_email,
+        u.full_name AS patient_name,
+        d.full_name AS doctor_name,
+        dp.specialty AS doctor_specialty
+      FROM appointments a
+      JOIN users u ON a.patient_id = u.user_id
+      JOIN users d ON a.doctor_id = d.user_id
+      JOIN doctor_profiles dp ON a.doctor_id = dp.user_id
+      WHERE a.appointment_id = $1`,
+      [appointmentId]
+    );
+
+    if (appointmentResult.rowCount === 0) {
+      return res.status(404).json({ message: 'Appointment not found' });
     }
 
     const result = await query(
@@ -135,13 +217,104 @@ exports.updateAppointmentStatus = async (req, res) => {
       [status, appointmentId]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Appointment not found' });
+    // Mail servisi modülünü import et
+    const { sendAppointmentConfirmation, sendAppointmentRejection } = require('../services/mailService');
+
+    // Randevu durumuna göre mail gönder
+    const appointmentData = appointmentResult.rows[0];
+    const { patient_email, doctor_name, doctor_specialty, datetime, type } = appointmentData;
+    
+    if (status === 'confirmed') {
+      const appointmentDetails = {
+        doctorName: doctor_name,
+        doctorSpecialty: doctor_specialty,
+        date: new Date(datetime).toLocaleDateString('tr-TR'),
+        time: new Date(datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        location: 'MedLine Hastanesi',
+        appointmentType: type
+      };
+      
+      await sendAppointmentConfirmation(patient_email, appointmentDetails);
+    } else if (status === 'cancelled') {
+      const appointmentDetails = {
+        doctorName: doctor_name,
+        doctorSpecialty: doctor_specialty,
+        date: new Date(datetime).toLocaleDateString('tr-TR'),
+        time: new Date(datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        reason: req.body.reason // Eğer red sebebi gönderilmişse
+      };
+      
+      await sendAppointmentRejection(patient_email, appointmentDetails);
     }
+
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error updating appointment status:', err);
     res.status(500).json({ message: 'Failed to update appointment status' });
+  }
+};
+
+// Patient Management
+exports.getAppointmentsByDoctor = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    console.log('Fetching appointments for doctor:', doctorId);
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+
+    const result = await query(
+      `SELECT 
+          a.appointment_id,
+          a.patient_id,
+          u.full_name,  
+          pp.birth_date,
+          CASE 
+            WHEN pp.birth_date IS NOT NULL THEN
+              (EXTRACT(YEAR FROM age(current_date, pp.birth_date)) * 12 +
+               EXTRACT(MONTH FROM age(current_date, pp.birth_date))) / 12
+            ELSE 0
+          END as calculated_age,
+          a.datetime,
+          a.type,
+          a.status,
+          d.specialty
+       FROM appointments a
+       JOIN users u ON a.patient_id = u.user_id
+       JOIN doctor_profiles d ON a.doctor_id = d.user_id
+       LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id
+       WHERE a.doctor_id = $1
+         AND a.datetime >= $2
+         AND a.status != 'cancelled'
+       ORDER BY a.datetime ASC`,
+      [doctorId, today.toISOString()]
+    );
+    
+    console.log('Raw SQL result:', result.rows);
+
+    // Format the response data - frontend'in beklediği isimlere dönüştür
+    const formattedAppointments = result.rows.map(appointment => {
+      console.log('Processing appointment:', appointment);
+      return {
+        appointment_id: appointment.appointment_id,
+        patient_id: appointment.patient_id,
+        patientname: appointment.full_name || 'İsimsiz Hasta',  // full_name'i patientname olarak
+        patientage: appointment.calculated_age || 0,           // calculated_age'i patientage olarak
+        datetime: appointment.datetime,
+        type: appointment.type,
+        status: appointment.status,
+        specialty: appointment.specialty
+      };
+    });
+
+    res.json(formattedAppointments);
+  } catch (err) {
+    console.error('Error getting doctor appointments:', err);
+    res.status(500).json({ 
+      message: 'Randevular alınırken bir hata oluştu',
+      error: err.message 
+    });
   }
 };
 
@@ -525,28 +698,31 @@ exports.updatePrescription = async (req, res) => {
     
     const { id } = req.params;
     const {
+      patientId, // patientId'yi de request body'den al
       patientName,
       diagnosis,
       medications,
       instructions,
       nextVisit,
       status,
-      doctorName // Added doctorName from request body
+      doctorName
     } = req.body;
 
-    // Update main prescription info
+    // Update main prescription info - patient_id'yi de güncelle
     const updateQuery = `
       UPDATE prescriptions 
-      SET diagnosis = COALESCE($1, diagnosis),
-          general_instructions = COALESCE($2, general_instructions),
-          next_visit_date = $3,
-          status = COALESCE($4, status),
+      SET patient_id = COALESCE($1, patient_id),
+          diagnosis = COALESCE($2, diagnosis),
+          general_instructions = COALESCE($3, general_instructions),
+          next_visit_date = $4,
+          status = COALESCE($5, status),
           updated_at = NOW()
-      WHERE prescription_id = $5 
+      WHERE prescription_id = $6 
       RETURNING *
     `;
     
     const prescriptionResult = await client.query(updateQuery, [
+      patientId, // patient_id'yi güncelle
       diagnosis,
       instructions,
       nextVisit || null,
@@ -618,7 +794,19 @@ exports.updatePrescription = async (req, res) => {
       }
     };
 
-    // Get doctor info if needed
+    // Get patient info from database to ensure we have the correct name
+    let patientNameToUse = patientName;
+    if (patientId) {
+      const patientInfo = await db.query(
+        `SELECT full_name FROM users WHERE user_id = $1 AND role = 'patient'`,
+        [patientId]
+      );
+      if (patientInfo.rows.length > 0) {
+        patientNameToUse = patientInfo.rows[0].full_name;
+      }
+    }
+
+    // Get doctor info
     let doctorNameToUse = doctorName;
     if (!doctorNameToUse) {
       const doctorInfo = await db.query(
@@ -634,9 +822,9 @@ exports.updatePrescription = async (req, res) => {
     const responseData = {
       id: prescriptionResult.rows[0].prescription_id,
       patientId: prescriptionResult.rows[0].patient_id,
-      patientName: patientName,
+      patientName: patientNameToUse, // Database'den gelen doğru hasta adını kullan
       prescriptionCode: prescriptionResult.rows[0].prescription_code,
-      doctorName: doctorNameToUse, // Use the resolved doctor name
+      doctorName: doctorNameToUse,
       date: formatDate(prescriptionResult.rows[0].created_at),
       diagnosis: prescriptionResult.rows[0].diagnosis,
       medications: updatedItems.rows.map(item => ({
@@ -663,7 +851,6 @@ exports.updatePrescription = async (req, res) => {
     client.release();
   }
 };
-
 exports.deletePrescription = async (req, res) => {
   const client = await db.connect();
   

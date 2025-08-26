@@ -77,12 +77,21 @@ const fetchAppointments = async () => {
   try {
     setLoading(true);
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
     
     if (!user.user_id) {
       throw new Error('Kullanıcı bilgileri alınamadı');
     }
 
-    const response = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`);
+    if (!token) {
+      throw new Error('Oturum bilgisi bulunamadı');
+    }
+
+    const response = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
     
     if (!response.ok) {
       throw new Error('Randevular yüklenirken bir hata oluştu');

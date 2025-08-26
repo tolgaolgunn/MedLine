@@ -48,21 +48,33 @@ exports.login = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
-
+    
     if (!isMatch) {
       return res.status(400).json({ message: "Geçersiz e-posta veya şifre." });
     }
 
     const token = jwt.sign(
-      { user_id: user.user_id, role: user.role },
+      { 
+        user_id: user.user_id,
+        email: user.email,
+        role: user.role
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: '24h' }
     );
 
+    // Remove sensitive data
+    delete user.password_hash;
+    
     res.json({
-      message: "Giriş başarılı",
+      message: "Giriş başarılı!",
       token,
-      user: { user_id: user.user_id, full_name: user.full_name, role: user.role }
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role
+      }
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
