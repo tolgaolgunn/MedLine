@@ -95,8 +95,12 @@ const PrescriptionManagement: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
+        const token = localStorage.getItem('token');
         const response = await axios.get(`${API_BASE_URL}/prescriptions`, {
-          params: { doctorId: currentDoctorId }
+          params: { doctorId: currentDoctorId },
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         });
 
         let fetchedPrescriptions: Prescription[] = [];
@@ -117,7 +121,8 @@ const PrescriptionManagement: React.FC = () => {
         }));
 
         setPrescriptions(fixedPrescriptions);
-      } catch (error) {
+      } catch (err) {
+        const error = err as any;
         console.error('Error loading prescriptions:', error);
         setError('Error loading prescriptions');
         toast.error(`Error loading prescriptions: ${error.response?.status || error.message}`);
@@ -145,8 +150,12 @@ const PrescriptionManagement: React.FC = () => {
   const fetchPatients = async () => {
     try {
       setPatientsLoading(true);
+      const token = localStorage.getItem('token');
       const response = await axios.get(`${API_BASE_URL}/patients/${currentDoctorId}`, {
-        params: { doctorId: currentDoctorId }
+        params: { doctorId: currentDoctorId },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
       
       const patientsData = response.data?.data || response.data;
@@ -155,7 +164,8 @@ const PrescriptionManagement: React.FC = () => {
       }
 
       setPatients(patientsData);
-    } catch (error) {
+    } catch (err) {
+      const error = err as any;
       console.error('Error loading patients:', error);
       toast.error(`Error loading patients: ${error.message}`);
     } finally {
@@ -207,59 +217,92 @@ const PrescriptionManagement: React.FC = () => {
         }))
       };
 
-      const response = await axios.post(`${API_BASE_URL}/prescriptions`, prescriptionData);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_BASE_URL}/prescriptions`, prescriptionData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       
       if (response.data) {
         setPrescriptions(prev => [response.data, ...prev]);
         setIsAddPrescriptionOpen(false);
         toast.success('Reçete başarıyla oluşturuldu');
       }
-    } catch (error) {
+    } catch (err) {
+      const error = err as any;
       console.error('Error creating prescription:', error);
       toast.error(`Reçete oluşturulurken hata: ${error.response?.data?.message || error.message}`);
     }
   };
 
   const handleUpdatePrescription = async (updatedPrescription: Prescription) => {
-    try {
-      const response = await axios.put(
-        `${API_BASE_URL}/prescriptions/${updatedPrescription.id}`, 
-        {
-          ...updatedPrescription,
-          patientId: String(updatedPrescription.patientId),
-          doctorId: currentDoctorId,
-          doctorName: currentDoctorName,
-          date: updatedPrescription.date || new Date().toISOString().split('T')[0]
-        }
-      );
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Get the selected patient's information
+    const selectedPatient = patients.find(p => String(p.patient_id) === String(updatedPrescription.patientId));
+    if (!selectedPatient) {
+      toast.error('Geçerli hasta bulunamadı');
+      return;
+    }
 
-      if (response.data) {
-        setPrescriptions(prevPrescriptions => 
-          prevPrescriptions.map(p => 
-            p.id === updatedPrescription.id ? response.data : p
-          )
-        );
+    // Format the prescription data properly
+    const prescriptionData = {
+      id: updatedPrescription.id,
+      patientId: String(updatedPrescription.patientId),
+      patientName: selectedPatient.patient_name, // Bu satırı düzeltin
+      doctorId: currentDoctorId,
+      doctorName: currentDoctorName,
+      prescriptionCode: updatedPrescription.prescriptionCode,
+      date: updatedPrescription.date || new Date().toISOString().split('T')[0],
+      diagnosis: updatedPrescription.diagnosis,
+      medications: updatedPrescription.medications.map(med => ({
+        name: med.name.trim(),
+        dosage: med.dosage.trim(),
+        frequency: med.frequency?.trim() || '',
+        duration: med.duration?.trim() || '',
+        instructions: med.instructions?.trim() || ''
+      })),
+      instructions: updatedPrescription.instructions,
+      status: updatedPrescription.status,
+      nextVisit: updatedPrescription.nextVisit
+    };
 
-        setIsEditPrescriptionOpen(false);
-        setEditingPrescription(null);
-        toast.success('Reçete başarıyla güncellendi');
-
-        const refreshResponse = await axios.get(`${API_BASE_URL}/prescriptions`, {
-          params: { doctorId: currentDoctorId }
-        });
-        
-        if (refreshResponse.data) {
-          setPrescriptions(Array.isArray(refreshResponse.data) ? 
-            refreshResponse.data : 
-            refreshResponse.data.data || []
-          );
+    const response = await axios.put(
+      `${API_BASE_URL}/prescriptions/${updatedPrescription.id}`, 
+      prescriptionData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
       }
-    } catch (error) {
-      console.error('Error updating prescription:', error);
-      toast.error('Reçete güncellenirken hata oluştu');
+    );
+
+    if (response.data) {
+      // API'den gelen veriyi kullanmak yerine, gönderdiğimiz veriyi kullanıyoruz
+      const updatedData = {
+        ...response.data,
+        patientId: prescriptionData.patientId,
+        patientName: prescriptionData.patientName // Bu satırı ekleyin
+      };
+      
+      setPrescriptions(prevPrescriptions => 
+        prevPrescriptions.map(p => 
+          p.id === updatedPrescription.id ? updatedData : p
+        )
+      );
+
+      setIsEditPrescriptionOpen(false);
+      setEditingPrescription(null);
+      toast.success('Reçete başarıyla güncellendi');
     }
-  };
+  } catch (err) {
+    const error = err as any;
+    console.error('Error updating prescription:', error);
+    toast.error(`Reçete güncellenirken hata: ${error.response?.data?.message || error.message}`);
+  }
+};
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -276,10 +319,16 @@ const PrescriptionManagement: React.FC = () => {
     }
     
     try {
-      await axios.delete(`${API_BASE_URL}/prescriptions/${id}`);
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE_URL}/prescriptions/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       setPrescriptions(prescriptions.filter(p => p.id !== id));
       toast.success('Reçete başarıyla silindi');
-    } catch (error) {
+    } catch (err) {
+      const error = err as any;
       console.error('Error deleting prescription:', error);
       toast.error('Reçete silinirken hata');
     }
@@ -347,20 +396,18 @@ const PrescriptionManagement: React.FC = () => {
     };
 
     const handlePatientSelect = (patientId: string) => {
-      const selectedPatient = patients.find(p => String(p.patient_id) === patientId);
-      
-      if (!selectedPatient) {
-        toast.error('Geçersiz hasta seçimi');
-        return;
-      }
-      
-      setFormData({
-        ...formData,
-        patientId: patientId,
-        patientName: selectedPatient.patient_name
-      });
-    };
-
+  const selectedPatient = patients.find(p => String(p.patient_id) === patientId);
+  if (!selectedPatient) {
+    toast.error('Geçersiz hasta seçimi');
+    return;
+  }
+  
+  setFormData({
+    ...formData,
+    patientId: patientId,
+    patientName: selectedPatient.patient_name
+  });
+};
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       

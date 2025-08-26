@@ -83,18 +83,26 @@ export function HealthAuthForm() {
 
   useEffect(() => {
     const pathname = location.pathname;
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    
     if (pathname === '/register') {
       setMode('register');
     } else if (pathname === '/forgot-password') {
       setMode('forgot-password');
     } else if (pathname === '/reset-password') {
-      setMode('reset-password');
+      if (token) {
+        setResetToken(token);
+        setMode('reset-password');
+      } else {
+        navigate('/forgot-password');
+      }
     } else if (pathname === '/reset-success') {
       setMode('reset-success');
     } else {
       setMode('login');
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   // Beni hatırla özelliği - sayfa yüklendiğinde hatırlanan email'i yükle
   // Token kontrolü ve yenileme için useEffect

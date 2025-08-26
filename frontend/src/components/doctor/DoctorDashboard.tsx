@@ -1,35 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { Calendar } from '../ui/calendar';
 import { toast } from "react-toastify";
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { PageHeader } from '../ui/PageHeader';
 import { 
   Calendar as CalendarIcon, 
-  Clock, 
   Activity, 
   Pill, 
   AlertCircle,
-  TrendingUp,
-  Heart,
-  Thermometer,
-  Users,
-  BarChart3,
-  Stethoscope,
-  MessageSquare,
   User,
   Bell,
-  Play,
   History,
+  Users,
+  Clock,
+  Play
 } from 'lucide-react';
-import axios from 'axios';
+import axios from '../../lib/axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+
+type AppointmentStatus = 'confirmed' | 'pending' | 'completed' | 'cancelled';
+type AppointmentType = 'online' | 'face_to_face';
 
 interface Appointment {
   id: number;
@@ -38,8 +33,8 @@ interface Appointment {
   specialty: string;
   date: string;
   time: string;
-  type: 'online' | 'face_to_face';
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  type: AppointmentType;
+  status: AppointmentStatus;
   symptoms: string;
   isCurrent?: boolean;
 }
@@ -54,7 +49,7 @@ interface Patient {
   avatar?: string;
 }
 
-const DoctorDashboard: React.FC = () => {
+const DoctorDashboard = () => {
   const navigate = useNavigate();
   const [totalPatients, setTotalPatients] = useState<number>(0);
   const [pendingAppointments, setPendingAppointments] = useState<number>(0);
@@ -101,6 +96,64 @@ const DoctorDashboard: React.FC = () => {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Kullanıcı bilgisini localStorage'dan al
+  const [userName, setUserName] = useState('');
+  const [doctorId, setDoctorId] = useState<string>('');
+
+  useEffect(() => {
+    const userDataStr = localStorage.getItem('user');
+    if (userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr);
+        setUserName(userData.full_name || userData.name || userData.email || '');
+        setDoctorId(userData.user_id || userData.id || '');
+      } catch (error) {
+        console.error('Kullanıcı bilgisi çözümlenirken hata oluştu:', error);
+        toast.error('Kullanıcı bilgisi yüklenirken hata oluştu');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchDoctorStats = async () => {
+      if (!doctorId) {
+        console.log('No doctorId available');
+        return;
+      }
+
+      console.log('Fetching stats for doctorId:', doctorId);
+      console.log('Auth Token:', localStorage.getItem('token'));
+
+      try {
+        const [patientsRes, pendingRes, todayRes] = await Promise.all([
+          axios.get(`/doctor/patients/count/${doctorId}`),
+          axios.get(`/doctor/appointments/pending/count/${doctorId}`),
+          axios.get(`/doctor/appointments/today/count/${doctorId}`)
+        ]);
+
+        console.log('API Responses:', {
+          patients: patientsRes.data,
+          pending: pendingRes.data,
+          today: todayRes.data
+        });
+
+        setTotalPatients(patientsRes.data.count || 0);
+        setPendingAppointments(pendingRes.data.count || 0);
+        setTodayAppointmentCount(todayRes.data.count || 0);
+      } catch (error: any) {
+        console.error('API Error Details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers
+        });
+        const errorMessage = error.response?.data?.message || 'İstatistikler yüklenirken hata oluştu';
+        toast.error(errorMessage);
+      }
+    };
+
+    fetchDoctorStats();
+  }, [doctorId]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -116,25 +169,25 @@ const DoctorDashboard: React.FC = () => {
     }
   };
 
-   // Filtreleme fonksiyonu
-   const getFilteredAppointments = () => {
-     return appointments.filter(appointment => {
-       // Status filtresi
-       if (filterStatus !== 'all') {
-         if (filterStatus === 'scheduled' && appointment.status !== 'confirmed') return false;
-         if (filterStatus === 'completed' && appointment.status !== 'completed') return false;
-         if (filterStatus === 'cancelled' && appointment.status !== 'cancelled') return false;
-         if (filterStatus === 'pending' && appointment.status !== 'pending') return false;
-       }
-      
-      // Tip filtresi
-      if (filterType !== 'all' && appointment.type !== filterType) return false;
-      
-      // Uzmanlık filtresi
-      if (filterSpecialty !== 'all' && appointment.specialty !== filterSpecialty) return false;
-      
-      return true;
-    });
+  // Filtreleme fonksiyonu
+  const getFilteredAppointments = () => {
+    return appointments.filter(appointment => {
+      // Status filtresi
+      if (filterStatus !== 'all') {
+        if (filterStatus === 'scheduled' && appointment.status !== 'confirmed') return false;
+        if (filterStatus === 'completed' && appointment.status !== 'completed') return false;
+        if (filterStatus === 'cancelled' && appointment.status !== 'cancelled') return false;
+        if (filterStatus === 'pending' && appointment.status !== 'pending') return false;
+      }
+     
+     // Tip filtresi
+     if (filterType !== 'all' && appointment.type !== filterType) return false;
+     
+     // Uzmanlık filtresi
+     if (filterSpecialty !== 'all' && appointment.specialty !== filterSpecialty) return false;
+     
+     return true;
+   });
   };
 
   // Filtre değişikliklerini takip et
@@ -158,24 +211,24 @@ const DoctorDashboard: React.FC = () => {
     return appointmentISO >= todayISO;
   });
 
-     // Boş durum mesajını belirle
-   const getEmptyMessage = () => {
-     if (filterStatus === 'completed') {
-       return 'Tamamlanan randevu bulunmuyor';
-     } else if (filterStatus === 'cancelled') {
-       return 'İptal edilen randevu bulunmuyor';
-     } else if (filterStatus === 'pending') {
-       return 'Beklemede olan randevu bulunmuyor';
-     } else if (filterStatus === 'scheduled') {
-       return 'Onaylanan randevu bulunmuyor';
-     } else if (filterType === 'online') {
-       return 'Online randevu bulunmuyor';
-     } else if (filterType === 'face_to_face') {
-       return 'Yüz yüze randevu bulunmuyor';
-     } else {
-       return 'Bu tarih için randevu bulunmuyor';
-     }
-   };
+  // Boş durum mesajını belirle
+  const getEmptyMessage = () => {
+    if (filterStatus === 'completed') {
+      return 'Tamamlanan randevu bulunmuyor';
+    } else if (filterStatus === 'cancelled') {
+      return 'İptal edilen randevu bulunmuyor';
+    } else if (filterStatus === 'pending') {
+      return 'Beklemede olan randevu bulunmuyor';
+    } else if (filterStatus === 'scheduled') {
+      return 'Onaylanan randevu bulunmuyor';
+    } else if (filterType === 'online') {
+      return 'Online randevu bulunmuyor';
+    } else if (filterType === 'face_to_face') {
+      return 'Yüz yüze randevu bulunmuyor';
+    } else {
+      return 'Bu tarih için randevu bulunmuyor';
+    }
+  };
 
   const isCurrentAppointment = (appointment: Appointment) => {
     // appointment.date: 'DD.MM.YYYY'
@@ -191,25 +244,6 @@ const DoctorDashboard: React.FC = () => {
     const diff = (appointmentDate.getTime() - now.getTime()) / 60000;
     return diff <= 10 && diff >= -30; // 10 dakika sonrası ve 30 dakika öncesi arası başlatılabilir
   };
-
-  // Kullanıcı bilgisini localStorage'dan al
-  const [userName, setUserName] = useState('');
-  const [doctorId, setDoctorId] = useState<string>('');
-  
-  useEffect(() => {
-    const userDataStr = localStorage.getItem('user');
-    if (userDataStr) {
-      try {
-        const userData = JSON.parse(userDataStr);
-        setUserName(userData.full_name || userData.email || '');
-        if (userData.user_id) {
-          setDoctorId(userData.user_id);
-        }
-      } catch (error) {
-        console.error('Kullanıcı bilgisi çözümlenirken hata oluştu:', error);
-      }
-    }
-  }, []);
 
   // Geçmiş aramaları yükle
   useEffect(() => {
@@ -286,38 +320,38 @@ const DoctorDashboard: React.FC = () => {
 
   // Doktora ait randevuları backend'den çek
   useEffect(() => {
-    if (doctorId) {
-      const fetchAppointments = async () => {
-        try {
-          const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
+    const fetchAppointments = async () => {
+      if (!doctorId) return;
+      
+      try {
+        const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
+        
+        const mapped = response.data.map((item: any) => {
+          const dateObj = new Date(item.datetime);
           
-          const mapped = response.data.map((item: any) => {
-            const dateObj = new Date(item.datetime);
-      
-            return {
-              id: item.id,
-              patientName: item.patientname || item.patientName,
-              patientAge: undefined, // API'den yaş gelmiyor, gerekirse eklenir
-              specialty: item.specialty,
-              date: dateObj.toLocaleDateString('tr-TR'), // örnek: 29.07.2025
-              time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), // örnek: 11:00
-              type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
-              status: item.status,
-              symptoms: item.symptoms,
-            };
-          });
-      
-          setAppointments(mapped);
-        } catch (error) {
-          console.error('Randevular çekilirken hata oluştu:', error);
-        }
-      };
-      
-      fetchAppointments();
-    }
+          return {
+            id: item.appointment_id,
+            patientName: item.patientName,
+            patientAge: item.patientAge || 0,
+            specialty: item.specialty,
+            date: dateObj.toLocaleDateString('tr-TR'), // örnek: 29.07.2025
+            time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), // örnek: 11:00
+            type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
+            status: item.status,
+            symptoms: item.symptoms,
+          };
+        });
+    
+        setAppointments(mapped);
+      } catch (error) {
+        console.error('Randevular çekilirken hata oluştu:', error);
+      }
+    };
+    
+    fetchAppointments();
   }, [doctorId]);
 
-       const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
+  const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
     try {
       await axios.patch(`http://localhost:3005/api/doctor/appointments/${appointmentId}/status`, { status: newStatus });
       // Güncel randevuları tekrar çek veya local state'i güncelle
@@ -885,8 +919,6 @@ const DoctorDashboard: React.FC = () => {
            </DialogFooter>
         </DialogContent>
       </Dialog>
-
-
     </div>
   );
 };

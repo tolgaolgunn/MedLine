@@ -25,13 +25,14 @@ import axios from 'axios';
 // Interface for appointment data structure
 interface Appointment {
   id: number;
-  patientId: number;
-  patientName: string;
-  patientAge: number;
+  appointment_id: number;
+  patient_id: number;
+  patientname: string; // Backend'den gelen property adı
+  patientAge: string;
   specialty: string;
   date: string;
   time: string;
-  datetime?: string; // Orijinal datetime'ı optional olarak sakla
+  datetime: string;
   type: 'online' | 'face_to_face';
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
 }
@@ -67,33 +68,61 @@ const DoctorAppointments: React.FC = () => {
 
   // Fetch appointments from API on component mount
   useEffect(() => {
-    const userDataStr = localStorage.getItem('user');
-    const userData = userDataStr ? JSON.parse(userDataStr) : null;
-    const doctorId = userData?.user_id;
-    
-    if (doctorId) {
-      axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`)
-        .then(res => {
-          // Map API response to appointment objects
-          const mapped = res.data.map((item: any) => {
-            const dateObj = new Date(item.datetime);
-            return {
-              id: item.id,
-              patientId: item.patient_id || 1, 
-              patientName: item.patientname || item.patientName,
-              patientAge: item.patientAge,
-              specialty: item.specialty,
-              date: dateObj.toLocaleDateString('tr-TR'),
-              time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-              datetime: item.datetime, // Orijinal datetime'ı da sakla
-              type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
-              status: item.status,
-            };
+  const userDataStr = localStorage.getItem('user');
+  const userData = userDataStr ? JSON.parse(userDataStr) : null;
+  const doctorId = userData?.user_id;
+  
+  const token = localStorage.getItem('token');
+  if (!doctorId) {
+    console.error('Doktor ID bulunamadı');
+    return;
+  }
+  if (!token) {
+    console.error('Token bulunamadı');
+    return;
+  }
+
+  if (doctorId) {
+    axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(res => {
+        console.log('API Yanıtı:', res.data);
+        
+        const mapped = res.data.map((item: any) => {
+          console.log('Hasta bilgisi:', {
+            id: item.appointment_id,
+            patientname: item.patientname,
+            hasPatientname: !!item.patientname,
+            rawData: item
           });
-          setAppointments(mapped);
+          
+          const dateObj = new Date(item.datetime);
+  return {
+    id: item.appointment_id,
+    appointment_id: item.appointment_id,
+    patient_id: item.patient_id,
+    patientname: item.patient_name || item.patientname || 'İsimsiz Hasta', // hem patient_name hem patientname kontrol et
+    patientAge: item.patient_age || item.patientage || '0', // hem patient_age hem patientage kontrol et
+    specialty: item.specialty,
+    date: dateObj.toLocaleDateString('tr-TR'),
+    time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+    datetime: item.datetime,
+    type: item.type,
+    status: item.status,
+  };
         });
-    }
-  }, []);
+        
+        console.log('Map edilmiş veri:', mapped);
+        setAppointments(mapped);
+      })
+      .catch(error => {
+        console.error('API hatası:', error);
+      });
+  }
+}, []);
 
   // Synchronize tempFilters with actual filters
   useEffect(() => {
@@ -143,7 +172,7 @@ const DoctorAppointments: React.FC = () => {
   // Handle opening patient history
   const handleOpenPatientHistory = () => {
     const current = appointments.find(app => isCurrentAppointment(app));
-    setHistoryPatientId(current?.patientId ?? null);
+    setHistoryPatientId(current?.patient_id ?? null);
     setShowPatientHistory(true);
   };
 
@@ -262,24 +291,42 @@ const DoctorAppointments: React.FC = () => {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     return appointments.filter(appointment => {
-      // Parse appointment date from DD.MM.YYYY format
-      const [day, month, year] = appointment.date.split('.');
-      const appointmentDate = new Date(Number(year), Number(month) - 1, Number(day));
+      const appointmentDate = new Date(appointment.datetime);
+      
+      // Set today to start of day
+      today.setHours(0, 0, 0, 0);
+      tomorrow.setHours(0, 0, 0, 0);
+      startOfWeek.setHours(0, 0, 0, 0);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      // End dates for comparisons
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const endOfTomorrow = new Date(tomorrow);
+      endOfTomorrow.setHours(23, 59, 59, 999);
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+      
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
       
       // Apply date filter based on selected option
       let dateFilter = true;
       switch (filter) {
         case 'today':
-          dateFilter = appointmentDate.toDateString() === today.toDateString();
+          dateFilter = appointmentDate >= today && appointmentDate <= endOfDay;
           break;
         case 'tomorrow':
-          dateFilter = appointmentDate.toDateString() === tomorrow.toDateString();
+          dateFilter = appointmentDate >= tomorrow && appointmentDate <= endOfTomorrow;
           break;
         case 'this_week':
-          dateFilter = appointmentDate >= startOfWeek && appointmentDate <= today;
+          dateFilter = appointmentDate >= startOfWeek && appointmentDate <= endOfWeek;
           break;
         case 'this_month':
-          dateFilter = appointmentDate >= startOfMonth && appointmentDate <= today;
+          dateFilter = appointmentDate >= startOfMonth && appointmentDate <= endOfMonth;
           break;
         case 'custom':
           if (startDate && endDate) {
@@ -450,11 +497,17 @@ const DoctorAppointments: React.FC = () => {
                     <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
                       {/* Appointment Info */}
                       <div>
-                        <p className="font-medium">{appointment.patientName}</p>
-                        <p className="text-sm text-gray-600">{appointment.patientAge} yaş • {appointment.specialty}</p>
-                        <p className="text-xs text-gray-500">{appointment.date} - {appointment.time} • {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
-                        <p className="text-xs text-gray-500">Şikayet: Belirtilmemiş</p>
-                      </div>
+    <p className="font-medium">
+      {appointment.patientname || 'İsimsiz Hasta'}
+    </p>
+    <p className="text-sm text-gray-600">
+      {appointment.patientAge} yaş • {appointment.specialty}
+    </p>
+    <p className="text-xs text-gray-500">
+      {appointment.date} - {appointment.time} • 
+      {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}
+    </p>
+  </div>
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
 
@@ -497,7 +550,7 @@ const DoctorAppointments: React.FC = () => {
                 <div className="space-y-3">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Hasta</Label>
-                    <p className="font-medium">{appointments.find(app => isCurrentAppointment(app))?.patientName}</p>
+                    <p className="font-medium">{appointments.find(app => isCurrentAppointment(app))?.patientname}</p>
                   </div>
                   
                   <div>
@@ -575,7 +628,7 @@ const DoctorAppointments: React.FC = () => {
                <DialogTitle>Randevu Detayı</DialogTitle>
              </DialogHeader>
              <div className="space-y-2">
-               <div><b>Hasta:</b> {selectedAppointment.patientName}</div>
+               <div><b>Hasta:</b> {selectedAppointment.patientname}</div>
                <div><b>Tarih:</b> {selectedAppointment.date}</div>
                <div><b>Saat:</b> {selectedAppointment.time}</div>
                <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
@@ -608,7 +661,7 @@ const DoctorAppointments: React.FC = () => {
              // Bugünden önceki randevuları ve ilgili hastanınkileri al
              const now = new Date();
              const historyList = appointments.filter(app => {
-               if (app.patientId !== historyPatientId) return false;
+               if (app.patient_id !== historyPatientId) return false;
                // Tarih parse
                const [day, month, year] = app.date.split('.');
                const appDate = new Date(Number(year), Number(month) - 1, Number(day));

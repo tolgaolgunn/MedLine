@@ -186,9 +186,18 @@ export function DoctorSearch() {
     const userData = userDataStr ? JSON.parse(userDataStr) : null;
     const patient_id = userData?.user_id;
 
-    // Tarih ve saat birleştir
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const datetime = `${dateStr} ${selectedTime}:00`;
+    // Seçilen tarihi UTC olarak ayarla
+    const dateObj = new Date(selectedDate);
+    // Saat ve dakikayı ayır
+    const [hours, minutes] = selectedTime.split(':');
+    // Tarihe saat ve dakikayı ekle (yerel saat olarak)
+    dateObj.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    // Timezone offset'i dakika cinsinden al
+    const timezoneOffset = dateObj.getTimezoneOffset();
+    // Timezone farkını ekle
+    dateObj.setMinutes(dateObj.getMinutes() - timezoneOffset);
+    // ISO string formatına çevir
+    const datetime = dateObj.toISOString();
 
     try {
       const response = await fetch('http://localhost:3005/api/appointments', {
