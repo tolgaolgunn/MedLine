@@ -56,6 +56,11 @@ initializeDatabase().then(() => {
 
         socket.on('disconnect', () => {
             console.log('Socket disconnected:', socket.id);
+            const userId = socket.userId;
+            if (userId) {
+                socket.leave(userId);
+                console.log('Socket', socket.id, 'left room', userId);
+            }
         });
     });
 
