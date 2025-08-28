@@ -187,18 +187,10 @@ export function Prescriptions() {
       return;
     }
 
-    // Create a new instance of axios with the current token
-    const currentToken = localStorage.getItem('token');
-    const apiInstance = axios.create({
-      baseURL: 'http://localhost:3005/api',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentToken}`
-      }
-    });
+    // Use the existing api instance that was created at component level
+    // This avoids creating multiple instances unnecessarily
 
-    // DÜZELTME: Backend route'una uygun endpoint
-    const response = await apiInstance.put(`/patient/prescriptions/${prescriptionId}/status`, {
+    const response = await api.put(`/patient/prescriptions/${prescriptionId}/status`, {
       status: 'used'
     });
 
