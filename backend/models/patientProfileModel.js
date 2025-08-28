@@ -1,10 +1,10 @@
 const db = require("../config/db");
 
-const createPatientProfile = async (user_id, birth_date, gender, address, medical_history) => {
+const createPatientProfile = async (user_id, birth_date, gender, address, medical_history = null, blood_type = null) => {
   const result = await db.query(
-    `INSERT INTO patient_profiles (user_id, birth_date, gender, address, medical_history)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [user_id, birth_date, gender, address, medical_history]
+    `INSERT INTO patient_profiles (user_id, birth_date, gender, address, medical_history, blood_type)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [user_id, birth_date, gender, address, medical_history, blood_type]
   );
   return result.rows[0];
 };
@@ -33,7 +33,7 @@ const getPatientProfileByUserId = async (user_id) => {
   return result.rows[0];
 };
 
-const updatePatientProfile = async (user_id, { birth_date, gender, address }) => {
+const updatePatientProfile = async (user_id, { birth_date, gender, address, blood_type }) => {
   console.log('updatePatientProfile fonksiyonu çağrıldı:');
   console.log('birth_date (gelen):', birth_date, typeof birth_date);
 
@@ -54,10 +54,10 @@ const updatePatientProfile = async (user_id, { birth_date, gender, address }) =>
 
   const result = await db.query(
     `UPDATE patient_profiles
-     SET birth_date = $1::date, gender = $2, address = $3, updated_at = CURRENT_TIMESTAMP
-     WHERE user_id = $4
+     SET birth_date = $1::date, gender = $2, address = $3, blood_type = $4, updated_at = CURRENT_TIMESTAMP
+     WHERE user_id = $5
      RETURNING *`,
-    [dbBirthDate, gender, address, user_id]
+    [dbBirthDate, gender, address, blood_type, user_id]
   );
 
   return result.rows[0];

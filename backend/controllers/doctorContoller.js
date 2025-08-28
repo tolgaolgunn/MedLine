@@ -131,14 +131,13 @@ exports.getAppointmentsByDoctor = async (req, res) => {
       `SELECT 
           a.appointment_id,
           a.patient_id,
-          u.full_name AS patient_name,  // patientname yerine patient_name
+          u.full_name AS "patientName",  // Çift tırnak içinde büyük harfle
           pp.birth_date,
           CASE 
             WHEN pp.birth_date IS NOT NULL THEN
-              (EXTRACT(YEAR FROM age(current_date, pp.birth_date)) * 12 +
-               EXTRACT(MONTH FROM age(current_date, pp.birth_date))) / 12
+              FLOOR(EXTRACT(YEAR FROM age(current_date, pp.birth_date)))
             ELSE 0
-          END as patient_age,  // patientage yerine patient_age
+          END as "patientAge",  // Çift tırnak içinde büyük harfle
           a.datetime,
           a.type,
           a.status,
@@ -154,20 +153,20 @@ exports.getAppointmentsByDoctor = async (req, res) => {
       [doctorId, today.toISOString()]
     );
     
-    console.log('Raw SQL result:', result.rows);
+    console.log('Raw SQL result:', JSON.stringify(result.rows, null, 2));
 
     // Format the response data
     const formattedAppointments = result.rows.map(appointment => {
-      console.log('Processing appointment:', appointment);
       return {
         appointment_id: appointment.appointment_id,
         patient_id: appointment.patient_id,
-        patientName: appointment.patient_name || 'İsimsiz Hasta',  // patient_name kullan
-        patientAge: appointment.patient_age || 0,  // patient_age kullan
+        patientName: appointment.patientName || 'İsimsiz Hasta', // Büyük harfle
+        patientAge: Math.floor(appointment.patientAge) || 0,
         datetime: appointment.datetime,
         type: appointment.type,
         status: appointment.status,
-        specialty: appointment.specialty
+        specialty: appointment.specialty,
+        symptoms: appointment.symptoms || ''
       };
     });
 
@@ -268,14 +267,13 @@ exports.getAppointmentsByDoctor = async (req, res) => {
       `SELECT 
           a.appointment_id,
           a.patient_id,
-          u.full_name,  
+          u.full_name AS "patientName",
           pp.birth_date,
           CASE 
             WHEN pp.birth_date IS NOT NULL THEN
-              (EXTRACT(YEAR FROM age(current_date, pp.birth_date)) * 12 +
-               EXTRACT(MONTH FROM age(current_date, pp.birth_date))) / 12
+              FLOOR(EXTRACT(YEAR FROM age(current_date, pp.birth_date))) -- FLOOR ekledik
             ELSE 0
-          END as calculated_age,
+          END as "patientAge",
           a.datetime,
           a.type,
           a.status,
@@ -291,20 +289,20 @@ exports.getAppointmentsByDoctor = async (req, res) => {
       [doctorId, today.toISOString()]
     );
     
-    console.log('Raw SQL result:', result.rows);
+    console.log('Raw SQL result:', JSON.stringify(result.rows, null, 2));
 
-    // Format the response data - frontend'in beklediği isimlere dönüştür
+    // Format the response data - yaş değerini Math.floor ile güvence altına al
     const formattedAppointments = result.rows.map(appointment => {
-      console.log('Processing appointment:', appointment);
       return {
         appointment_id: appointment.appointment_id,
         patient_id: appointment.patient_id,
-        patientname: appointment.full_name || 'İsimsiz Hasta',  // full_name'i patientname olarak
-        patientage: appointment.calculated_age || 0,           // calculated_age'i patientage olarak
+        patientName: appointment.patientName || 'İsimsiz Hasta',
+        patientAge: Math.floor(parseFloat(appointment.patientAge || 0)), // Double Math.floor
         datetime: appointment.datetime,
         type: appointment.type,
         status: appointment.status,
-        specialty: appointment.specialty
+        specialty: appointment.specialty,
+        symptoms: appointment.symptoms || ''
       };
     });
 
@@ -332,6 +330,7 @@ exports.getPatientsByDoctor = async (req, res) => {
               p.gender,
               p.address,
               p.medical_history,
+              p.blood_type,
               a.doctor_id,
               COUNT(a.appointment_id) AS total_appointments,
               MAX(a.datetime) AS last_appointment_date,
@@ -341,7 +340,7 @@ exports.getPatientsByDoctor = async (req, res) => {
        LEFT JOIN patient_profiles p ON u.user_id = p.user_id
        WHERE a.doctor_id = $1
        GROUP BY u.user_id, u.full_name, u.email, u.phone_number, 
-                p.birth_date, p.gender, p.address, p.medical_history, a.doctor_id`,
+                p.birth_date, p.gender, p.address, p.medical_history, p.blood_type, a.doctor_id`,
       [doctorId]
     );
     res.json(result.rows);

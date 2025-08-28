@@ -21,22 +21,17 @@ import {
   Mail
 } from 'lucide-react';
 
-// Update the Appointment interface to match backend data
+// Update the Appointment interface to match backend response
 interface Appointment {
   appointment_id: number;
+  patient_id: number;
   doctor_id: number;
   doctor_name: string;
   doctor_specialty: string;
+  hospital_name: string; // Changed from doctor_hospital
   datetime: string;
   type: 'online' | 'face_to_face';
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
-  date?: string;
-  time?: string;
-  complaint?: string;
-  notes?: string;
-  doctorPhone?: string;
-  doctorEmail?: string;
-  doctorAddress?: string;
 }
 
 // Durum çevirileri için mapping
@@ -100,24 +95,14 @@ const fetchAppointments = async () => {
     
     const data = await response.json();
     
-    // API'den gelen veriyi işleyip state'e kaydedelim
+    // API'den gelen veriyi işle
     const formattedAppointments = data.map((apt: any) => ({
-      appointment_id: apt.appointment_id,
-      doctor_id: apt.doctor_id,
-      doctor_name: apt.doctor_name,
-      doctor_specialty: apt.doctor_specialty,
-      datetime: apt.datetime,
-      type: apt.type,
-      status: apt.status,
-      // API'den gelen datetime'ı parçalayarak date ve time oluşturuyoruz
+      ...apt,
       date: new Date(apt.datetime).toLocaleDateString('tr-TR'),
       time: new Date(apt.datetime).toLocaleTimeString('tr-TR', {
         hour: '2-digit',
         minute: '2-digit'
-      }),
-      // Eğer API'den bu alanlar geliyorsa:
-      complaint: apt.complaint || '',
-      notes: apt.notes || ''
+      })
     }));
 
     setAppointments(formattedAppointments);
@@ -412,8 +397,10 @@ const fetchAppointments = async () => {
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600">{appointment.doctor_specialty}</p>
-                        <p className="text-xs text-gray-500">{appointment.date} - {appointment.time} • {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
-                        <p className="text-xs text-gray-500">Şikayet: {appointment.complaint || 'Belirtilmemiş'}</p>
+                        <p className="text-sm text-gray-500">{appointment.hospital_name}</p>
+                        <p className="text-xs text-gray-500">
+                          {appointment.date} - {appointment.time} • {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}
+                        </p>
                       </div>
                       
                       {/* Aksiyon Butonları */}
@@ -573,6 +560,7 @@ const fetchAppointments = async () => {
                 <div className="space-y-2">
                   <p><strong>Ad Soyad:</strong> {selectedAppointment.doctor_name}</p>
                   <p><strong>Uzmanlık:</strong> {selectedAppointment.doctor_specialty}</p>
+                  <p><strong>Hastane:</strong> {selectedAppointment.hospital_name}</p>
                   {selectedAppointment.doctorPhone && (
                     <p className="flex items-center gap-2">
                       <Phone className="w-4 h-4" />

@@ -77,8 +77,19 @@ export function HealthAuthForm() {
     gender: "",
     address: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    national_id: "",
+    blood_type: ""
   });
+  
+  // TC Kimlik input değişikliğini kontrol eden fonksiyon
+  const handleTCKimlikInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+    setFormData(prev => ({
+      ...prev,
+      national_id: value
+    }));
+  };
   const [birthDateError, setBirthDateError] = useState("");
 
   useEffect(() => {
@@ -242,20 +253,20 @@ export function HealthAuthForm() {
     }
     if (mode === "register") {
       // 18 yaş kontrolü
-      if (formData.birthDate) {
-        const today = new Date();
-        const birthDate = new Date(formData.birthDate);
-        const age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        const d = today.getDate() - birthDate.getDate();
-        const isUnder18 = age < 18 || (age === 18 && (m < 0 || (m === 0 && d < 0)));
-        if (isUnder18) {
-          setBirthDateError("18 yaş altı üyeler kayıt olamaz.");
-          return;
-        } else {
-          setBirthDateError("");
-        }
-      }
+      // if (formData.birthDate) {
+      //   const today = new Date();
+      //   const birthDate = new Date(formData.birthDate);
+      //   const age = today.getFullYear() - birthDate.getFullYear();
+      //   const m = today.getMonth() - birthDate.getMonth();
+      //   const d = today.getDate() - birthDate.getDate();
+      //   const isUnder18 = age < 18 || (age === 18 && (m < 0 || (m === 0 && d < 0)));
+      //   if (isUnder18) {
+      //     setBirthDateError("18 yaş altı üyeler kayıt olamaz.");
+      //     return;
+      //   } else {
+      //     setBirthDateError("");
+      //   }
+      // }
       
       if (formData.password !== formData.confirmPassword) {
         toast.error("Şifreler Eşleşmiyor.");
@@ -268,8 +279,29 @@ export function HealthAuthForm() {
         return;
       }
       
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.birthDate || !formData.gender || !formData.address) {
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || 
+          !formData.birthDate || !formData.gender || !formData.address || 
+          !formData.national_id || !formData.blood_type) {
         toast.error("Lütfen tüm alanları doldurun.");
+        return;
+      }
+
+      // TC Kimlik Numarası validasyonu
+      if (!formData.national_id) {
+        toast.error("TC Kimlik Numarası zorunludur.");
+        return;
+      }
+      if (formData.national_id.length !== 11) {
+        toast.error("TC Kimlik Numarası 11 haneli olmalıdır.");
+        return;
+      }
+      if (!/^\d+$/.test(formData.national_id)) {
+        toast.error("TC Kimlik Numarası sadece rakamlardan oluşmalıdır.");
+        return;
+      }
+      // TC Kimlik numarası mantıksal doğrulama
+      if (formData.national_id[0] === '0') {
+        toast.error("TC Kimlik Numarası 0 ile başlayamaz.");
         return;
       }
       // Telefon numarası birleştir
@@ -293,7 +325,9 @@ export function HealthAuthForm() {
             birth_date: formData.birthDate,
             gender: genderDB,
             address: formData.address,
-            role: "patient"
+            role: "patient",
+            national_id: formData.national_id,
+            blood_type: formData.blood_type
           })
         });
         const data = await response.json();
@@ -909,7 +943,62 @@ export function HealthAuthForm() {
                           <option value="Kadın">Kadın</option>
                           <option value="Belirtmek istemiyorum">Belirtmek istemiyorum</option>
                         </select>
-                      </div>  
+                      </div>
+
+                      {/* TC Kimlik Numarası */}
+                      <div className="space-y-2">
+                        <Label htmlFor="national_id" className="text-gray-700">TC Kimlik No</Label>
+                        <div>
+                          <Input
+                            id="national_id"
+                            type="text"
+                            placeholder="TC Kimlik Numaranız"
+                            value={formData.national_id}
+                            onChange={e => {
+                              // Sadece rakam girişine izin ver
+                              const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                              setFormData(prev => ({ ...prev, national_id: value }))
+                            }}
+                            onKeyPress={(e) => {
+                              // Rakam dışındaki tuşlara izin verme
+                              if (!/[0-9]/.test(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            pattern="\d{11}"
+                            className="h-11 border-gray-300 focus:border-slate-800 bg-white text-gray-900"
+                            maxLength={11}
+                            required
+                          />
+                          {formData.national_id && formData.national_id.length !== 11 && (
+                            <div className="text-xs text-red-500 mt-1">
+                              TC Kimlik Numarası 11 haneli olmalıdır. ({11 - formData.national_id.length} hane kaldı)
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Kan Grubu */}
+                      <div className="space-y-2">
+                        <Label htmlFor="blood_type" className="text-gray-700">Kan Grubu</Label>
+                        <select
+                          id="blood_type"
+                          value={formData.blood_type}
+                          onChange={e => setFormData(prev => ({ ...prev, blood_type: e.target.value }))}
+                          className="appearance-none outline-none h-11 border border-gray-300 focus:border-slate-800 bg-white rounded-md px-3 w-full text-gray-900"
+                          required
+                        >
+                          <option value="">Seçiniz</option>
+                          <option value="A+">A RH+</option>
+                          <option value="A-">A RH-</option>
+                          <option value="B+">B RH+</option>
+                          <option value="B-">B RH-</option>
+                          <option value="AB+">AB RH+</option>
+                          <option value="AB-">AB RH-</option>
+                          <option value="0+">0 RH+</option>
+                          <option value="0-">0 RH-</option>
+                        </select>
+                      </div>
                       {/* Adres geniş ve kısa, alta */}
                       <div className="space-y-2 col-span-2">
                         <Label htmlFor="address" className="text-gray-700">Adres</Label>

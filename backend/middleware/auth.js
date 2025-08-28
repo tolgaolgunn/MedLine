@@ -40,6 +40,7 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+
 // Doctor authorization middleware
 const isDoctor = (req, res, next) => {
   if (req.user && req.user.role === 'doctor') {
@@ -51,6 +52,7 @@ const isDoctor = (req, res, next) => {
     });
   }
 };
+
 
 module.exports = {
   authenticateToken,

@@ -47,6 +47,7 @@ interface Doctor {
   rating: number;
   reviewCount: number;
   location: string;
+  hospitalName: string;
   image: string;
   onlineAvailable: boolean;
   officeAvailable: boolean;
@@ -101,6 +102,7 @@ export function DoctorSearch() {
           rating: 4.5, 
           reviewCount: 0,
           location: `${doc.city || ""}, ${doc.district || ""}`.replace(/^[,\s]+|[,\s]+$/g, ""),
+          hospitalName: doc.hospital_name || '',
           image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face",
           onlineAvailable: true,
           officeAvailable: true,
@@ -523,6 +525,10 @@ export function DoctorSearch() {
                 <div className="flex items-center gap-2 text-sm">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
                   <span>{doctor.location}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span>{doctor.hospitalName || 'Hastane bilgisi mevcut değil'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <CalendarIcon className="w-4 h-4 text-muted-foreground" />

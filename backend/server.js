@@ -13,6 +13,8 @@ const app = express();
 
 app.use(cors({
     origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
 app.use(express.json()); 
@@ -25,6 +27,7 @@ app.use('/api/admin', adminRoutes);
 initializeDatabase().then(() => {
     const PORT = process.env.PORT || 3005;
     const server = app.listen(PORT, () => {
+        console.log("Server is starting...");
         console.log('Server is running on port ' + PORT);
         console.log('http://localhost:' + PORT);
     });

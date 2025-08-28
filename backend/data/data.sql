@@ -4,17 +4,22 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20),
+    national_id VARCHAR(11) UNIQUE,
     role VARCHAR(20) NOT NULL CHECK (role IN ('patient', 'doctor', 'admin')),
     is_approved BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE TABLE patient_profiles (
     user_id INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
     birth_date DATE,
     gender VARCHAR(10) CHECK (gender IN ('male', 'female', 'other')),
     address TEXT,
     medical_history TEXT,
+    blood_type VARCHAR(5) DEFAULT 'A+' CHECK (blood_type IN (
+        'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', '0+', '0-'
+    )),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -44,36 +49,37 @@ CREATE TABLE IF NOT EXISTS appointments (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Reçeteler
+-- Prescriptions
 CREATE TABLE prescriptions (
     prescription_id SERIAL PRIMARY KEY,
     appointment_id INTEGER REFERENCES appointments(appointment_id) ON DELETE CASCADE,
     doctor_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
     patient_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-    prescription_code VARCHAR(50) UNIQUE, -- Reçete kodu (TCKN + tarih gibi)
-    diagnosis TEXT, -- Teşhis bilgisi eklendi
-    general_instructions TEXT, -- Genel talimatlar eklendi
-    usage_instructions TEXT, -- Kullanım talimatları eklendi
-    next_visit_date DATE, -- Sonraki ziyaret tarihi eklendi
+    prescription_code VARCHAR(50) UNIQUE, -- prescription code (e.g. national_id + date)
+    diagnosis TEXT,
+    general_instructions TEXT,
+    usage_instructions TEXT,
+    next_visit_date DATE,
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'used', 'expired', 'cancelled')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Reçete içerikleri (ilaçlar)
+-- Prescription items (medications)
 CREATE TABLE prescription_items (
     item_id SERIAL PRIMARY KEY,
     prescription_id INTEGER REFERENCES prescriptions(prescription_id) ON DELETE CASCADE,
     medicine_name VARCHAR(255) NOT NULL,
-    dosage VARCHAR(100) NOT NULL, -- 10mg gibi
-    frequency VARCHAR(100) NOT NULL, -- Günde 2 kez gibi (yeni eklendi)
-    duration VARCHAR(100) NOT NULL, -- 7 gün gibi (yeni eklendi)
+    dosage VARCHAR(100) NOT NULL, -- e.g. 10mg
+    frequency VARCHAR(100) NOT NULL, -- e.g. twice a day
+    duration VARCHAR(100) NOT NULL, -- e.g. 7 days
     usage_instructions TEXT,
     side_effects TEXT,
     quantity INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
--- Update or recreate the feedbacks table
+
+-- Feedbacks
 CREATE TABLE feedbacks (
     feedback_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
