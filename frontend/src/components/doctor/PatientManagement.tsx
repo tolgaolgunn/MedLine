@@ -30,6 +30,7 @@ interface Patient {
   gender: string;
   address: string;
   medical_history: string;
+  blood_type: string;
   doctor_id: string;
   total_appointments: number;
   last_appointment_date: string;
@@ -58,6 +59,10 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
             <div className="flex items-center space-x-2">
               <span className="text-gray-400">Cinsiyet:</span>
               <span>{patient.gender}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-400">Kan Grubu:</span>
+              <span>{patient.blood_type || 'Belirtilmemiş'}</span>
             </div>
           </div>
           

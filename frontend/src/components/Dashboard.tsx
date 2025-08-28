@@ -49,6 +49,7 @@ interface Appointment {
   id: number;
   doctor: string;
   specialty: string;
+  hospital_name?: string;
   date: string;
   time: string;
   type: 'Online' | 'Yüz Yüze';
@@ -484,6 +485,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
       </DialogHeader>
       <div className="space-y-2">
         <div><b>Doktor:</b> {selectedAppointment.doctor_name || 'Doktor'}</div>
+        <div><b>Hastane:</b> {selectedAppointment.hospital_name || '-'}</div>
         <div><b>Tarih:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleDateString('tr-TR') : '-'}</div>
         <div><b>Saat:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '-'}</div>
         <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>

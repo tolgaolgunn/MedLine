@@ -91,21 +91,22 @@ const DoctorAppointments: React.FC = () => {
       .then(res => {
         console.log('API Yanıtı:', res.data);
         
-        const mapped = res.data.map((item: any) => {
-          console.log('Hasta bilgisi:', {
-            id: item.appointment_id,
-            patientname: item.patientname,
-            hasPatientname: !!item.patientname,
-            rawData: item
-          });
-          
-          const dateObj = new Date(item.datetime);
+        // API'den gelen veriyi işlerken yaşı tam sayıya yuvarla
+const mapped = res.data.map((item: any) => {
+  console.log('Hasta bilgisi:', {
+    id: item.appointment_id,
+    patientname: item.patientname,
+    hasPatientname: !!item.patientname,
+    rawData: item
+  });
+  
+  const dateObj = new Date(item.datetime);
   return {
     id: item.appointment_id,
     appointment_id: item.appointment_id,
     patient_id: item.patient_id,
-    patientname: item.patient_name || item.patientname || 'İsimsiz Hasta', // hem patient_name hem patientname kontrol et
-    patientAge: item.patient_age || item.patientage || '0', // hem patient_age hem patientage kontrol et
+    patientname: item.patient_name || item.patientname || 'İsimsiz Hasta',
+    patientAge: Math.floor(parseFloat(item.patient_age || item.patientage || '0')), // Yaşı tam sayıya yuvarla
     specialty: item.specialty,
     date: dateObj.toLocaleDateString('tr-TR'),
     time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
@@ -113,8 +114,7 @@ const DoctorAppointments: React.FC = () => {
     type: item.type,
     status: item.status,
   };
-        });
-        
+});
         console.log('Map edilmiş veri:', mapped);
         setAppointments(mapped);
       })
