@@ -13,57 +13,30 @@ export function BackButton({ className = "", showAvatar = false }: BackButtonPro
   const location = useLocation();
 
   const handleGoBack = () => {
-    const currentPath = window.location.pathname;
+    // 1) Tarayıcı geçmişi varsa her durumda bir önceki sayfaya dön
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    // 2) Explicit 'from' varsa oraya dön (geçmiş yoksa)
     const from = location.state?.from;
-    
-    // Eğer location state'den gelen bir from değeri varsa, oraya git
     if (from) {
       navigate(from);
       return;
     }
-    
-    // Kullanıcı rolünü kontrol et
+
+    // 3) Geçmiş ve from yoksa role'a göre makul başlangıca yönlendir
     let userRole = 'patient';
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       userRole = user.role || 'patient';
-    } catch {
-      userRole = 'patient';
-    }
-    
-    // Doktor sayfaları için özel kontrol
-    if (currentPath.startsWith('/doctor/')) {
-      if (currentPath === '/doctor/dashboard') {
-        // Eğer zaten dashboard'daysa, ana sayfaya git
-        navigate('/');
-      } else {
-        // Doktor alt sayfalarından dashboard'a git
-        navigate('/doctor/dashboard');
-      }
-    } else if (currentPath.startsWith('/patient/')) {
-      // Hasta sayfaları için
-      if (currentPath === '/patient/dashboard') {
-        navigate('/');
-      } else {
-        navigate('/patient/dashboard');
-      }
-    } else if (currentPath === '/dashboard') {
-      // /dashboard sayfasından geri gitme
-      if (userRole === 'doctor') {
-        // Doktor ise doctor dashboard'a git
-        navigate('/doctor/dashboard');
-      } else {
-        // Hasta ise ana sayfaya git
-        navigate('/');
-      }
+    } catch {}
+
+    if (userRole === 'doctor') {
+      navigate('/doctor/dashboard');
     } else {
-      // Diğer sayfalar için güvenli geri gitme
-      if (window.history.length > 1) {
-        navigate(-1);
-      } else {
-        // Geçmiş yoksa ana sayfaya git
-        navigate('/');
-      }
+      navigate('/dashboard');
     }
   };
 

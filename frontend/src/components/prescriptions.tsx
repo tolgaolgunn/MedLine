@@ -187,7 +187,7 @@ export function Prescriptions() {
         return;
       }
 
-      const response = await api.put(`/patient/prescriptions/${userId}/${prescriptionId}/status`, {
+      const response = await api.put(`/patient/prescriptions/${prescriptionId}/status`, {
         status: 'used'
       });
 

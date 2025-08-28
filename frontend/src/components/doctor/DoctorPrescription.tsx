@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Plus, Search, FileText, Calendar, User, Pill, Printer, Download, Edit, Trash2, Eye, Users } from 'lucide-react';
+import { Plus, Search, FileText, Calendar, User, Pill, Printer, Edit, Trash2, Eye, Users } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 interface Patient {
@@ -943,7 +943,7 @@ const PrescriptionManagement: React.FC = () => {
               <Plus className="w-4 h-4 mr-2" /> Yeni Reçete
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Yeni Reçete Oluştur</DialogTitle>
             </DialogHeader>
@@ -1130,7 +1130,7 @@ const PrescriptionManagement: React.FC = () => {
 
       {selectedPrescription && (
         <Dialog open={!!selectedPrescription} onOpenChange={() => setSelectedPrescription(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Reçete Detayları - {selectedPrescription.patientName}</DialogTitle>
             </DialogHeader>
@@ -1198,7 +1198,7 @@ const PrescriptionManagement: React.FC = () => {
 
       {editingPrescription && (
         <Dialog open={isEditPrescriptionOpen} onOpenChange={setIsEditPrescriptionOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Reçete Düzenle - {editingPrescription.patientName}</DialogTitle>
             </DialogHeader>

@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { PageHeader } from './ui/PageHeader';
 import { 
   Calendar, 
   Clock, 
@@ -349,11 +350,13 @@ const fetchAppointments = async () => {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Sayfa Başlığı */}
+     {/* Sayfa Başlığı */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Randevu Yönetimi</h1>
-        <p className="text-muted-foreground">Randevularınızı görüntüleyin ve yönetin.</p>
-      </div>
+       <PageHeader
+       title='Randevu Yönetimi'
+       subtitle='Randevularını görüntüleyin ve yönetin.'
+       ></PageHeader>
+      </div> 
 
       {/* Ana İçerik */}
       <div className="w-full">

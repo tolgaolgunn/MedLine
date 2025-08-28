@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
+import { PageHeader } from './ui/PageHeader';
 import { Alert, AlertDescription } from './ui/alert';
 import { 
   Upload, 
@@ -78,10 +79,10 @@ export function AIDiagnosis() {
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">AI Destekli Ön Tanı</h1>
-        <p className="text-muted-foreground">
-          Semptomlarınızı ve ses/video kayıtlarınızı analiz ederek ön tanı alın.
-        </p>
+       <PageHeader
+       title='AI Destekli Ön Tanı'
+       subtitle='Semptomlarınızı ve ses/video kayıtlarınızı analiz ederek ön tanı alın.'
+       ></PageHeader>
       </div>
 
       {/* Warning Alert */}

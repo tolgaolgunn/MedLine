@@ -30,7 +30,7 @@ function App(): React.ReactElement {
 
             {/* Hasta Dashboard - sadece hasta rolü için */}
             <Route
-              path="/dashboard"
+              path="/dashboard/*"
               element={
                 <ProtectedRoute>
                   <Dashboard />
