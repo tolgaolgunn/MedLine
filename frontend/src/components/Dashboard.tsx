@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from './ui/dialog';
 import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { 
   Calendar, 
   Clock, 
@@ -35,7 +36,6 @@ import { DoctorSearch } from "./DoctorSearch";
 import Appointments from "./Appointments";
 import { MedicalRecords } from "./MedicalRecords";
 import { Prescriptions } from "./prescriptions";
-import { Pharmacy } from "./pharmacy";
 import { Notifications } from "./notifications";   
 import { Topbar } from "./Topbar";
 import { DoctorAppointments, DoctorDashboard } from "./doctor";
@@ -66,6 +66,7 @@ export function Dashboard() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [userRole, setUserRole] = useState<string>('patient');
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Kullanıcı rolünü al
   useEffect(() => {
@@ -85,6 +86,29 @@ export function Dashboard() {
       console.error('Error parsing user data:', error);
     }
   }, [navigate]);
+
+  // URL yolunu (path) activeSection ile senkronize et (hasta için)
+  useEffect(() => {
+    if (userRole === 'doctor') return;
+    const path = location.pathname || '';
+    // /dashboard veya /dashboard/{section}
+    if (path.startsWith('/dashboard')) {
+      const parts = path.split('/').filter(Boolean); // ['dashboard', 'section?']
+      const sectionFromPath = parts[1] || 'dashboard';
+      if (sectionFromPath !== activeSection) {
+        setActiveSection(sectionFromPath);
+      }
+    }
+  }, [location.pathname, userRole]);
+
+  // setActiveSection çağrılarını URL'ye yönlendiren 
+  const setActiveSectionWithRoute = (section: string) => {
+    if (userRole === 'doctor') return;
+    const target = section && section !== 'dashboard' ? `/dashboard/${section}` : '/dashboard';
+    if (location.pathname !== target) {
+      navigate(target, { state: { from: location.pathname } });
+    }
+  };
 
   // Hasta randevu verilerini al
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
@@ -204,8 +228,6 @@ export function Dashboard() {
         return <MedicalRecords />;
       case "prescriptions":
         return <Prescriptions />;
-      case "pharmacy":
-        return <Pharmacy />;
       case "notifications":
         return <Notifications />;
       case "feedback":
@@ -233,12 +255,12 @@ export function Dashboard() {
     <div className="flex h-screen bg-background">
       <Sidebar
         activeSection={activeSection}
-        setActiveSection={setActiveSection}
+        setActiveSection={setActiveSectionWithRoute}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Topbar onLogout={handleLogout} setActiveSection={setActiveSection} />
+        <Topbar onLogout={handleLogout} setActiveSection={setActiveSectionWithRoute} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto">
           {renderContent()}
         </main>
@@ -567,7 +589,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                setShowHistoryModal(false);
              }
            }}>
-           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>Geçmiş Aramalar</DialogTitle>
               </DialogHeader>

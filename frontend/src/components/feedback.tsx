@@ -143,7 +143,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     console.log('Server response:', response.data);
 
     if (response.data && response.data.success) {
-      toast.success('Geri bildirim başarıyla gönderildi');
+      toast.success('Geri bildirim başarıyla gönderildi.');
       // Reset form
       setTitle('');
       setMessage('');
@@ -151,11 +151,11 @@ const handleSubmit = async (e: React.FormEvent) => {
       // Refresh feedback list
       await fetchFeedbacks();
     } else {
-      throw new Error(response.data?.message || 'Geri bildirim gönderilemedi');
+      throw new Error(response.data?.message || 'Geri bildirim gönderilemedi.');
     }
   } catch (err: any) {
     console.error('Error submitting feedback:', err);
-    const errorMessage = err.response?.data?.message || err.message || 'Geri bildirim gönderilemedi';
+    const errorMessage = err.response?.data?.message || err.message || 'Geri bildirim gönderilemedi.';
     toast.error(errorMessage);
   } finally {
     setSubmitting(false);
@@ -169,11 +169,11 @@ const handleSubmit = async (e: React.FormEvent) => {
       const response = await api.delete(`/feedback/${id}`);
       if (response.data.success) {
         await fetchFeedbacks();
-        toast.success('Geri bildiriminiz başarıyla silindi');
+        toast.success('Geri bildiriminiz başarıyla silindi.');
       }
     } catch (err) {
       console.error('Error deleting feedback:', err);
-      toast.error('Geri bildirim silinemedi');
+      toast.error('Geri bildirim silinemedi.');
     }
   };
   
@@ -182,7 +182,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     const message = error.response?.data?.message || 'An error occurred';
     toast.error(message);
   } else {
-    toast.error('An unexpected error occurred');
+    toast.error('Bir hata oluştu.');
   }
 };
 
@@ -283,7 +283,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   Geri Bildirim Türü
                 </label>
                 <Select value={type} onValueChange={(value) => setType(value as FeedbackType)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-32">
                     <SelectValue placeholder="Tür seçin" />
                   </SelectTrigger>
                   <SelectContent>

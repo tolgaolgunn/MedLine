@@ -778,7 +778,7 @@ const DoctorDashboard = () => {
 
       {/* Geçmiş Aramalar Modal */}
       <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto [&>button]:hidden">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto [&>button]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Geçmiş Aramalar</DialogTitle>
           </DialogHeader>

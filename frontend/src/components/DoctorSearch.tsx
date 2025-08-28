@@ -3,6 +3,7 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
+import { PageHeader } from './ui/PageHeader';
 import {
   Avatar,
   AvatarFallback,
@@ -402,14 +403,10 @@ export function DoctorSearch() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">
-          Doktor Ara & Randevu Al
-        </h1>
-        <p className="text-muted-foreground">
-          Uzmanlık alanına göre doktor bulun ve randevu alın.
-        </p>
-      </div>
+     <PageHeader 
+        title="Doktor Ara & Randevu Al"
+        subtitle="Uzmanlık alanına göre doktor bulun ve randevu alın."
+      />
 
       {/* Search and Filters */}
       <Card className="p-6">

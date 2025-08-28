@@ -56,14 +56,7 @@ const AdminDashboard: React.FC = () => {
       time: "15:45",
       status: 'pending'
     },
-    {
-      id: 3,
-      name: "Eczane Şifa",
-      role: "Eczane",
-      date: "15.12.2024",
-      time: "16:20",
-      status: 'pending'
-    }
+    
   ]);
 
   const [systemNotifications, setSystemNotifications] = useState<SystemNotification[]>([

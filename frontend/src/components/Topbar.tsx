@@ -139,7 +139,7 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
     { id: 'appointments', label: 'Randevu Al', icon: Calendar, description: 'Yeni randevu oluştur' },
     { id: 'prescriptions', label: 'Reçetelerim', icon: Pill, description: 'Reçetelerimi görüntüle' },
     { id: 'medical-records', label: 'Sağlık Kayıtlarım', icon: FileText, description: 'Tıbbi geçmişim' },
-    { id: 'doctors', label: 'Doktor Ara', icon: Users, description: 'Uzman doktor bul' },
+    { id: 'doctor-search', label: 'Doktor Ara', icon: Users, description: 'Uzman doktor bul' },
     { id: 'profile', label: 'Profil Ayarları', icon: Settings, description: 'Hesap bilgilerini düzenle' },
     { id: 'help', label: 'Yardım', icon: HelpCircle, description: 'Destek ve kullanım kılavuzu' },
   ];
