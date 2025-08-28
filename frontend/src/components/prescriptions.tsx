@@ -175,63 +175,61 @@ export function Prescriptions() {
   };
 
   const markAsUsed = async (prescriptionId: number) => {
-  try {
-    setLoading(true);
-    
-    const userStr = localStorage.getItem('user');
-    const userData = userStr ? JSON.parse(userStr) : null;
-    const userId = userData?.user_id;
+    try {
+      setLoading(true);
+      
+      const userStr = localStorage.getItem('user');
+      const userData = userStr ? JSON.parse(userStr) : null;
+      const userId = userData?.user_id;
 
-    if (!userId) {
-      toast.error('Kullanıcı bilgisi bulunamadı');
-      return;
-    }
-
-    // Use the existing api instance that was created at component level
-    // This avoids creating multiple instances unnecessarily
-
-    const response = await api.put(`/patient/prescriptions/${prescriptionId}/status`, {
-      status: 'used'
-    });
-
-    if (response.data.success) {
-      // Update prescriptions list with correct status
-      setPrescriptions(prevPrescriptions =>
-        prevPrescriptions.map(p =>
-          p.prescription_id === prescriptionId
-            ? { ...p, prescription_status: 'used' }
-            : p
-        )
-      );
-
-      // Update modal if open
-      if (selected && selected.prescription_id === prescriptionId) {
-        setSelected(prev => 
-          prev ? { ...prev, prescription_status: 'used' } : null
-        );
+      if (!userId) {
+        toast.error('Kullanıcı bilgisi bulunamadı');
+        return;
       }
 
-      // Close modal after status update
-      setSelected(null);
+      const response = await api.put(`/patient/prescriptions/${prescriptionId}/status`, {
+        status: 'used'
+      });
 
-      toast.success('Reçete kullanıldı olarak işaretlendi');
-      
-      // Refetch prescriptions to ensure sync
-      await fetchPrescriptions();
-    } else {
-      throw new Error(response.data.message || 'Reçete durumu güncellenemedi');
+      if (response.data.success) {
+        // Update prescriptions list with correct status
+        setPrescriptions(prevPrescriptions =>
+          prevPrescriptions.map(p =>
+            p.prescription_id === prescriptionId
+              ? { ...p, prescription_status: 'used' }
+              : p
+          )
+        );
+
+        // Update modal if open
+        if (selected && selected.prescription_id === prescriptionId) {
+          setSelected(prev => 
+            prev ? { ...prev, prescription_status: 'used' } : null
+          );
+        }
+
+        // Close modal after status update
+        setSelected(null);
+
+        toast.success('Reçete kullanıldı olarak işaretlendi');
+        
+        // Refetch prescriptions to ensure sync
+        await fetchPrescriptions();
+      } else {
+        throw new Error(response.data.message || 'Reçete durumu güncellenemedi');
+      }
+    } catch (error: any) {
+      console.error('Reçete durumu güncellenirken hata:', error);
+      toast.error(
+        error.response?.data?.message || 
+        error.message || 
+        'Reçete durumu güncellenirken bir hata oluştu'
+      );
+    } finally {
+      setLoading(false);
     }
-  } catch (error: any) {
-    console.error('Reçete durumu güncellenirken hata:', error);
-    toast.error(
-      error.response?.data?.message || 
-      error.message || 
-      'Reçete durumu güncellenirken bir hata oluştu'
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
   useEffect(() => {
     fetchPrescriptions();
   }, []);
