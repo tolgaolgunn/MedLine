@@ -175,33 +175,7 @@ export function Dashboard() {
     return "İyi Akşamlar";
   };
 
-  // Sağlık metrikleri
-  const healthMetrics: HealthMetric[] = [
-    {
-      label: "Kalp Atış Hızı",
-      value: "72 bpm",
-      icon: Heart,
-      status: "normal"
-    },
-    {
-      label: "Kan Basıncı",
-      value: "120/80",
-      icon: Activity,
-      status: "normal"
-    },
-    {
-      label: "Vücut Sıcaklığı",
-      value: "36.8°C",
-      icon: Thermometer,
-      status: "normal"
-    },
-    {
-      label: "Oksijen Seviyesi",
-      value: "98%",
-      icon: TrendingUp,
-      status: "normal"
-    }
-  ];
+ 
 
   const renderContent = () => {
     switch (activeSection) {
@@ -212,7 +186,6 @@ export function Dashboard() {
           <DashboardHome 
             upcomingAppointments={upcomingAppointments}
             loadingAppointments={loadingAppointments}
-            healthMetrics={healthMetrics}
             getGreetingTime={getGreetingTime}
             setActiveSection={setActiveSection}
           />
@@ -244,7 +217,6 @@ export function Dashboard() {
           <DashboardHome 
             upcomingAppointments={upcomingAppointments}
             loadingAppointments={loadingAppointments}
-            healthMetrics={healthMetrics}
             getGreetingTime={getGreetingTime}
             setActiveSection={setActiveSection}
           />
@@ -305,25 +277,39 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
     }
   } catch {}
 
-  // Geçmiş aramaları yükle
+  // Mount olduğunda localStorage'dan yükle
   useEffect(() => {
-    const savedSearches = localStorage.getItem('recentSearches_patient');
+    // userRole'a göre doğru localStorage anahtarını kullan
+    const userStr = localStorage.getItem('user');
+    let currentUserRole = 'patient';
+    if (userStr) {
+      try {
+        const userObj = JSON.parse(userStr);
+        currentUserRole = userObj.role || 'patient';
+      } catch (err) {
+        console.error("User parse hatası:", err);
+      }
+    }
+    
+    const localStorageKey = `recentSearches_${currentUserRole}`;
+    const savedSearches = localStorage.getItem(localStorageKey);
+    
     if (savedSearches) {
       try {
-        const parsed = JSON.parse(savedSearches);
-        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
-          const converted = parsed.map((text: string) => ({ text, timestamp: Date.now() }));
-          setRecentSearches(converted);
-        } else {
-          setRecentSearches(parsed);
-        }
-      } catch (error) {
-        console.error('Error parsing recent searches:', error);
+        setRecentSearches(JSON.parse(savedSearches));
+      } catch (err) {
+        console.error("JSON parse hatası:", err);
         setRecentSearches([]);
       }
+    } else {
+      // localStorage'da veri yoksa state'i boş yap
+      setRecentSearches([]);
     }
   }, []);
 
+
+
+  
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -551,47 +537,14 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
               </Button>
             </div>
           </Card>
-
-          <Card className="p-6 transition-colors duration-200">
-            <h2 className="text-xl font-semibold mb-4">Sağlık Durumu</h2>
-              <div className="space-y-4">
-              {healthMetrics.map((metric: HealthMetric, index: number) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      metric.status === 'normal' ? 'bg-green-100 dark:bg-green-900/20' :
-                      metric.status === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900/20' :
-                      'bg-red-100 dark:bg-red-900/20'
-                    }`}>
-                      <metric.icon className={`w-4 h-4 ${
-                        metric.status === 'normal' ? 'text-green-600 dark:text-green-400' :
-                        metric.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' :
-                        'text-red-600 dark:text-red-400'
-                      }`} />
-                    </div>
-                    <span className="text-sm font-medium">{metric.label}</span>
-                  </div>
-                  <span className="text-sm font-semibold">{metric.value}</span>
-                </div>
-              ))}
-            </div>
-                                                                                                                                                                       <Button 
-                        variant="outline"
-                        className="w-full mt-4 !border !border-black hover:!border-gray-700 hover:!bg-gray-50"
-                        style={{ borderWidth: '2px', borderColor: 'black', borderStyle: 'solid' }}
-                        onClick={() => setActiveSection('ai-diagnosis')}
-                      >
-                        AI Teşhis Al
-                      </Button>
-          </Card>
-
           {/* Geçmiş Aramalar Modal */}
            <Dialog open={showHistoryModal} onOpenChange={(open) => {
              if (!open) {
                setShowHistoryModal(false);
              }
            }}>
-           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto [&>button]:hidden" 
+           onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>Geçmiş Aramalar</DialogTitle>
               </DialogHeader>
@@ -685,9 +638,23 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                 <Button 
                   variant="destructive" 
                   onClick={() => {
+                    // userRole'a göre doğru localStorage anahtarını kullan
+                    const userStr = localStorage.getItem('user');
+                    let currentUserRole = 'patient';
+                    if (userStr) {
+                      try {
+                        const userObj = JSON.parse(userStr);
+                        currentUserRole = userObj.role || 'patient';
+                      } catch (err) {
+                        console.error("User parse hatası:", err);
+                      }
+                    }
+                    
+                    const localStorageKey = `recentSearches_${currentUserRole}`;
                     setRecentSearches([]);
-                    localStorage.removeItem('recentSearches_patient');
-                    setShowHistoryModal(false);
+                    localStorage.removeItem(localStorageKey);
+                    // Modal'ın kapanmaması için bu satırı kaldırıyorum
+                    // setShowHistoryModal(false);
                   }}
                   disabled={recentSearches.length === 0}
                 >
@@ -695,7 +662,9 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => setShowHistoryModal(false)}
+                  onClick={() => {
+                    setShowHistoryModal(false);
+                  }}
                 >
                   Kapat
                 </Button>
