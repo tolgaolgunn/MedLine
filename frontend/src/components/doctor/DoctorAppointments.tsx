@@ -95,7 +95,7 @@ const DoctorAppointments: React.FC = () => {
 const mapped = res.data.map((item: any) => {
   console.log('Hasta bilgisi:', {
     id: item.appointment_id,
-    patientname: item.patientname,
+    patientname: item.patientName,
     hasPatientname: !!item.patientname,
     rawData: item
   });
@@ -105,8 +105,8 @@ const mapped = res.data.map((item: any) => {
     id: item.appointment_id,
     appointment_id: item.appointment_id,
     patient_id: item.patient_id,
-    patientname: item.patient_name || item.patientname || 'İsimsiz Hasta',
-    patientAge: Math.floor(parseFloat(item.patient_age || item.patientage || '0')), // Yaşı tam sayıya yuvarla
+    patientname: item.patientName || 'İsimsiz Hasta',
+    patientAge: Math.floor(parseFloat(item.patientage || item.patientAge || '0')), // Yaşı tam sayıya yuvarla
     specialty: item.specialty,
     date: dateObj.toLocaleDateString('tr-TR'),
     time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
