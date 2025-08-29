@@ -115,6 +115,8 @@ const DoctorDashboard = () => {
   }, []);
 
 // Doktora ait randevuları backend'den çek
+// Remove the duplicate useEffect hook and keep only one:
+
 useEffect(() => {
   const fetchAppointments = async () => {
     if (!doctorId) return;
@@ -122,22 +124,29 @@ useEffect(() => {
     try {
       const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
       
+      // API yanıtını konsola yazdır
+      console.log('API Response:', response.data);
+      
       const mapped = response.data.map((item: any) => {
         const dateObj = new Date(item.datetime);
         
+        // Debug için item objesini konsola yazdır
+        console.log('Appointment item:', item);
+        
         return {
-          id: item.appointment_id,
-          patientName: item.patientName,
-          patientAge: Math.floor(parseFloat(item.patientAge || '0')), // Double Math.floor
-          specialty: item.specialty,
+          id: item.appointment_id || item.id,
+          patientName: item.patientName || item.patientname || 'İsimsiz Hasta',
+          patientAge: item.patientAge || item.patientage || 0,
+          specialty: item.specialty || '',
           date: dateObj.toLocaleDateString('tr-TR'),
           time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-          type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
-          status: item.status,
-          symptoms: item.symptoms,
+          type: (item.type === 'face_to_face' ? 'face_to_face' : 'online') as AppointmentType,
+          status: (item.status || 'pending') as AppointmentStatus,
+          symptoms: item.symptoms || '',
         };
       });
-    
+      
+      console.log('Mapped appointments:', mapped);
       setAppointments(mapped);
     } catch (error) {
       console.error('Randevular çekilirken hata oluştu:', error);
@@ -238,20 +247,6 @@ useEffect(() => {
     return diff <= 10 && diff >= -30; // 10 dakika sonrası ve 30 dakika öncesi arası başlatılabilir
   };
 
-  const isPastAppointment = (appointment: Appointment) => {
-    // appointment.date: 'DD.MM.YYYY'
-    // appointment.time: 'HH:mm'
-    const [day, month, year] = appointment.date.split('.');
-    const [hour, minute] = appointment.time.split(':');
-    const appointmentDate = new Date(
-      Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)
-    );
-    const now = new Date();
-
-    // Randevu zamanı geçmiş mi? (bugün ve geçmiş tarihler)
-    return appointmentDate <= now;
-  };
-
   // Geçmiş aramaları yükle
   useEffect(() => {
     const savedSearches = localStorage.getItem('recentSearches_doctor');
@@ -326,36 +321,10 @@ useEffect(() => {
   }, [doctorId]);
 
   // Doktora ait randevuları backend'den çek
-
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!doctorId) return;
-      
-      try {
-        const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
-        
-        const mapped = response.data.map((item: any) => {
-          const dateObj = new Date(item.datetime);
-          
-          return {
-            id: item.appointment_id,
-            patientName: item.patientName,
-            patientAge: item.patientAge || 0,
-            specialty: item.specialty,
-            date: dateObj.toLocaleDateString('tr-TR'), // örnek: 29.07.2025
-            time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), // örnek: 11:00
-            type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
-            status: item.status,
-            symptoms: item.symptoms || item.complaint || '',
-          };
-        });
-    
-        setAppointments(mapped);
-      } catch (error) {
-        console.error('Randevular çekilirken hata oluştu:', error);
-      }
-    };
-
+  // Doktora ait randevuları backend'den çek
+useEffect(() => {
+  const fetchAppointments = async () => {
+    if (!doctorId) return;
     
     try {
       const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
@@ -584,11 +553,6 @@ useEffect(() => {
                         <p className="font-medium">{appointment.patientName}</p>
                         <p className="text-sm text-gray-600">{appointment.time} - {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
                         <p className="text-xs text-gray-500">{appointment.specialty}</p>
-                        {(appointment.symptoms || (appointment as any).complaint) && (
-                          <p className="text-xs text-gray-600 mt-1">
-                            <span className="font-medium">Şikayet:</span> {appointment.symptoms || (appointment as any).complaint}
-                          </p>
-                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -614,20 +578,14 @@ useEffect(() => {
                          </>
                        )}
                        
-                                               {appointment.status === 'confirmed' && isPastAppointment(appointment) && (
-                          <button
-                            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm transition-all duration-200 text-sm"
-                            onClick={() => handleUpdateStatus(appointment.id, 'completed')}
-                          >
-                            Tamamlandı
-                          </button>
-                        )}
-                        
-                        {appointment.status === 'confirmed' && !isPastAppointment(appointment) && (
-                          <div className="text-xs text-gray-500 text-center px-2">
-                            Saat geldiğinde tamamlanabilir
-                          </div>
-                        )}
+                       {appointment.status === 'confirmed' && (
+                         <button
+                           className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm transition-all duration-200 text-sm"
+                           onClick={() => handleUpdateStatus(appointment.id, 'completed')}
+                         >
+                           Tamamlandı
+                         </button>
+                       )}
                          {isCurrentAppointment(appointment) && appointment.status !== 'cancelled' && (
                           <Button
                           size="sm"
@@ -701,7 +659,7 @@ useEffect(() => {
 
       {showDetail && selectedAppointment && (
         <Dialog open={showDetail} onOpenChange={handleCloseDetail}>
-          <DialogContent className="max-w-md [&>button]:hidden">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Randevu Detayı</DialogTitle>
             </DialogHeader>
@@ -720,9 +678,9 @@ useEffect(() => {
                      selectedAppointment.status === 'cancelled' ? 'İptal Edildi' : 'Beklemede'}
                   </Badge>
                 </div>
-                {(selectedAppointment.symptoms || (selectedAppointment as any).complaint) && (
+                {selectedAppointment.symptoms && (
                   <div className="col-span-2">
-                    <b>Şikayetler:</b> {selectedAppointment.symptoms || (selectedAppointment as any).complaint}
+                    <b>Semptomlar:</b> {selectedAppointment.symptoms}
                   </div>
                 )}
               </div>
@@ -757,49 +715,30 @@ useEffect(() => {
                        </>
                      )}
                      
-                                           {selectedAppointment.status === 'confirmed' && isPastAppointment(selectedAppointment) && (
-                        <>
-                          <Button
-                            size="sm"
-                            className="bg-blue-500 hover:bg-blue-600 text-white"
-                            onClick={() => {
-                              handleUpdateStatus(selectedAppointment.id, 'completed');
-                              setShowDetail(false);
-                            }}
-                          >
-                            Tamamlandı
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => {
-                              handleUpdateStatus(selectedAppointment.id, 'cancelled');
-                              setShowDetail(false);
-                            }}
-                          >
-                            İptal Et
-                          </Button>
-                        </>
-                      )}
-                      
-                      {selectedAppointment.status === 'confirmed' && !isPastAppointment(selectedAppointment) && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => {
-                              handleUpdateStatus(selectedAppointment.id, 'cancelled');
-                              setShowDetail(false);
-                            }}
-                          >
-                            İptal Et
-                          </Button>
-                          <div className="text-sm text-gray-500 ">
-                            Randevu saati geldiğinde randevuyu tamamla butonuna basınız
-                          </div>
-                        </>
-
-                      )}
+                     {selectedAppointment.status === 'confirmed' && (
+                       <>
+                         <Button
+                           size="sm"
+                           className="bg-blue-500 hover:bg-blue-600 text-white"
+                           onClick={() => {
+                             handleUpdateStatus(selectedAppointment.id, 'completed');
+                             setShowDetail(false);
+                           }}
+                         >
+                           Tamamlandı
+                         </Button>
+                         <Button
+                           size="sm"
+                           variant="destructive"
+                           onClick={() => {
+                             handleUpdateStatus(selectedAppointment.id, 'cancelled');
+                             setShowDetail(false);
+                           }}
+                         >
+                           İptal Et
+                         </Button>
+                       </>
+                     )}
                      
                      {selectedAppointment.status === 'cancelled' && (
                        <>
@@ -849,7 +788,7 @@ useEffect(() => {
 
       {/* Geçmiş Aramalar Modal */}
       <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto [&>button]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto [&>button]:hidden">
           <DialogHeader>
             <DialogTitle>Geçmiş Aramalar</DialogTitle>
           </DialogHeader>
