@@ -71,12 +71,14 @@ export function DoctorSearch() {
     Date | undefined
   >();
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [selectedComplaint, setSelectedComplaint] = useState<string>("");
   const [appointmentType, setAppointmentType] = useState<
     AppointmentType | ""
   >("");
   const [showSuccess, setShowSuccess] =
     useState<boolean>(false);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [originalDoctors, setOriginalDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showCalendar, setShowCalendar] = useState<boolean>(false);
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
@@ -108,8 +110,10 @@ export function DoctorSearch() {
           price: "-",
         }));
         setDoctors(mapped);
+        setOriginalDoctors(mapped); // Orijinal listeyi sakla
       } catch (e) {
         setDoctors([]);
+        setOriginalDoctors([]);
       } finally {
         setLoading(false);
       }
@@ -201,16 +205,17 @@ export function DoctorSearch() {
     const datetime = dateObj.toISOString();
 
     try {
-      const response = await fetch('http://localhost:3005/api/appointments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patient_id,
-          doctor_id: selectedDoctor.id,
-          datetime,
-          type: appointmentType === 'online' ? 'online' : 'face_to_face'
-        })
-      });
+             const response = await fetch('http://localhost:3005/api/appointments', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           patient_id,
+           doctor_id: selectedDoctor.id,
+           datetime,
+           type: appointmentType === 'online' ? 'online' : 'face_to_face',
+           complaint: selectedComplaint || ''
+         })
+       });
 
       if (response.ok) {
         setShowSuccess(true);
@@ -360,6 +365,7 @@ export function DoctorSearch() {
     setSelectedDate(undefined);
     setTempSelectedDate(undefined);
     setSelectedTime("");
+    setSelectedComplaint("");
     setAppointmentType("");
     setShowCalendar(false);
     setShowDateError(false);
@@ -373,6 +379,8 @@ export function DoctorSearch() {
     setSelectedSpecialty("");
     setActiveSearchTerm("");
     setActiveSelectedSpecialty("");
+    // Orijinal doktor listesini geri yükle
+    setDoctors(originalDoctors);
   };
 
   const handleOpenAppointmentModal = (doctor: Doctor) => {
@@ -383,7 +391,7 @@ export function DoctorSearch() {
 
   const handleCloseModal = () => {
     // Eğer seçim yapılmışsa onay sor
-    if (appointmentType || selectedDate || selectedTime || tempSelectedDate) {
+    if (appointmentType || selectedDate || selectedTime || tempSelectedDate || selectedComplaint.trim()) {
       setShowExitConfirm(true);
     } else {
       setSelectedDoctor(null);
@@ -567,7 +575,7 @@ export function DoctorSearch() {
                        Randevu Al
                      </Button>
                    </DialogTrigger>
-                   <DialogContent className="max-w-md">
+                                       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                      <DialogHeader>
                        <DialogTitle>
                          Randevu Al - {doctor.name}
@@ -663,14 +671,19 @@ export function DoctorSearch() {
 
                                      {/* Days */}
                                      <div className="grid grid-cols-7 gap-1 mb-2">
-                                       {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day) => (
-                                         <div key={day} className="text-center text-sm font-medium text-gray-500 p-2">
+                                       {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day, index) => (
+                                         <div 
+                                           key={day} 
+                                           className={`text-center text-sm font-medium p-2 ${
+                                             index === 5 || index === 6 ? 'text-red-500 font-semibold' : 'text-gray-500'
+                                           }`}
+                                         >
                                            {day}
                                          </div>
                                        ))}
                                      </div>
 
-                                                                         {/* Dates */}
+                                    {/* Dates */}
                                      <div className="grid grid-cols-7 gap-1">
                                        {(() => {
                                          const start = startOfMonth(currentMonth);
@@ -685,7 +698,7 @@ export function DoctorSearch() {
                                            days.push(<div key={`empty-${i}`} className="p-2"></div>);
                                          }
                                          
-                                                                                   for (let day = 1; day <= daysInMonth; day++) {
+                                            for (let day = 1; day <= daysInMonth; day++) {
                                             const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
                                             const today = new Date();
                                             const isToday = isSameDay(currentDate, today);
@@ -698,11 +711,15 @@ export function DoctorSearch() {
                                             const currentDateStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
                                             const isPast = currentDateStart < todayStart;
                                             
+                                            // Hafta sonu kontrolü (Cumartesi = 6, Pazar = 0)
+                                            const dayOfWeek = currentDate.getDay();
+                                            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // 0 = Pazar, 6 = Cumartesi
+                                            
                                             days.push(
                                               <button
                                                 key={day}
                                                 onClick={() => {
-                                                  if (!isPast) {
+                                                  if (!isPast && !isWeekend) {
                                                     if (appointmentType) {
                                                       setTempSelectedDate(currentDate);
                                                     } else {
@@ -710,13 +727,15 @@ export function DoctorSearch() {
                                                     }
                                                   }
                                                 }}
-                                                disabled={isPast}
+                                                disabled={isPast || isWeekend}
                                                 className={`
                                                   p-2 text-sm rounded-md transition-colors
-                                                  ${isPast ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-blue-100 cursor-pointer'}
+                                                  ${isPast || isWeekend ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-blue-100 cursor-pointer'}
                                                   ${isToday ? 'bg-blue-50 text-blue-600 font-medium' : ''}
                                                   ${isSelected ? 'bg-blue-600 text-white font-medium' : ''}
+                                                  ${isWeekend ? 'bg-red-50 text-red-400 border border-red-200' : ''}
                                                 `}
+                                                title={isWeekend ? 'Hafta sonu (Cumartesi-Pazar) randevu alınamaz' : ''}
                                               >
                                                 {day}
                                               </button>
@@ -813,32 +832,70 @@ export function DoctorSearch() {
                         )}
 
                           <div className="space-y-3">
-                           <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-                             <p className="font-medium mb-2">Seçimleriniz:</p>
-                             <ul className="space-y-1">
-                               <li>• Randevu Türü: {appointmentType === 'online' ? 'Online Görüşme' : appointmentType === 'office' ? 'Muayenehane Ziyareti' : 'Seçilmedi'}</li>
-                               <li>• Tarih: {selectedDate ? selectedDate.toLocaleDateString('tr-TR') : 'Seçilmedi'}</li>
-                               <li>• Saat: {selectedTime || 'Seçilmedi'}</li>
-                             </ul>
-                           </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-2">
+                                Şikayetleriniz
+                              </label>
+                                 <textarea
+                                 placeholder="Şikayetlerinizi ve belirtilerinizi detaylı olarak yazın..."
+                                 className="w-full p-3 border border-gray-300 rounded-md resize-none overflow-hidden overflow-y-auto"
+                                 rows={4}
+                                maxLength={500}
+                                 value={selectedComplaint}
+                                 onChange={(e) => {
+                                   setSelectedComplaint(e.target.value);
+                                   // Otomatik yükseklik ayarı
+                                   e.target.style.height = 'auto';
+                                   e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                                 }}
+                                 style={{ minHeight: '96px', maxHeight: '120px' }}
+                               />
+                               <div className="flex justify-between items-center mt-1">
+                                 <span className="text-xs text-gray-500">
+                                   {selectedComplaint.length}/500 karakter
+                                 </span>
+                                 {selectedComplaint.length >= 500 && (
+                                   <span className="text-xs text-red-500">
+                                     Maksimum karakter sayısına ulaştınız
+                                   </span>
+                                 )}
+                               </div>
+                            </div>
+                            
+                            <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg break-all">
+                              <p className="font-medium mb-2">Seçimleriniz:</p>
+                              <ul className="space-y-1">
+                                <li>• Randevu Türü: {appointmentType === 'online' ? 'Online Görüşme' : appointmentType === 'office' ? 'Muayenehane Ziyareti' : 'Seçilmedi'}</li>
+                                <li>• Tarih: {selectedDate ? selectedDate.toLocaleDateString('tr-TR') : 'Seçilmedi'}</li>
+                                <li>• Saat: {selectedTime || 'Seçilmedi'}</li>
+                                <li className="whitespace-pre-wrap break-all">• Şikayet: {selectedComplaint || 'Belirtilmemiş'}</li>
+                              </ul>
+                            </div>
                            
-                                                       <Button
+                              <Button
                               className="w-full"
                               onClick={handleBookAppointment}
-                              disabled={
-                                !appointmentType ||
-                                !selectedDate ||
-                                !selectedTime ||
-                                isTimeSlotDisabled(selectedTime)
-                              }
+                                                             disabled={
+                                 !appointmentType ||
+                                 !selectedDate ||
+                                 !selectedTime ||
+                                 isTimeSlotDisabled(selectedTime) ||
+                                 !selectedComplaint.trim()
+                               }
                             >
                               Randevuyu Onayla ({doctor.price})
                             </Button>
-                           {selectedTime && isTimeSlotDisabled(selectedTime) && (
-                             <p className="text-sm text-red-600 text-center">
-                               {getTimeSlotMessage(selectedTime)}
-                             </p>
-                           )}
+                              {selectedTime && isTimeSlotDisabled(selectedTime) && (
+                              <p className="text-sm text-red-600 text-center">
+                                {getTimeSlotMessage(selectedTime)}
+                              </p>
+                            )}
+                            
+                            {!selectedComplaint.trim() && (
+                              <p className="text-sm text-orange-600 text-center">
+                                Lütfen şikayetlerinizi belirtin
+                              </p>
+                            )}
                          </div>
                       </div>
                     )}

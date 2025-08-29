@@ -245,6 +245,20 @@ const DoctorDashboard = () => {
     return diff <= 10 && diff >= -30; // 10 dakika sonrası ve 30 dakika öncesi arası başlatılabilir
   };
 
+  const isPastAppointment = (appointment: Appointment) => {
+    // appointment.date: 'DD.MM.YYYY'
+    // appointment.time: 'HH:mm'
+    const [day, month, year] = appointment.date.split('.');
+    const [hour, minute] = appointment.time.split(':');
+    const appointmentDate = new Date(
+      Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)
+    );
+    const now = new Date();
+
+    // Randevu zamanı geçmiş mi? (bugün ve geçmiş tarihler)
+    return appointmentDate <= now;
+  };
+
   // Geçmiş aramaları yükle
   useEffect(() => {
     const savedSearches = localStorage.getItem('recentSearches_doctor');
@@ -338,7 +352,7 @@ const DoctorDashboard = () => {
             time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), // örnek: 11:00
             type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
             status: item.status,
-            symptoms: item.symptoms,
+            symptoms: item.symptoms || item.complaint || '',
           };
         });
     
@@ -543,6 +557,11 @@ const DoctorDashboard = () => {
                         <p className="font-medium">{appointment.patientName}</p>
                         <p className="text-sm text-gray-600">{appointment.time} - {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
                         <p className="text-xs text-gray-500">{appointment.specialty}</p>
+                        {(appointment.symptoms || (appointment as any).complaint) && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            <span className="font-medium">Şikayet:</span> {appointment.symptoms || (appointment as any).complaint}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -568,14 +587,20 @@ const DoctorDashboard = () => {
                          </>
                        )}
                        
-                       {appointment.status === 'confirmed' && (
-                         <button
-                           className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm transition-all duration-200 text-sm"
-                           onClick={() => handleUpdateStatus(appointment.id, 'completed')}
-                         >
-                           Tamamlandı
-                         </button>
-                       )}
+                                               {appointment.status === 'confirmed' && isPastAppointment(appointment) && (
+                          <button
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm transition-all duration-200 text-sm"
+                            onClick={() => handleUpdateStatus(appointment.id, 'completed')}
+                          >
+                            Tamamlandı
+                          </button>
+                        )}
+                        
+                        {appointment.status === 'confirmed' && !isPastAppointment(appointment) && (
+                          <div className="text-xs text-gray-500 text-center px-2">
+                            Saat geldiğinde tamamlanabilir
+                          </div>
+                        )}
                          {isCurrentAppointment(appointment) && appointment.status !== 'cancelled' && (
                           <Button
                           size="sm"
@@ -649,7 +674,7 @@ const DoctorDashboard = () => {
 
       {showDetail && selectedAppointment && (
         <Dialog open={showDetail} onOpenChange={handleCloseDetail}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md [&>button]:hidden">
             <DialogHeader>
               <DialogTitle>Randevu Detayı</DialogTitle>
             </DialogHeader>
@@ -668,9 +693,9 @@ const DoctorDashboard = () => {
                      selectedAppointment.status === 'cancelled' ? 'İptal Edildi' : 'Beklemede'}
                   </Badge>
                 </div>
-                {selectedAppointment.symptoms && (
+                {(selectedAppointment.symptoms || (selectedAppointment as any).complaint) && (
                   <div className="col-span-2">
-                    <b>Semptomlar:</b> {selectedAppointment.symptoms}
+                    <b>Şikayetler:</b> {selectedAppointment.symptoms || (selectedAppointment as any).complaint}
                   </div>
                 )}
               </div>
@@ -705,30 +730,49 @@ const DoctorDashboard = () => {
                        </>
                      )}
                      
-                     {selectedAppointment.status === 'confirmed' && (
-                       <>
-                         <Button
-                           size="sm"
-                           className="bg-blue-500 hover:bg-blue-600 text-white"
-                           onClick={() => {
-                             handleUpdateStatus(selectedAppointment.id, 'completed');
-                             setShowDetail(false);
-                           }}
-                         >
-                           Tamamlandı
-                         </Button>
-                         <Button
-                           size="sm"
-                           variant="destructive"
-                           onClick={() => {
-                             handleUpdateStatus(selectedAppointment.id, 'cancelled');
-                             setShowDetail(false);
-                           }}
-                         >
-                           İptal Et
-                         </Button>
-                       </>
-                     )}
+                                           {selectedAppointment.status === 'confirmed' && isPastAppointment(selectedAppointment) && (
+                        <>
+                          <Button
+                            size="sm"
+                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                            onClick={() => {
+                              handleUpdateStatus(selectedAppointment.id, 'completed');
+                              setShowDetail(false);
+                            }}
+                          >
+                            Tamamlandı
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              handleUpdateStatus(selectedAppointment.id, 'cancelled');
+                              setShowDetail(false);
+                            }}
+                          >
+                            İptal Et
+                          </Button>
+                        </>
+                      )}
+                      
+                      {selectedAppointment.status === 'confirmed' && !isPastAppointment(selectedAppointment) && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              handleUpdateStatus(selectedAppointment.id, 'cancelled');
+                              setShowDetail(false);
+                            }}
+                          >
+                            İptal Et
+                          </Button>
+                          <div className="text-sm text-gray-500 ">
+                            Randevu saati geldiğinde randevuyu tamamla butonuna basınız
+                          </div>
+                        </>
+
+                      )}
                      
                      {selectedAppointment.status === 'cancelled' && (
                        <>

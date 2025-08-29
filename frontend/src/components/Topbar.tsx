@@ -103,6 +103,8 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
   const clearRecentSearches = () => {
     setRecentSearches([]);
     localStorage.removeItem(`recentSearches_${userRole}`);
+    // Modal'ın kapanmaması için showSearchResults'ı true tut
+    setShowSearchResults(true);
   };
 
   const removeSearchItem = (searchToRemove: string) => {
