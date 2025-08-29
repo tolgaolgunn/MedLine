@@ -196,7 +196,7 @@ export function Prescriptions() {
         setPrescriptions(prevPrescriptions =>
           prevPrescriptions.map(p =>
             p.prescription_id === prescriptionId
-              ? { ...p, prescription_status: 'used' } // Update prescription_status instead of status
+              ? { ...p, prescription_status: 'used' }
               : p
           )
         );
@@ -213,12 +213,18 @@ export function Prescriptions() {
 
         toast.success('Reçete kullanıldı olarak işaretlendi');
         
-        // Optionally refetch prescriptions to ensure sync
-        fetchPrescriptions();
+        // Refetch prescriptions to ensure sync
+        await fetchPrescriptions();
+      } else {
+        throw new Error(response.data.message || 'Reçete durumu güncellenemedi');
       }
     } catch (error: any) {
       console.error('Reçete durumu güncellenirken hata:', error);
-      toast.error(error.response?.data?.message || 'Reçete durumu güncellenirken bir hata oluştu');
+      toast.error(
+        error.response?.data?.message || 
+        error.message || 
+        'Reçete durumu güncellenirken bir hata oluştu'
+      );
     } finally {
       setLoading(false);
     }

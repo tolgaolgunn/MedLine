@@ -5,10 +5,15 @@ const getUserByEmail = async (email) => {
   return result.rows[0];
 };
 
-const createUser = async (full_name, email, password_hash, phone_number, role, is_approved = false) => {
+const getUserByNationalId = async (national_id) => {
+  const result = await db.query("SELECT * FROM users WHERE national_id = $1", [national_id]);
+  return result.rows[0];
+};
+
+const createUser = async (full_name, email, password_hash, phone_number, role, is_approved = false, national_id = null) => {
   const result = await db.query(
-    "INSERT INTO users (full_name, email, password_hash, phone_number, role, is_approved) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-    [full_name, email, password_hash, phone_number, role, is_approved]
+    "INSERT INTO users (full_name, email, password_hash, phone_number, role, is_approved, national_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+    [full_name, email, password_hash, phone_number, role, is_approved, national_id]
   );
   return result.rows[0];
 };
@@ -41,4 +46,5 @@ module.exports = {
   getUserById,
   updateUserProfile,
   updateUserPassword,
+  getUserByNationalId,
 };

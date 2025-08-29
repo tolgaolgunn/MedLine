@@ -76,7 +76,11 @@ exports.getAppointmentsByUser = async (req, res) => {
   try {
     const userId = req.params.userId;
     const result = await db.query(
-      `SELECT a.*, u.full_name AS doctor_name, d.specialty AS doctor_specialty
+      `SELECT 
+        a.*,
+        u.full_name AS doctor_name,
+        d.specialty AS doctor_specialty,
+        d.hospital_name AS hospital_name
        FROM appointments a
        JOIN users u ON a.doctor_id = u.user_id
        JOIN doctor_profiles d ON u.user_id = d.user_id

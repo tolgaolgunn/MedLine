@@ -65,7 +65,21 @@ const updateDoctorProfile = async (user_id, fields) => {
 
 const getAllDoctorsWithUser = async () => {
   const result = await db.query(`
-    SELECT u.user_id, u.full_name, u.email, u.phone_number, d.specialty, d.license_number, d.experience_years, d.biography, d.city, d.district, d.hospital_name
+    SELECT 
+      u.user_id, 
+      u.full_name, 
+      u.email, 
+      u.phone_number, 
+      d.specialty, 
+      d.license_number, 
+      d.experience_years, 
+      d.biography, 
+      d.city, 
+      d.district, 
+      d.hospital_name,
+      u.created_at AS member_since,
+      u.is_approved,
+      d.approved_by_admin
     FROM users u
     JOIN doctor_profiles d ON u.user_id = d.user_id
     WHERE u.role = 'doctor' AND u.is_approved = TRUE AND d.approved_by_admin = TRUE

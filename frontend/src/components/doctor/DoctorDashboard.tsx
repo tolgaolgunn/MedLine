@@ -114,45 +114,38 @@ const DoctorDashboard = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const fetchDoctorStats = async () => {
-      if (!doctorId) {
-        console.log('No doctorId available');
-        return;
-      }
-
-      console.log('Fetching stats for doctorId:', doctorId);
-      console.log('Auth Token:', localStorage.getItem('token'));
-
-      try {
-        const [patientsRes, pendingRes, todayRes] = await Promise.all([
-          axios.get(`/doctor/patients/count/${doctorId}`),
-          axios.get(`/doctor/appointments/pending/count/${doctorId}`),
-          axios.get(`/doctor/appointments/today/count/${doctorId}`)
-        ]);
-
-        console.log('API Responses:', {
-          patients: patientsRes.data,
-          pending: pendingRes.data,
-          today: todayRes.data
-        });
-
-        setTotalPatients(patientsRes.data.count || 0);
-        setPendingAppointments(pendingRes.data.count || 0);
-        setTodayAppointmentCount(todayRes.data.count || 0);
-      } catch (error: any) {
-        console.error('API Error Details:', {
-          status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers
-        });
-        const errorMessage = error.response?.data?.message || 'İstatistikler yüklenirken hata oluştu';
-        toast.error(errorMessage);
-      }
-    };
-
-    fetchDoctorStats();
-  }, [doctorId]);
+// Doktora ait randevuları backend'den çek
+useEffect(() => {
+  const fetchAppointments = async () => {
+    if (!doctorId) return;
+    
+    try {
+      const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
+      
+      const mapped = response.data.map((item: any) => {
+        const dateObj = new Date(item.datetime);
+        
+        return {
+          id: item.appointment_id,
+          patientName: item.patientName,
+          patientAge: Math.floor(parseFloat(item.patientAge || '0')), // Double Math.floor
+          specialty: item.specialty,
+          date: dateObj.toLocaleDateString('tr-TR'),
+          time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+          type: item.type === 'face_to_face' ? 'face_to_face' : 'online',
+          status: item.status,
+          symptoms: item.symptoms,
+        };
+      });
+    
+      setAppointments(mapped);
+    } catch (error) {
+      console.error('Randevular çekilirken hata oluştu:', error);
+    }
+  };
+  
+  fetchAppointments();
+}, [doctorId]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -333,6 +326,7 @@ const DoctorDashboard = () => {
   }, [doctorId]);
 
   // Doktora ait randevuları backend'den çek
+
   useEffect(() => {
     const fetchAppointments = async () => {
       if (!doctorId) return;
@@ -361,9 +355,42 @@ const DoctorDashboard = () => {
         console.error('Randevular çekilirken hata oluştu:', error);
       }
     };
+
     
-    fetchAppointments();
-  }, [doctorId]);
+    try {
+      const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
+      
+      // API yanıtını konsola yazdır
+      console.log('API Response:', response.data);
+      
+      const mapped = response.data.map((item: any) => {
+  const dateObj = new Date(item.datetime);
+  
+  // Debug için item objesini konsola yazdır
+  console.log('Appointment item:', item);
+  
+  return {
+    id: item.appointment_id || item.id,
+    patientName: item.patientName || item.patientname || 'İsimsiz Hasta', // Her iki varyasyonu da kontrol et
+    patientAge: item.patientAge || item.patientage || 0,
+    specialty: item.specialty || '',
+    date: dateObj.toLocaleDateString('tr-TR'),
+    time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+    type: (item.type === 'face_to_face' ? 'face_to_face' : 'online') as AppointmentType,
+    status: (item.status || 'pending') as AppointmentStatus,
+    symptoms: item.symptoms || '',
+  };
+});
+  
+      console.log('Mapped appointments:', mapped);
+      setAppointments(mapped);
+    } catch (error) {
+      console.error('Randevular çekilirken hata oluştu:', error);
+    }
+  };
+  
+  fetchAppointments();
+}, [doctorId]);
 
   const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
     try {

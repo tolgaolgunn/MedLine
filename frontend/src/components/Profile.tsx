@@ -35,7 +35,8 @@ export function Profile() {
     email: "",
     phone: "",
     gender: "",
-    address: ""
+    address: "",
+    bloodType: ""
   });
 
   const [originalFormData, setOriginalFormData] = useState({
@@ -45,7 +46,8 @@ export function Profile() {
     phone: "",
     gender: "",
     address: "",
-    birthDate: ""
+    birthDate: "",
+    bloodType: ""
   });
 
   const [birthDate, setBirthDate] = useState<string>("");
@@ -90,6 +92,7 @@ export function Profile() {
           phone: userData.phone_number || "",
           gender: userData.gender || "",
           address: userData.address || "",
+          bloodType: userData.blood_type || ""
         };
         
         setFormData(newFormData);
@@ -151,6 +154,7 @@ export function Profile() {
       formData.phone !== originalFormData.phone ||
       formData.gender !== originalFormData.gender ||
       formData.address !== originalFormData.address ||
+      formData.bloodType !== originalFormData.bloodType ||
       birthDate !== originalFormData.birthDate
     );
   };
@@ -175,7 +179,8 @@ export function Profile() {
         phone_number: formData.phone,
         gender: formData.gender,
         address: formData.address,
-        birth_date: birthDate || null
+        birth_date: birthDate || null,
+        blood_type: formData.bloodType || null
       };
 
       const response = await fetch('http://localhost:3005/api/profile', {
@@ -319,7 +324,7 @@ export function Profile() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="gender">Cinsiyet</Label>
                   <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
@@ -330,6 +335,25 @@ export function Profile() {
                       <SelectItem value="female">Kadın</SelectItem>
                       <SelectItem value="male">Erkek</SelectItem>
                       <SelectItem value="other">Belirtmek istemiyorum</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bloodType">Kan Grubu</Label>
+                  <Select value={formData.bloodType} onValueChange={(value) => handleInputChange('bloodType', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Kan grubu seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A+">A+</SelectItem>
+                      <SelectItem value="A-">A-</SelectItem>
+                      <SelectItem value="B+">B+</SelectItem>
+                      <SelectItem value="B-">B-</SelectItem>
+                      <SelectItem value="AB+">AB+</SelectItem>
+                      <SelectItem value="AB-">AB-</SelectItem>
+                      <SelectItem value="0+">0+</SelectItem>
+                      <SelectItem value="0-">0-</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

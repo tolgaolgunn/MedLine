@@ -1,29 +1,41 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { getUserByEmail, createUser, getUserById, updateUserProfile, updateUserPassword } = require("../models/userModel");
+const { getUserByEmail, getUserByNationalId,createUser, getUserById, updateUserProfile, updateUserPassword } = require("../models/userModel");
 const { sendResetMail } = require('../services/mailService'); 
 const { createPatientProfile, updatePatientProfile, getPatientProfileByUserId } = require("../models/patientProfileModel");
 const { getAllDoctorsWithUser, getDoctorProfileByUserId } = require("../models/doctorProfileModel");
 
 exports.register = async (req, res) => {
-  const { full_name, email, password, phone_number, role, birth_date, gender, address } = req.body;
+  const { full_name, email, password, phone_number, role, birth_date, gender, address, national_id, blood_type } = req.body;
 
   try {
+    // E-posta kontrolü
     const existingUser = await getUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: "Bu e-posta ile kayıtlı kullanıcı zaten var." });
     }
 
+    // TC Kimlik kontrolü
+    if (national_id) {
+      const existingNationalId = await getUserByNationalId(national_id);
+      if (existingNationalId) {
+        return res.status(400).json({ message: "Bu TC Kimlik numarası ile kayıtlı kullanıcı zaten var." });
+      }
+    }
+
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    const user = await createUser(full_name, email, password_hash, phone_number, role || "patient", true);
+    const user = await createUser(full_name, email, password_hash, phone_number, role || "patient", true, national_id);
     
+    // Yeni hasta profili oluştur - medical_history NULL, blood_type kullanıcıdan gelen değer
     await createPatientProfile(
       user.user_id,
       birth_date || null,
       gender || null,
-      address || null
+      address || null,
+      null, // medical_history her zaman null
+      blood_type || null // blood_type kullanıcının seçimine göre
     );
 
     res.status(201).json({ message: "Kayıt başarılı!", user });
@@ -106,14 +118,14 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const user_id = req.user.user_id;
-    const { full_name, email, phone_number, birth_date, gender, address, specialty, license_number, experience_years, biography, city, district, hospital_name } = req.body;
+    const { full_name, email, phone_number, birth_date, gender, address, blood_type, specialty, license_number, experience_years, biography, city, district, hospital_name } = req.body;
 
     // User tablosunu güncelle
     const updatedUser = await updateUserProfile(user_id, { full_name, email, phone_number });
 
     // Patient profile'ı güncelle (eğer patient ise)
     if (req.user.role === "patient") {
-      await updatePatientProfile(user_id, { birth_date, gender, address });
+      await updatePatientProfile(user_id, { birth_date, gender, address, blood_type });
     }
 
     // Doctor profile'ı güncelle (eğer doctor ise)
