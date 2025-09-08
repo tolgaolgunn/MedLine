@@ -1,16 +1,17 @@
 import { Button } from './ui/button';
 import { 
-  User,Heart,Calendar, Pill, Settings,Menu,ChevronLeft,ChevronRight,
+  User,Heart,Calendar, Pill, Settings,ChevronLeft,ChevronRight,
   Stethoscope,FileText,BarChart3,MessageSquare
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export interface SidebarProps {
-  activeSection: string;
-  setActiveSection: (section: string) => void;
-  isCollapsed: boolean;
-  setIsCollapsed: (collapsed: boolean) => void;
-  onLogout?: () => void;
+  readonly activeSection: string;
+  readonly setActiveSection: (section: string) => void;
+  readonly isCollapsed: boolean;
+  readonly setIsCollapsed: (collapsed: boolean) => void;
+  readonly onLogout?: () => void;
+  readonly userRole?: 'admin' | 'doctor' | 'patient';
 }
 
 interface MenuItem {
@@ -19,11 +20,15 @@ interface MenuItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCollapsed, onLogout }: SidebarProps) {
-  const [userRole, setUserRole] = useState<string>('patient');
+export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCollapsed, onLogout, userRole: userRoleProp }: SidebarProps) {
+  const [userRole, setUserRole] = useState<string>(userRoleProp || 'patient');
 
-  // Get user role from localStorage
+  // Prefer explicit prop from layout; otherwise read from localStorage
   useEffect(() => {
+    if (userRoleProp) {
+      setUserRole(userRoleProp);
+      return;
+    }
     try {
       const userStr = localStorage.getItem('user');
       if (userStr) {
@@ -33,7 +38,7 @@ export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCol
     } catch (error) {
       console.error('Error parsing user data:', error);
     }
-  }, []);
+  }, [userRoleProp]);
 
   // Menu items for patients
   const patientMenuItems: MenuItem[] = [
@@ -56,8 +61,26 @@ export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCol
     { id:'prescriptions', label: 'Reçeteler', icon: Pill },
   ];
 
+  // Menu items for admins (must match AdminLayout sections)
+  const adminMenuItems: MenuItem[] = [
+    { id: 'dashboard', label: 'Ana Sayfa', icon: Heart },
+    { id: 'user-management', label: 'Kullanıcı Yönetimi', icon: User },
+    { id: 'patient-approvals', label: 'Hasta Onayları', icon: Stethoscope },
+    { id: 'statistics', label: 'İstatistikler', icon: BarChart3 },
+    { id: 'system-controls', label: 'Sistem Kontrolleri', icon: FileText },
+    { id: 'complaints', label: 'Geri Bildirim', icon: MessageSquare },
+    { id: 'system-settings', label: 'Sistem Ayarları', icon: Settings },
+  ];
+
   // Use appropriate menu items based on user role
-  const menuItems = userRole === 'doctor' ? doctorMenuItems : patientMenuItems;
+  let menuItems: MenuItem[];
+  if (userRole === 'admin') {
+    menuItems = adminMenuItems;
+  } else if (userRole === 'doctor') {
+    menuItems = doctorMenuItems;
+  } else {
+    menuItems = patientMenuItems;
+  }
 
 return (
     <div className={`bg-card border-r border-border transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} h-screen flex flex-col`}>
@@ -105,17 +128,18 @@ return (
         })}
       </nav>
 
-      <Button
-        variant="ghost"
-        className={`w-full ${isCollapsed ? 'justify-center px-2' : 'justify-start gap-3 px-3'}`}
-        onClick={() => {
-          console.log('Ayarlar butonuna tıklandı');
-          setActiveSection('settings');
-        }}
-      >
-        <Settings className="w-4 h-4 flex-shrink-0" />
-        {!isCollapsed && <span>Ayarlar</span>}
-      </Button>
+      {userRole !== 'admin' && (
+        <Button
+          variant="ghost"
+          className={`w-full ${isCollapsed ? 'justify-center px-2' : 'justify-start gap-3 px-3'}`}
+          onClick={() => {
+            setActiveSection('settings');
+          }}
+        >
+          <Settings className="w-4 h-4 flex-shrink-0" />
+          {!isCollapsed && <span>Ayarlar</span>}
+        </Button>
+      )}
     </div>
   );
 }

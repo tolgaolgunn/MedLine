@@ -1,483 +1,376 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
-import { Avatar, AvatarFallback } from '../ui/avatar';
-import { 
-  User, 
-  Shield, 
-  Settings, 
-  Bell, 
-  Key, 
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Edit,
-  Save,
-  X,
-  Camera,
-  Lock,
-  Eye,
-  EyeOff
-} from 'lucide-react';
+import { Label } from '../ui/label';
+import { Separator } from '../ui/separator';
+import { Eye, EyeOff, User } from 'lucide-react';
+import { toast } from 'react-toastify';
 
-interface AdminProfile {
-  id: number;
-  fullName: string;
-  email: string;
-  phone: string;
-  role: string;
-  department: string;
-  location: string;
-  joinDate: string;
-  lastLogin: string;
-  avatar?: string;
+function getPasswordErrors(password: string) {
+  return {
+    length: password.length < 8,
+    upper: !/[A-Z]/.test(password),
+    lower: !/[a-z]/.test(password),
+    digit: !/\d/.test(password),
+    punct: !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)
+  };
 }
 
+const passwordRequirements = [
+  { key: 'length', label: 'En az 8 karakter uzunluğunda olmalıdır.' },
+  { key: 'upper', label: '1 büyük harf içermelidir.' },
+  { key: 'lower', label: '1 küçük harf içermelidir.' },
+  { key: 'digit', label: '1 sayı içermelidir.' },
+  { key: 'punct', label: '1 noktalama işareti içermelidir.' }
+];
+
 const AdminProfile: React.FC = () => {
-  const [profile, setProfile] = useState<AdminProfile>({
-    id: 1,
-    fullName: "Admin User",
-    email: "admin@medline.com",
-    phone: "+90 555 123 45 67",
-    role: "Sistem Yöneticisi",
-    department: "Bilgi Teknolojileri",
-    location: "İstanbul, Türkiye",
-    joinDate: "01.01.2024",
-    lastLogin: "15.12.2024 14:30"
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: ''
   });
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState<AdminProfile>(profile);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [originalFormData, setOriginalFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: ''
+  });
+
+  const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleEdit = () => {
-    setEditedProfile(profile);
-    setIsEditing(true);
-  };
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
-  const handleCancel = () => {
-    setEditedProfile(profile);
-    setIsEditing(false);
-  };
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+          return;
+        }
 
-  const handleSave = () => {
-    setProfile(editedProfile);
-    setIsEditing(false);
-    alert('Profil başarıyla güncellendi!');
-  };
+        const response = await fetch('http://localhost:3005/api/profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-  const handleInputChange = (field: keyof AdminProfile, value: string) => {
-    setEditedProfile(prev => ({ ...prev, [field]: value }));
-  };
+        if (!response.ok) throw new Error('Profil bilgileri alınamadı');
 
-  const handlePasswordChange = () => {
-    if (newPassword !== confirmPassword) {
-      alert('Yeni şifreler eşleşmiyor!');
-      return;
+        const userData = await response.json();
+        const nameParts = (userData.full_name || '').split(' ');
+        const newFormData = {
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          email: userData.email || '',
+          phone: userData.phone_number || ''
+        };
+
+        setFormData(newFormData);
+        setOriginalFormData(newFormData);
+      } catch (error) {
+        console.error('Profil bilgileri alınırken hata:', error);
+        toast.error('Profil bilgileri yüklenemedi. Lütfen tekrar deneyin.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  const handleInputChange = (field: string, value: string) => {
+    let validatedValue = value;
+    switch (field) {
+      case 'firstName':
+      case 'lastName':
+        validatedValue = value.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ\s]/g, '');
+        break;
+      case 'phone':
+        validatedValue = value.replace(/\D/g, '');
+        break;
     }
-    if (newPassword.length < 8) {
-      alert('Şifre en az 8 karakter olmalıdır!');
-      return;
-    }
-    
-    // Simulate password change
-    alert('Şifre başarıyla değiştirildi!');
-    setShowPasswordModal(false);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    setFormData(prev => ({ ...prev, [field]: validatedValue }));
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const hasChanges = () => {
+    return (
+      formData.firstName !== originalFormData.firstName ||
+      formData.lastName !== originalFormData.lastName ||
+      formData.email !== originalFormData.email ||
+      formData.phone !== originalFormData.phone
+    );
+  };
+
+  const handleSaveProfile = async () => {
+    if (!formData.firstName.trim()) return toast.error('Ad alanı boş bırakılamaz');
+    if (!formData.lastName.trim()) return toast.error('Soyad alanı boş bırakılamaz');
+    if (!formData.email.trim()) return toast.error('E-posta alanı boş bırakılamaz');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return toast.error('Geçerli bir e-posta adresi giriniz');
+    if (!formData.phone.trim()) return toast.error('Telefon alanı boş bırakılamaz');
+    if (formData.phone.length < 10) return toast.error('Telefon numarası en az 10 haneli olmalıdır');
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+
+      const updateData = {
+        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        phone_number: formData.phone
+      };
+
+      const response = await fetch('http://localhost:3005/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Profil güncellenemedi');
+      }
+
+      toast.success('Profil bilgileriniz başarıyla güncellendi!');
+      setOriginalFormData({ ...formData });
+    } catch (error: any) {
+      console.error('Profil güncellenirken hata:', error);
+      toast.error(error.message || 'Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.');
+    }
+  };
+
+  const handlePasswordChangeInput = (field: string, value: string) => {
+    setPasswordData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      return toast.error('Şifreler eşleşmiyor!');
+    }
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      return toast.error('Mevcut şifre yeni şifre ile aynı olamaz!');
+    }
+    const errors = getPasswordErrors(passwordData.newPassword);
+    if (Object.values(errors).some(Boolean)) {
+      return toast.error('Şifre gereksinimlerini karşılayınız.');
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+
+      const response = await fetch('http://localhost:3005/api/change-password', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          oldPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Şifre değiştirilemedi');
+      }
+
+      toast.success('Şifreniz başarıyla değiştirildi!');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      console.error('Şifre değiştirilirken hata:', error);
+      toast.error(error.message || 'Şifre değiştirilemedi. Lütfen tekrar deneyin.');
+    }
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Admin Profili</h1>
-          <p className="text-muted-foreground">Profil bilgilerinizi yönetin</p>
+    <div className="flex-1 p-6 bg-white">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <User className="w-8 h-8 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl text-gray-900">Admin Profil</h1>
+            <p className="text-gray-600">Kişisel bilgilerinizi güncelleyin</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowPasswordModal(true)}
-            className="flex items-center gap-2"
-          >
-            <Key className="w-4 h-4" />
-            Şifre Değiştir
-          </Button>
-          {!isEditing ? (
-            <Button
-              onClick={handleEdit}
-              className="flex items-center gap-2"
-            >
-              <Edit className="w-4 h-4" />
-              Düzenle
-            </Button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                className="flex items-center gap-2"
-              >
-                <X className="w-4 h-4" />
-                İptal
-              </Button>
-              <Button
-                onClick={handleSave}
-                className="flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Kaydet
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Profile Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Card */}
-        <Card className="lg:col-span-1">
-          <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <div className="relative inline-block">
-                <Avatar className="w-24 h-24 mx-auto">
-                  <AvatarFallback className="text-2xl font-bold">
-                    {getInitials(profile.fullName)}
-                  </AvatarFallback>
-                </Avatar>
-                {isEditing && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="absolute bottom-0 right-0 rounded-full w-8 h-8 p-0"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-              <div>
-                <h2 className="text-xl font-bold">{profile.fullName}</h2>
-                <p className="text-gray-600">{profile.role}</p>
-                <Badge variant="default" className="mt-2">Admin</Badge>
-              </div>
-              <div className="space-y-2 text-sm text-gray-600">
-                <div className="flex items-center justify-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  {profile.email}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle>Kişisel Bilgiler</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">Ad</Label>
+                  <Input
+                    id="firstName"
+                    className="border border-gray-200 rounded-md"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    placeholder="Adınızı giriniz"
+                    maxLength={50}
+                  />
                 </div>
-                <div className="flex items-center justify-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  {profile.phone}
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  {profile.location}
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Soyad</Label>
+                  <Input
+                    id="lastName"
+                    className="border border-gray-200 rounded-md"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    placeholder="Soyadınızı giriniz"
+                    maxLength={50}
+                  />
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Profile Details */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Profil Bilgileri
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ad Soyad
-                  </label>
-                  {isEditing ? (
-                    <Input
-                      value={editedProfile.fullName}
-                      onChange={(e) => handleInputChange('fullName', e.target.value)}
-                      placeholder="Ad Soyad"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{profile.fullName}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    E-posta
-                  </label>
-                  {isEditing ? (
-                    <Input
-                      value={editedProfile.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="E-posta"
-                      type="email"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{profile.email}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Telefon
-                  </label>
-                  {isEditing ? (
-                    <Input
-                      value={editedProfile.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      placeholder="Telefon"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{profile.phone}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Departman
-                  </label>
-                  {isEditing ? (
-                    <Input
-                      value={editedProfile.department}
-                      onChange={(e) => handleInputChange('department', e.target.value)}
-                      placeholder="Departman"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{profile.department}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Konum
-                  </label>
-                  {isEditing ? (
-                    <Input
-                      value={editedProfile.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
-                      placeholder="Konum"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{profile.location}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Katılım Tarihi
-                  </label>
-                  <p className="text-gray-900">{profile.joinDate}</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Activity & Security */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              Son Aktiviteler
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Sisteme giriş yapıldı</p>
-                  <p className="text-xs text-gray-500">{profile.lastLogin}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Kullanıcı yönetimi güncellendi</p>
-                  <p className="text-xs text-gray-500">14.12.2024 16:45</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Sistem ayarları değiştirildi</p>
-                  <p className="text-xs text-gray-500">13.12.2024 11:20</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Yedekleme işlemi tamamlandı</p>
-                  <p className="text-xs text-gray-500">12.12.2024 03:00</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Security Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              Güvenlik Ayarları
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">İki Faktörlü Doğrulama</p>
-                  <p className="text-xs text-gray-500">Hesap güvenliğini artırın</p>
-                </div>
-                <Badge variant="default" className="bg-green-600">Aktif</Badge>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Oturum Zaman Aşımı</p>
-                  <p className="text-xs text-gray-500">30 dakika sonra otomatik çıkış</p>
-                </div>
-                <Badge variant="outline">30 dk</Badge>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Son Şifre Değişikliği</p>
-                  <p className="text-xs text-gray-500">01.12.2024</p>
-                </div>
-                <Badge variant="outline">1 ay önce</Badge>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Aktif Oturumlar</p>
-                  <p className="text-xs text-gray-500">Şu anda 1 aktif oturum</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Görüntüle
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Şifre Değiştir</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPasswordModal(false)}
-              >
-                ✕
-              </Button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mevcut Şifre
-                </label>
+              <div className="space-y-2">
+                <Label htmlFor="email">E-posta</Label>
                 <Input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Mevcut şifrenizi girin"
+                  id="email"
+                  className="border border-gray-200 rounded-md"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  placeholder="ornek@gmail.com"
                 />
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Yeni Şifre
-                </label>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefon Numarası</Label>
+                <Input
+                  id="phone"
+                  className="border border-gray-200 rounded-md"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="Telefon numaranızı giriniz"
+                  maxLength={11}
+                />
+              </div>
+
+              <Button 
+                onClick={handleSaveProfile} 
+                className="w-full"
+                disabled={!hasChanges() || isLoading}
+              >
+                Profil Bilgilerini Kaydet
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle>Şifre Değiştir</CardTitle>
+              <CardDescription>Hesabınızın güvenliği için düzenli olarak şifrenizi değiştirin</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Mevcut Şifre</Label>
                 <div className="relative">
                   <Input
-                    type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    id="currentPassword"
+                    className="border border-gray-200 rounded-md"
+                    type={showPassword ? 'text' : 'password'}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => handlePasswordChangeInput('currentPassword', e.target.value)}
+                    placeholder="Mevcut şifrenizi girin"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Yeni Şifre</Label>
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    className="border border-gray-200 rounded-md"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={passwordData.newPassword}
+                    onChange={(e) => handlePasswordChangeInput('newPassword', e.target.value)}
                     placeholder="Yeni şifrenizi girin"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2"
                     onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
                   >
-                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Yeni Şifre (Tekrar)
-                </label>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Yeni Şifre Tekrar</Label>
                 <div className="relative">
                   <Input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    id="confirmPassword"
+                    className="border border-gray-200 rounded-md"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => handlePasswordChangeInput('confirmPassword', e.target.value)}
                     placeholder="Yeni şifrenizi tekrar girin"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-slate-800 transition-colors"
                   >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className="flex gap-2 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setShowPasswordModal(false)}
-                className="flex-1"
-              >
-                İptal
-              </Button>
-              <Button
-                onClick={handlePasswordChange}
-                className="flex-1"
-                disabled={!currentPassword || !newPassword || !confirmPassword}
+
+              <div className="text-sm text-gray-600">
+                <ul className="list-disc list-inside space-y-1">
+                  {passwordRequirements.map(req => {
+                    const errors = getPasswordErrors(passwordData.newPassword);
+                    if (!errors[req.key as keyof typeof errors]) return null;
+                    return <li key={req.key} className="text-red-600">{req.label}</li>;
+                  })}
+                </ul>
+              </div>
+
+              <Button 
+                onClick={handleChangePassword} 
+                className="w-full"
+                disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
               >
                 Şifreyi Değiştir
               </Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
-      )}
+      </div>
     </div>
   );
 };
