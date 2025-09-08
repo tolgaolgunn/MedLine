@@ -115,11 +115,10 @@ const AdminLayout: React.FC = () => {
         setActiveSection={handleSectionChange}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
-        userRole="admin"
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Topbar onLogout={handleLogout} setActiveSection={handleSectionChange} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-white">
           {renderContent()}
         </main>
       </div>

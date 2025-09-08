@@ -1,27 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'react-toastify';
 import { 
   Users, 
   UserPlus, 
   Search, 
-  Filter,
-  MoreHorizontal,
   Edit,
   Trash2,
   Eye,
-  EyeOff,
-  Shield,
-  UserCheck,
-  UserX,
-  X
+  EyeOff
 } from 'lucide-react';
 
 interface User {
@@ -48,40 +42,8 @@ interface NewUser {
 }
 
 const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: 1,
-      name: "Esma Kocabaş",
-      email: "esma@example.com",
-      role: "doctor",
-      lastLogin: "2 saat önce",
-      createdAt: "15.12.2024"
-    },
-    {
-      id: 2,
-      name: "Fatma Demir",
-      email: "fatma@example.com",
-      role: "patient",
-      lastLogin: "1 gün önce",
-      createdAt: "14.12.2024"
-    },
-    {
-      id: 3,
-      name: "Mehmet Özkan",
-      email: "mehmet@example.com",
-      role: "doctor",
-      lastLogin: "3 saat önce",
-      createdAt: "13.12.2024"
-    },
-    {
-      id: 4,
-      name: "Ayşe Yıldız",
-      email: "ayse@example.com",
-      role: "patient",
-      lastLogin: "1 hafta önce",
-      createdAt: "10.12.2024"
-    }
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -121,6 +83,49 @@ const UserManagement: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Çıkış onayı modalları
+  const [confirmCloseAddOpen, setConfirmCloseAddOpen] = useState(false);
+  const [confirmCloseEditOpen, setConfirmCloseEditOpen] = useState(false);
+
+  // Backend'den doktorlar ve hastaları yükle
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setIsLoading(true);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          return;
+        }
+        const headers: any = { 'Authorization': `Bearer ${token}` };
+        const [doctorsRes, patientsRes] = await Promise.all([
+          fetch('http://localhost:3005/api/admin/doctors/all', { headers }),
+          fetch('http://localhost:3005/api/admin/patients/all', { headers })
+        ]);
+        if (!doctorsRes.ok || !patientsRes.ok) return;
+        const doctorsData = await doctorsRes.json();
+        const patientsData = await patientsRes.json();
+        const mappedDoctors: User[] = (doctorsData.data || doctorsData || []).map((d: any) => ({
+          id: d.user_id || d.user?.user_id,
+          name: d.full_name || d.user?.full_name,
+          email: d.email || d.user?.email,
+          role: 'doctor'
+        }));
+        const mappedPatients: User[] = (patientsData.data || patientsData || []).map((p: any) => ({
+          id: p.user_id || p.user?.user_id,
+          name: p.full_name || p.user?.full_name,
+          email: p.email || p.user?.email,
+          role: 'patient'
+        }));
+        setUsers([...mappedDoctors, ...mappedPatients].filter(u => !!u.id && !!u.name));
+      } catch (e) {
+        // noop
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadUsers();
+  }, []);
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -129,14 +134,30 @@ const UserManagement: React.FC = () => {
     return matchesSearch && matchesRole;
   });
 
-  const handleDeleteUser = (userId: number) => {
-    if (window.confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) {
+  const handleDeleteUser = async (userId: number) => {
+    const target = users.find(u => u.id === userId);
+    if (!target) return;
+    if (!window.confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return toast.error('Oturum bulunamadı. Lütfen giriş yapın.');
+      const headers: any = { 'Authorization': `Bearer ${token}` };
+      const base = 'http://localhost:3005/api/admin';
+      const url = target.role === 'doctor'
+        ? `${base}/doctors/${userId}`
+        : `${base}/patients/${userId}`;
+      const res = await fetch(url, { method: 'DELETE', headers });
+      if (!res.ok) throw new Error('Silme başarısız');
       setUsers(users.filter(user => user.id !== userId));
       toast.success('Kullanıcı başarıyla silindi!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Kullanıcı silinemedi');
     }
   };
 
-    const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (newUser.password !== newUser.confirmPassword) {
       toast.error('Şifreler eşleşmiyor!');
       return;
@@ -158,17 +179,52 @@ const UserManagement: React.FC = () => {
         return;
       }
 
-    const user: User = {
-      id: users.length + 1,
-      name: `${newUser.firstName} ${newUser.lastName}`,
-      email: newUser.email,
-      role: newUser.role,
-      lastLogin: 'Henüz giriş yapmadı',
-      createdAt: new Date().toLocaleDateString('tr-TR')
-    };
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return toast.error('Oturum bulunamadı. Lütfen giriş yapın.');
+      const headers: any = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
 
-    setUsers([...users, user]);
-    
+      if (newUser.role === 'doctor') {
+        const body = {
+          full_name: `${newUser.firstName} ${newUser.lastName}`.trim(),
+          email: newUser.email,
+          password: newUser.password,
+          phone_number: newUser.phone || null,
+          specialty: '',
+          license_number: '',
+          experience_years: 0,
+          biography: null,
+          city: '',
+          district: '',
+          hospital_name: null
+        };
+        const res = await fetch('http://localhost:3005/api/admin/doctors/add', { method: 'POST', headers, body: JSON.stringify(body) });
+        if (!res.ok) {
+          const e = await res.json().catch(() => ({}));
+          throw new Error(e.message || 'Doktor oluşturulamadı');
+        }
+        const data = await res.json();
+        const added = data.data?.user || data.user;
+        const user: User = {
+          id: added?.user_id,
+          name: added?.full_name,
+          email: added?.email,
+          role: 'doctor',
+          lastLogin: 'Henüz giriş yapmadı',
+          createdAt: new Date().toLocaleDateString('tr-TR')
+        };
+        setUsers(prev => [...prev, user]);
+      } else {
+        toast.info('Hasta ekleme admin panelinden desteklenmiyor. Kayıt akışını kullanın.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      return toast.error(err.message || 'Kullanıcı eklenemedi');
+    }
+
     // Formu temizle
     setNewUser({
       firstName: '',
@@ -194,11 +250,21 @@ const UserManagement: React.FC = () => {
     setIsAddUserOpen(true);
   };
 
-  // Modal kapatma işlemi
-  const handleCloseModal = () => {
-    // Orijinal verilere geri dön
+  // Add modal için çıkış isteği (iptal/kapama)
+  const handleRequestCloseAdd = () => {
+    const changed = JSON.stringify(newUser) !== JSON.stringify(originalUser);
+    if (changed) {
+      setConfirmCloseAddOpen(true);
+    } else {
+      setIsAddUserOpen(false);
+    }
+  };
+
+  // Modal kapatma işlemi (Add) - Onaylandıysa
+  const confirmCloseAdd = () => {
     setNewUser({...originalUser});
     setIsAddUserOpen(false);
+    setConfirmCloseAddOpen(false);
   };
 
   // Kullanıcı düzenleme modal'ını aç
@@ -238,8 +304,19 @@ const UserManagement: React.FC = () => {
     setIsEditUserOpen(true);
   };
 
-  // Kullanıcı düzenleme modal'ını kapat
-  const handleCloseEditModal = () => {
+  // Edit modal için çıkış isteği
+  const handleRequestCloseEdit = () => {
+    const changed = JSON.stringify(newUser) !== JSON.stringify(originalUser);
+    if (changed) {
+      setConfirmCloseEditOpen(true);
+    } else {
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+    }
+  };
+
+  // Kullanıcı düzenleme modal'ını kapat (Onaylandıysa)
+  const confirmCloseEdit = () => {
     setEditingUser(null);
     setIsEditUserOpen(false);
     setNewUser({
@@ -255,10 +332,11 @@ const UserManagement: React.FC = () => {
       gender: 'male',
       address: ''
     });
+    setConfirmCloseEditOpen(false);
   };
 
   // Kullanıcı güncelleme işlemi
-  const handleUpdateUser = () => {
+  const handleUpdateUser = async () => {
     if (!editingUser) return;
 
     if (!newUser.firstName || !newUser.lastName || !newUser.email) {
@@ -266,22 +344,44 @@ const UserManagement: React.FC = () => {
       return;
     }
 
-    // Kullanıcıyı güncelle
-    const updatedUsers = users.map(user => {
-      if (user.id === editingUser.id) {
-        return {
-          ...user,
-          name: `${newUser.firstName} ${newUser.lastName}`,
-          email: newUser.email,
-          role: newUser.role
-        };
-      }
-      return user;
-    });
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return toast.error('Oturum bulunamadı. Lütfen giriş yapın.');
+      const headers: any = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      const base = 'http://localhost:3005/api/admin';
+      const payload = {
+        full_name: `${newUser.firstName} ${newUser.lastName}`.trim(),
+        email: newUser.email
+      };
+      const url = (editingUser.role === 'doctor' || newUser.role === 'doctor')
+        ? `${base}/doctors/${editingUser.id}`
+        : `${base}/patients/${editingUser.id}`;
+      const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error('Güncelleme başarısız');
 
-    setUsers(updatedUsers);
-    handleCloseEditModal();
-    toast.success('Kullanıcı başarıyla güncellendi!');
+      const updatedUsers = users.map(user => {
+        if (user.id === editingUser.id) {
+          return {
+            ...user,
+            name: `${newUser.firstName} ${newUser.lastName}`,
+            email: newUser.email,
+            role: newUser.role
+          };
+        }
+        return user;
+      });
+
+      setUsers(updatedUsers);
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+      toast.success('Kullanıcı başarıyla güncellendi!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Kullanıcı güncellenemedi');
+    }
   };
 
   // Değişiklik olup olmadığını kontrol et
@@ -321,7 +421,7 @@ const UserManagement: React.FC = () => {
           <p className="text-gray-600 mt-2">Sistemdeki tüm kullanıcıları yönetin</p>
         </div>
         
-        <Dialog open={isAddUserOpen} onOpenChange={handleCloseModal}>
+        <Dialog open={isAddUserOpen} onOpenChange={handleRequestCloseAdd}>
           <Button onClick={handleOpenModal}>
             <UserPlus className="w-4 h-4 mr-2" />
             Yeni Kullanıcı Ekle
@@ -426,20 +526,20 @@ const UserManagement: React.FC = () => {
                   />
                 </div>
                 
-                                 <div>
-                   <Label htmlFor="address">Adres</Label>
-                   <Textarea
-                     id="address"
-                     className="border border-gray-300 rounded-md min-h-[20px]"
-                     value={newUser.address}
-                     onChange={(e) => setNewUser({...newUser, address: e.target.value})}
-                     placeholder="Tam adres bilgisi"
-                     maxLength={200}
-                   />
-                   <div className="text-xs text-gray-500 mt-1">
-                     {newUser.address.length}/200 karakter
-                   </div>
-                 </div>
+                <div>
+                  <Label htmlFor="address">Adres</Label>
+                  <Textarea
+                    id="address"
+                    className="border border-gray-300 rounded-md min-h-[20px]"
+                    value={newUser.address}
+                    onChange={(e) => setNewUser({...newUser, address: e.target.value})}
+                    placeholder="Tam adres bilgisi"
+                    maxLength={200}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {newUser.address.length}/200 karakter
+                  </div>
+                </div>
               </div>
 
               {/* Hesap Bilgileri */}
@@ -458,84 +558,84 @@ const UserManagement: React.FC = () => {
                   </Select>
                 </div>
                 
-                                 <div className="grid grid-cols-2 gap-4">
-                   <div>
-                     <Label htmlFor="password">Şifre *</Label>
-                     <div className="relative">
-                       <Input
-                         id="password"
-                         className="border border-gray-300 rounded-md pr-10"
-                         type={showPassword ? "text" : "password"}
-                         value={newUser.password}
-                         onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                         placeholder="Şifre"
-                       />
-                       <Button
-                         type="button"
-                         variant="ghost"
-                         size="sm"
-                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                         onClick={() => setShowPassword(!showPassword)}
-                       >
-                         {showPassword ? (
-                           <EyeOff className="h-4 w-4 text-gray-500" />
-                         ) : (
-                           <Eye className="h-4 w-4 text-gray-500" />
-                         )}
-                       </Button>
-                     </div>
-                     <div className="text-xs text-gray-500 mt-1 space-y-1">
-                       <div className={`${/[A-Z]/.test(newUser.password) ? 'text-green-600' : 'text-red-500'}`}>
-                         {/[A-Z]/.test(newUser.password) ? '✓' : '✗'} En az 1 büyük harf
-                       </div>
-                       <div className={`${/[a-z]/.test(newUser.password) ? 'text-green-600' : 'text-red-500'}`}>
-                         {/[a-z]/.test(newUser.password) ? '✓' : '✗'} En az 1 küçük harf
-                       </div>
-                       <div className={`${/\d/.test(newUser.password) ? 'text-green-600' : 'text-red-500'}`}>
-                         {/\d/.test(newUser.password) ? '✓' : '✗'} En az 1 sayı
-                       </div>
-                       <div className={`${/[!@#$%^&*(),.?":{}|<>]/.test(newUser.password) ? 'text-green-600' : 'text-red-500'}`}>
-                         {/[!@#$%^&*(),.?":{}|<>]/.test(newUser.password) ? '✓' : '✗'} En az 1 noktalama işareti
-                       </div>
-                       <div className={`${newUser.password.length >= 8 ? 'text-green-600' : 'text-red-500'}`}>
-                         {newUser.password.length >= 8 ? '✓' : '✗'} En az 8 karakter
-                       </div>
-                     </div>
-                   </div>
-                   <div>
-                     <Label htmlFor="confirmPassword">Şifre Tekrar *</Label>
-                     <div className="relative">
-                       <Input
-                         id="confirmPassword"
-                         className="border border-gray-300 rounded-md pr-10"
-                         type={showConfirmPassword ? "text" : "password"}
-                         value={newUser.confirmPassword}
-                         onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
-                         placeholder="Şifre tekrar"
-                       />
-                       <Button
-                         type="button"
-                         variant="ghost"
-                         size="sm"
-                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                       >
-                         {showConfirmPassword ? (
-                           <EyeOff className="h-4 w-4 text-gray-500" />
-                         ) : (
-                           <Eye className="h-4 w-4 text-gray-500" />
-                         )}
-                       </Button>
-                     </div>
-                   </div>
-                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="password">Şifre *</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        className="border border-gray-300 rounded-md pr-10"
+                        type={showPassword ? "text" : "password"}
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                        placeholder="Şifre"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-500" />
+                        )}
+                      </Button>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 space-y-1">
+                      <div className={`${/[A-Z]/.test(newUser.password) ? 'text-green-600' : 'text-red-500'}`}>
+                        {/[A-Z]/.test(newUser.password) ? '✓' : '✗'} En az 1 büyük harf
+                      </div>
+                      <div className={`${/[a-z]/.test(newUser.password) ? 'text-green-600' : 'text-red-500'}`}>
+                        {/[a-z]/.test(newUser.password) ? '✓' : '✗'} En az 1 küçük harf
+                      </div>
+                      <div className={`${/\d/.test(newUser.password) ? 'text-green-600' : 'text-red-500'}`}>
+                        {/\d/.test(newUser.password) ? '✓' : '✗'} En az 1 sayı
+                      </div>
+                      <div className={`${/[!@#$%^&*(),.?":{}|<>]/.test(newUser.password) ? 'text-green-600' : 'text-red-500'}`}>
+                        {/[!@#$%^&*(),.?":{}|<>]/.test(newUser.password) ? '✓' : '✗'} En az 1 noktalama işareti
+                      </div>
+                      <div className={`${newUser.password.length >= 8 ? 'text-green-600' : 'text-red-500'}`}>
+                        {newUser.password.length >= 8 ? '✓' : '✗'} En az 8 karakter
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="confirmPassword">Şifre Tekrar *</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        className="border border-gray-300 rounded-md pr-10"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={newUser.confirmPassword}
+                        onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
+                        placeholder="Şifre tekrar"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-500" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Butonlar */}
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button variant="outline"
                   className='!border-2 !border-gray-300 !rounded-md'
-                  onClick={handleCloseModal}>
+                  onClick={handleRequestCloseAdd}>
                   İptal
                 </Button>
                 <Button onClick={handleAddUser}>
@@ -545,102 +645,130 @@ const UserManagement: React.FC = () => {
               </div>
             </div>
           </DialogContent>
-                 </Dialog>
+        </Dialog>
 
-         {/* Kullanıcı Düzenleme Modal */}
-         <Dialog open={isEditUserOpen} onOpenChange={handleCloseEditModal}>
-           <DialogContent 
-             className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:hidden"
-             onPointerDownOutside={(e) => e.preventDefault()}
-           >
-             <DialogHeader>
-               <DialogTitle className="flex items-center gap-2">
-                 <Edit className="w-5 h-5" />
-                 Kullanıcı Düzenle: {editingUser?.name}
-               </DialogTitle>
-             </DialogHeader>
-             
-             <div className="space-y-6">
-               {/* Kişisel Bilgiler */}
-               <div className="space-y-4">
-                 <h3 className="text-lg font-semibold border-b pb-2">Kişisel Bilgiler</h3>
-                 <div className="grid grid-cols-2 gap-4">
-                   <div>
-                     <Label htmlFor="editFirstName">Ad *</Label>
-                     <Input
-                       id="editFirstName"
-                       className="border border-gray-300 rounded-md"
-                       value={newUser.firstName}
-                       onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
-                       placeholder="Ad"
-                     />
-                   </div>
-                   <div>
-                     <Label htmlFor="editLastName">Soyad *</Label>
-                     <Input
-                       id="editLastName"
-                       className="border border-gray-300 rounded-md"
-                       value={newUser.lastName}
-                       onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
-                       placeholder="Soyad"
-                     />
-                   </div>
-                 </div>
-               </div>
+        {/* Add Close Confirm */}
+        <Dialog open={confirmCloseAddOpen} onOpenChange={(open) => setConfirmCloseAddOpen(open)}>
+          <DialogContent className="max-w-md [&>button]:hidden" onPointerDownOutside={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Değişiklikler kaydedilmedi</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-700">Çıkmak istediğinize emin misiniz? Yaptığınız değişiklikler kaybolacak.</p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" className='!border-2 !border-gray-300 !rounded-md' onClick={() => setConfirmCloseAddOpen(false)}>Vazgeç</Button>
+              <Button onClick={confirmCloseAdd}>Evet, Çık</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
-               {/* İletişim Bilgileri */}
-               <div className="space-y-4">
-                 <h3 className="text-lg font-semibold border-b pb-2">İletişim Bilgileri</h3>
-                 <div>
-                   <Label htmlFor="editEmail">E-posta *</Label>
-                   <Input
-                     id="editEmail"
-                     className="border border-gray-300 rounded-md"
-                     type="email"
-                     value={newUser.email}
-                     onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                     placeholder="ornek@email.com"
-                   />
-                 </div>
-               </div>
+        {/* Kullanıcı Düzenleme Modal */}
+        <Dialog open={isEditUserOpen} onOpenChange={handleRequestCloseEdit}>
+          <DialogContent 
+            className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:hidden"
+            onPointerDownOutside={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Edit className="w-5 h-5" />
+                Kullanıcı Düzenle: {editingUser?.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* Kişisel Bilgiler */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Kişisel Bilgiler</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="editFirstName">Ad *</Label>
+                    <Input
+                      id="editFirstName"
+                      className="border border-gray-300 rounded-md"
+                      value={newUser.firstName}
+                      onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
+                      placeholder="Ad"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editLastName">Soyad *</Label>
+                    <Input
+                      id="editLastName"
+                      className="border border-gray-300 rounded-md"
+                      value={newUser.lastName}
+                      onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
+                      placeholder="Soyad"
+                    />
+                  </div>
+                </div>
+              </div>
 
-               {/* Hesap Bilgileri */}
-               <div className="space-y-4">
-                 <h3 className="text-lg font-semibold border-b pb-2">Hesap Bilgileri</h3>
-                 <div className="w-1/3">
-                   <Label htmlFor="editRole">Rol</Label>
-                   <Select value={newUser.role} onValueChange={(value: 'patient' | 'doctor') => setNewUser({...newUser, role: value})}>
-                     <SelectTrigger className="border border-gray-300 rounded-md">
-                       <SelectValue />
-                     </SelectTrigger>
-                     <SelectContent>
-                       <SelectItem value="patient">Hasta</SelectItem>
-                       <SelectItem value="doctor">Doktor</SelectItem>
-                     </SelectContent>
-                   </Select>
-                 </div>
-               </div>
+              {/* İletişim Bilgileri */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">İletişim Bilgileri</h3>
+                <div>
+                  <Label htmlFor="editEmail">E-posta *</Label>
+                  <Input
+                    id="editEmail"
+                    className="border border-gray-300 rounded-md"
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                    placeholder="ornek@email.com"
+                  />
+                </div>
+              </div>
 
-               {/* Butonlar */}
-               <div className="flex justify-end gap-3 pt-4 border-t">
-                 <Button variant="outline"
-                   className='!border-2 !border-gray-300 !rounded-md'
-                   onClick={handleCloseEditModal}>
-                   İptal
-                 </Button>
-                 <Button 
-                   onClick={handleUpdateUser}
-                   disabled={!hasChanges()}
-                   className={!hasChanges() ? 'opacity-50 cursor-not-allowed' : ''}
-                 >
-                   <Edit className="w-4 h-4 mr-2" />
-                   Güncelle
-                 </Button>
-               </div>
-             </div>
-           </DialogContent>
-         </Dialog>
-       </div>
+              {/* Hesap Bilgileri */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Hesap Bilgileri</h3>
+                <div className="w-1/3">
+                  <Label htmlFor="editRole">Rol</Label>
+                  <Select value={newUser.role} onValueChange={(value: 'patient' | 'doctor') => setNewUser({...newUser, role: value})}>
+                    <SelectTrigger className="border border-gray-300 rounded-md">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="patient">Hasta</SelectItem>
+                      <SelectItem value="doctor">Doktor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Butonlar */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button variant="outline"
+                  className='!border-2 !border-gray-300 !rounded-md'
+                  onClick={handleRequestCloseEdit}>
+                  İptal
+                </Button>
+                <Button 
+                  onClick={handleUpdateUser}
+                  disabled={!hasChanges()}
+                  className={!hasChanges() ? 'opacity-50 cursor-not-allowed' : ''}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Güncelle
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Close Confirm */}
+        <Dialog open={confirmCloseEditOpen} onOpenChange={(open) => setConfirmCloseEditOpen(open)}>
+          <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Değişiklikler kaydedilmedi</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-700">Çıkmak istediğinize emin misiniz? Yaptığınız değişiklikler kaybolacak.</p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setConfirmCloseEditOpen(false)}>Vazgeç</Button>
+              <Button onClick={confirmCloseEdit}>Evet, Çık</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <Card>
         <CardHeader>
@@ -707,14 +835,14 @@ const UserManagement: React.FC = () => {
                     </td>
                     <td className="p-2">
                       <div className="flex items-center gap-1">
-                                                 <Button
-                           variant="ghost"
-                           size="sm"
-                           className="p-1"
-                           onClick={() => handleEditUser(user)}
-                         >
-                           <Edit className="w-4 h-4" />
-                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-1"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
