@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
+import { PageHeader } from '../ui/PageHeader';
 import { Eye, EyeOff, User } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -203,15 +204,10 @@ const AdminProfile: React.FC = () => {
   return (
     <div className="flex-1 p-6 bg-white">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl text-gray-900">Admin Profil</h1>
-            <p className="text-gray-600">Kişisel bilgilerinizi güncelleyin</p>
-          </div>
-        </div>
+        <PageHeader 
+          title="Admin Profil" 
+          subtitle="Kişisel bilgilerinizi güncelleyin"
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-white">

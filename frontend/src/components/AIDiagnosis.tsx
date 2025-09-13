@@ -79,10 +79,10 @@ export function AIDiagnosis() {
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
       <div className="mb-8">
-       <PageHeader
-       title='AI Destekli Ön Tanı'
-       subtitle='Semptomlarınızı ve ses/video kayıtlarınızı analiz ederek ön tanı alın.'
-       ></PageHeader>
+        <PageHeader
+        title='AI Destekli Ön Tanı'
+        subtitle='Semptomlarınızı ve ses/video kayıtlarınızı analiz ederek ön tanı alın.'
+        ></PageHeader>
       </div>
 
       {/* Warning Alert */}
