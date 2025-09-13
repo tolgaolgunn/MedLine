@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
+import { PageHeader } from '../ui/PageHeader';
 import { 
   Settings, 
   Database, 
@@ -277,13 +278,11 @@ const SystemSettings: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Sistem Ayarları</h1>
-          <p className="text-muted-foreground">Sistem konfigürasyonunu yönetin</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader 
+        title="Sistem Ayarları" 
+        subtitle="Sistem konfigürasyonunu yönetin"
+      />
+      <div className="flex items-center justify-end gap-2">
           <Button
             variant="outline"
             onClick={handleReset}
@@ -320,8 +319,8 @@ const SystemSettings: React.FC = () => {
           </Button>
         </div>
       </div>
-
-      {/* Category Tabs */}
+    )
+    {/* Category Tabs */}
       <div className="flex flex-wrap gap-2">
         {categories.map((category) => (
           <Button
@@ -454,8 +453,7 @@ const SystemSettings: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
-  );
 };
+
 
 export default SystemSettings;

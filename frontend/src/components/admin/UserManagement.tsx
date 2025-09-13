@@ -7,6 +7,7 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { PageHeader } from '../ui/PageHeader';
 import { toast } from 'react-toastify';
 import { 
   Users, 
@@ -415,11 +416,11 @@ const UserManagement: React.FC = () => {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Kullanıcı Yönetimi</h1>
-          <p className="text-gray-600 mt-2">Sistemdeki tüm kullanıcıları yönetin</p>
-        </div>
+      <PageHeader 
+        title="Kullanıcı Yönetimi" 
+        subtitle="Sistemdeki tüm kullanıcıları yönetin"
+      />
+      <div className="flex justify-end items-center mb-6">
         
         <Dialog open={isAddUserOpen} onOpenChange={handleRequestCloseAdd}>
           <Button onClick={handleOpenModal}>

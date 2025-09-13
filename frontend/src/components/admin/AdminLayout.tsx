@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../Sidebar';
 import { Topbar } from '../Topbar';
 import AdminDashboard from './AdminDashboard';
@@ -16,6 +16,7 @@ const AdminLayout: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Admin kontrolü
   useEffect(() => {
@@ -31,12 +32,12 @@ const AdminLayout: React.FC = () => {
 
   // URL'den aktif section'ı al
   useEffect(() => {
-    const path = window.location.pathname;
+    const path = location.pathname;
     if (path.includes('/admin')) {
       const section = path.split('/').pop() || 'dashboard';
       setActiveSection(section);
     }
-  }, []);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -48,8 +49,8 @@ const AdminLayout: React.FC = () => {
     setIsLoading(true);
     setActiveSection(section);
     
-    // URL'i güncelle
-    window.history.pushState({}, '', `/admin/${section}`);
+    // URL'i React Router ile güncelle
+    navigate(`/admin/${section}`);
     
     // Loading state'ini kısa süre sonra kaldır
     setTimeout(() => setIsLoading(false), 300);

@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { PageHeader } from '../ui/PageHeader';
 import { 
   Clock, 
   CheckCircle, 
@@ -104,13 +106,13 @@ const PatientApprovals: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary">Beklemede</Badge>;
+        return <Badge variant="outline" className="bg-black text-white border-black">Beklemede</Badge>;
       case 'approved':
-        return <Badge variant="default" className="bg-green-600">Onaylandı</Badge>;
+        return <Badge variant="outline" className="bg-black text-white border-black">Onaylandı</Badge>;
       case 'rejected':
-        return <Badge variant="destructive">Reddedildi</Badge>;
+        return <Badge variant="outline" className="bg-black text-white border-black">Reddedildi</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline" className="bg-black text-white border-black">{status}</Badge>;
     }
   };
 
@@ -118,79 +120,10 @@ const PatientApprovals: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Hasta Onayları</h1>
-          <p className="text-muted-foreground">Bekleyen hasta onay taleplerini yönetin</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{pendingRequests.length}</div>
-            <div className="text-sm text-gray-600">Bekleyen Onay</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Clock className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{pendingRequests.length}</p>
-                <p className="text-sm text-muted-foreground">Bekleyen</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {approvalRequests.filter(req => req.status === 'approved').length}
-                </p>
-                <p className="text-sm text-muted-foreground">Onaylandı</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <XCircle className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {approvalRequests.filter(req => req.status === 'rejected').length}
-                </p>
-                <p className="text-sm text-muted-foreground">Reddedildi</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <FileText className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{approvalRequests.length}</p>
-                <p className="text-sm text-muted-foreground">Toplam</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <PageHeader 
+        title="Hasta Onayları" 
+        subtitle="Bekleyen hasta onay taleplerini yönetin"
+      />
 
       {/* Pending Requests */}
       <Card>
@@ -215,7 +148,6 @@ const PatientApprovals: React.FC = () => {
                       <h3 className="font-medium">{request.patientName}</h3>
                       <p className="text-sm text-gray-600">{request.patientEmail}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline">{getRequestTypeLabel(request.requestType)}</Badge>
                         <span className="text-sm text-gray-500">{request.submittedAt}</span>
                       </div>
                     </div>
@@ -224,6 +156,7 @@ const PatientApprovals: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="border-2 border-gray-300 shadow-sm"
                       onClick={() => {
                         setSelectedRequest(request);
                         setShowDetailModal(true);
@@ -236,7 +169,7 @@ const PatientApprovals: React.FC = () => {
                       variant="default"
                       size="sm"
                       onClick={() => handleApprove(request.id)}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-600 hover:bg-gray-700"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Onayla
@@ -279,7 +212,6 @@ const PatientApprovals: React.FC = () => {
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-3 font-medium">Hasta</th>
-                  <th className="text-left p-3 font-medium">Talep Türü</th>
                   <th className="text-left p-3 font-medium">Durum</th>
                   <th className="text-left p-3 font-medium">Tarih</th>
                   <th className="text-left p-3 font-medium">İşlemler</th>
@@ -300,9 +232,6 @@ const PatientApprovals: React.FC = () => {
                           <div className="text-sm text-gray-500">{request.patientEmail}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="p-3">
-                      <Badge variant="outline">{getRequestTypeLabel(request.requestType)}</Badge>
                     </td>
                     <td className="p-3">
                       {getStatusBadge(request.status)}
@@ -329,7 +258,7 @@ const PatientApprovals: React.FC = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleApprove(request.id)}
-                              className="p-2 text-green-600 hover:text-green-800"
+                              className="p-2 text-gray-600 hover:text-gray-800"
                             >
                               <CheckCircle className="w-4 h-4" />
                             </Button>
@@ -355,81 +284,23 @@ const PatientApprovals: React.FC = () => {
 
       {/* Detail Modal */}
       {showDetailModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Onay Talebi Detayı</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDetailModal(false)}
-              >
-                ✕
-              </Button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium text-gray-900">Hasta Bilgileri</h3>
-                <p className="text-gray-600">{selectedRequest.patientName}</p>
-                <p className="text-gray-600">{selectedRequest.patientEmail}</p>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">Talep Türü</h3>
-                <Badge variant="outline">{getRequestTypeLabel(selectedRequest.requestType)}</Badge>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">Durum</h3>
-                {getStatusBadge(selectedRequest.status)}
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">Tarih</h3>
-                <p className="text-gray-600">{selectedRequest.submittedAt}</p>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">Belgeler</h3>
-                <div className="space-y-2">
-                  {selectedRequest.documents.map((doc, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">{doc}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+        <Dialog open={showDetailModal} onOpenChange={(open) => { if (!open) setShowDetailModal(false); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Onay Talebi Detayı</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              <div><b>Hasta:</b> {selectedRequest.patientName}</div>
+              <div><b>E-posta:</b> {selectedRequest.patientEmail}</div>
+              <div><b>Durum:</b> {selectedRequest.status === 'pending' ? 'Beklemede' : selectedRequest.status === 'approved' ? 'Onaylandı' : 'Reddedildi'}</div>
+              <div><b>Tarih:</b> {selectedRequest.submittedAt}</div>
               {selectedRequest.notes && (
-                <div>
-                  <h3 className="font-medium text-gray-900">Notlar</h3>
-                  <p className="text-gray-600">{selectedRequest.notes}</p>
-                </div>
+                <div><b>Notlar:</b> {selectedRequest.notes}</div>
               )}
             </div>
-            {selectedRequest.status === 'pending' && (
-              <div className="flex gap-2 mt-6">
-                <Button
-                  variant="default"
-                  onClick={() => {
-                    handleApprove(selectedRequest.id);
-                    setShowDetailModal(false);
-                  }}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Onayla
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    handleReject(selectedRequest.id);
-                    setShowDetailModal(false);
-                  }}
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Reddet
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+            <Button onClick={() => setShowDetailModal(false)} className="w-full mt-4">Kapat</Button>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
