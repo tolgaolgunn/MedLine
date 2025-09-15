@@ -4,6 +4,8 @@ import { Sidebar } from '../Sidebar';
 import { Topbar } from '../Topbar';
 import AdminDashboard from './AdminDashboard';
 import UserManagement from './UserManagement';
+import DoctorManagement from './DoctorManagement';
+import PatientManagement from './PatientManagement';
 import PatientApprovals from './PatientApprovals';
 import Statistics from './Statistics';
 import SystemControls from './SystemControls';
@@ -73,6 +75,10 @@ const AdminLayout: React.FC = () => {
         return <AdminDashboard />;
       case 'user-management':
         return <UserManagement />;
+      case 'doctors':
+        return <DoctorManagement />;
+      case 'patients':
+        return <PatientManagement />;
       case 'patient-approvals':
         return <PatientApprovals />;
       case 'statistics':

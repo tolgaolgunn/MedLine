@@ -1,5 +1,13 @@
 const db = require("../config/db");
 
+const checkLicenseNumber = async (license_number) => {
+  const result = await db.query(
+    "SELECT COUNT(*) FROM doctor_profiles WHERE license_number = $1",
+    [license_number]
+  );
+  return parseInt(result.rows[0].count) > 0;
+};
+
 const createDoctorProfile = async (user_id, specialty, license_number, experience_years, biography, city, district, hospital_name, approved_by_admin = true) => {
   const result = await db.query(
     `INSERT INTO doctor_profiles (user_id, specialty, license_number, experience_years, biography, city, district, hospital_name, approved_by_admin)
@@ -87,9 +95,62 @@ const getAllDoctorsWithUser = async () => {
   return result.rows;
 };
 
+const deleteDoctor = async (user_id) => {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    // İlk olarak doktorun randevularını kontrol et
+    const appointmentsCheck = await client.query(
+      "SELECT COUNT(*) FROM appointments WHERE doctor_id = $1 AND status NOT IN ('cancelled', 'completed')",
+      [user_id]
+    );
+
+    if (parseInt(appointmentsCheck.rows[0].count) > 0) {
+      throw new Error('Aktif randevuları olan doktor silinemez.');
+    }
+
+    // Doktorun tüm randevularını güncelle (iptal et veya geçmiş olarak işaretle)
+    await client.query(
+      `UPDATE appointments 
+       SET status = CASE 
+         WHEN datetime < CURRENT_TIMESTAMP THEN 'completed'
+         ELSE 'cancelled'
+       END
+       WHERE doctor_id = $1`,
+      [user_id]
+    );
+
+    // Doktor profilini sil
+    await client.query(
+      "DELETE FROM doctor_profiles WHERE user_id = $1",
+      [user_id]
+    );
+
+    // Kullanıcı kaydını sil
+    const result = await client.query(
+      "DELETE FROM users WHERE user_id = $1 AND role = 'doctor' RETURNING *",
+      [user_id]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('Doktor bulunamadı.');
+    }
+
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   createDoctorProfile,
   getDoctorProfileByUserId,
   updateDoctorProfile,
   getAllDoctorsWithUser,
+  deleteDoctor
 }; 
