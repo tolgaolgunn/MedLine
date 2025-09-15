@@ -65,6 +65,8 @@ export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCol
   const adminMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Ana Sayfa', icon: Heart },
     { id: 'user-management', label: 'Kullanıcı Yönetimi', icon: User },
+    { id: 'doctors', label: 'Doktor Yönetimi', icon: Stethoscope },
+    { id: 'patients', label: 'Hasta Yönetimi', icon: User },
     { id: 'patient-approvals', label: 'Hasta Onayları', icon: Stethoscope },
     { id: 'statistics', label: 'İstatistikler', icon: BarChart3 },
     { id: 'system-controls', label: 'Sistem Kontrolleri', icon: FileText },

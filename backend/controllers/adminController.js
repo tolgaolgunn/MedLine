@@ -1,14 +1,88 @@
 const bcrypt = require("bcryptjs");
-const { createUser } = require("../models/userModel");
+const db = require("../config/db");
+const { createUser, getUserByEmail, getUserByNationalId } = require("../models/userModel");
 const { 
   createDoctorProfile, 
   getAllDoctorsWithUser,
-  getDoctorProfileByUserId 
+  getDoctorProfileByUserId,
+  deleteDoctor
 } = require("../models/doctorProfileModel");
 const { getAllFeedbacks, getFeedbackById, respondToFeedback } = require("../models/feedbackModel");
 const { getAllAppointmentsWithDetails, getAppointmentById } = require("../models/appointmentModel");
 const { getAllPrescriptionsWithDetails, getPrescriptionById } = require("../models/prescriptionAdminModel");
-const { getAllPatients, getPatientProfileByUserId } = require("../models/patientProfileModel");
+const { getAllPatients, getPatientProfileByUserId, createPatientProfile, updatePatientProfile, deletePatient } = require("../models/patientProfileModel");
+
+exports.createPatient = async (req, res) => {
+  const { 
+    full_name, 
+    email, 
+    password, 
+    phone_number, 
+    birth_date, 
+    gender, 
+    address, 
+    national_id, 
+    blood_type,
+    medical_history 
+  } = req.body;
+
+  try {
+    // E-posta kontrolü
+    const existingUser = await getUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ message: "Bu e-posta ile kayıtlı kullanıcı zaten var." });
+    }
+
+    // TC Kimlik kontrolü
+    if (national_id) {
+      const existingNationalId = await getUserByNationalId(national_id);
+      if (existingNationalId) {
+        return res.status(400).json({ message: "Bu TC Kimlik numarası ile kayıtlı kullanıcı zaten var." });
+      }
+    }
+
+    // Zorunlu alanların kontrolü
+    if (!full_name || !email || !password) {
+      return res.status(400).json({ message: "Ad-soyad, e-posta ve şifre alanları zorunludur." });
+    }
+
+    // Şifre hash'leme
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    // Kullanıcı oluşturma (role her zaman "patient")
+    const user = await createUser(
+      full_name, 
+      email, 
+      password_hash, 
+      phone_number, 
+      "patient", 
+      true, // is_approved
+      national_id
+    );
+    
+    // Hasta profili oluşturma
+    await createPatientProfile(
+      user.user_id,
+      birth_date || null,
+      gender || null,
+      address || null,
+      medical_history || null,
+      blood_type || null
+    );
+
+    // Hassas bilgileri kaldır
+    delete user.password_hash;
+
+    res.status(201).json({ 
+      message: "Hasta başarıyla oluşturuldu", 
+      user: user
+    });
+  } catch (err) {
+    console.error('Create patient error:', err);
+    res.status(500).json({ error: "Hasta oluşturulurken bir hata oluştu." });
+  }
+};
 
 exports.createDoctor = async (req, res) => {
   const { 
@@ -25,50 +99,114 @@ exports.createDoctor = async (req, res) => {
     hospital_name 
   } = req.body;
 
+  const client = await db.connect();
+
   try {
+    await client.query('BEGIN');
+
+    // E-posta kontrolü
+    const emailCheck = await client.query(
+      "SELECT COUNT(*) FROM users WHERE email = $1",
+      [email]
+    );
+    
+    if (parseInt(emailCheck.rows[0].count) > 0) {
+      throw {
+        code: '23505',
+        constraint: 'users_email_key',
+        message: 'Bu e-posta adresi zaten kullanımda.'
+      };
+    }
+
+    // Lisans numarası kontrolü
+    const licenseCheck = await client.query(
+      "SELECT COUNT(*) FROM doctor_profiles WHERE license_number = $1",
+      [license_number]
+    );
+    
+    if (parseInt(licenseCheck.rows[0].count) > 0) {
+      throw {
+        code: '23505',
+        constraint: 'doctor_profiles_license_number_key',
+        message: 'Bu lisans numarası zaten kullanımda.'
+      };
+    }
+
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
     // Create user with doctor role
-    const user = await createUser(
-      full_name, 
-      email, 
-      password_hash, 
-      phone_number, 
-      "doctor", 
-      true
+    const userResult = await client.query(
+      "INSERT INTO users (full_name, email, password_hash, phone_number, role, is_approved) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+      [full_name, email, password_hash, phone_number, "doctor", true]
     );
+
+    if (!userResult.rows[0]) {
+      throw new Error('Kullanıcı oluşturulamadı');
+    }
+
+    const user = userResult.rows[0];
 
     // Create doctor profile
-    const doctorProfile = await createDoctorProfile(
-      user.user_id,
-      specialty,
-      license_number,
-      experience_years || 0,
-      biography || null,
-      city,
-      district,
-      hospital_name || null,
-      true // Set approved_by_admin to true
+    const doctorResult = await client.query(
+      `INSERT INTO doctor_profiles (user_id, specialty, license_number, experience_years, biography, city, district, hospital_name, approved_by_admin)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [user.user_id, specialty, license_number, experience_years || 0, biography || null, city, district, hospital_name, true]
     );
 
-    res.status(201).json({ 
-      success: true,
-      message: "Doktor başarıyla oluşturuldu",
+    if (!doctorResult.rows[0]) {
+      throw new Error('Doktor profili oluşturulamadı');
+    }
+
+    const doctorProfile = doctorResult.rows[0];
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      message: 'Doktor başarıyla oluşturuldu',
       data: {
         user,
-        doctor_profile: doctorProfile
+        doctorProfile
       }
     });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating doctor:', error);
 
-  } catch (err) {
-    console.error('Error creating doctor:', err);
-    res.status(500).json({ 
-      success: false,
-      message: "Doktor oluşturulurken bir hata oluştu",
-      error: err.message 
+    if (error.code === '23505') {
+      if (error.constraint === 'users_email_key') {
+        return res.status(400).json({
+          message: 'Bu e-posta adresi zaten kullanımda.',
+          code: error.code,
+          constraint: error.constraint
+        });
+      } else if (error.constraint === 'doctor_profiles_license_number_key') {
+        return res.status(400).json({
+          message: 'Bu lisans numarası zaten kullanımda.',
+          code: error.code,
+          constraint: error.constraint
+        });
+      }
+    }
+
+    if (error.code === '23503') {
+      return res.status(400).json({
+        message: 'Geçersiz kullanıcı ID',
+        error: error.message,
+        code: error.code,
+        constraint: error.constraint
+      });
+    }
+
+    res.status(400).json({
+      message: 'Doktor oluşturulurken bir hata oluştu',
+      error: error.message,
+      code: error.code,
+      constraint: error.constraint
     });
+  } finally {
+    client.release();
   }
 };
 
@@ -234,6 +372,8 @@ exports.getPatientById = async (req, res) => {
     const patientId = req.params.id;
     const patient = await getPatientProfileByUserId(patientId);
 
+    console.log('Retrieved patient data:', patient); // Debug log
+
     if (!patient) {
       return res.status(404).json({
         success: false,
@@ -241,6 +381,7 @@ exports.getPatientById = async (req, res) => {
       });
     }
 
+    // Hasta verilerini direkt olarak gönder
     res.status(200).json({
       success: true,
       data: patient,
@@ -259,29 +400,52 @@ exports.getPatientById = async (req, res) => {
 // Hasta bilgilerini güncelleme endpoint'i
 exports.updatePatient = async (req, res) => {
   try {
-    const patientId = req.params.id;
-    const updateData = req.body;
-    
-    const updatedPatient = await updatePatient(patientId, updateData);
+    const { id } = req.params;
+    const { 
+      full_name, 
+      email, 
+      phone_number, 
+      birth_date, 
+      gender, 
+      address, 
+      blood_type,
+      health_history 
+    } = req.body;
 
-    if (!updatedPatient) {
+    // Önce user tablosunu güncelle
+    const updatedUser = await updateUserProfile(id, { 
+      full_name, 
+      email, 
+      phone_number 
+    });
+
+    if (!updatedUser) {
       return res.status(404).json({
         success: false,
         message: "Güncellenecek hasta bulunamadı"
       });
     }
 
-    res.status(200).json({
-      success: true,
-      data: updatedPatient,
-      message: "Hasta bilgileri başarıyla güncellendi"
+    // Sonra hasta profilini güncelle
+    await updatePatientProfile(id, {
+      birth_date,
+      gender,
+      address,
+      blood_type,
+      medical_history: health_history
     });
-  } catch (err) {
-    console.error('Error updating patient:', err);
-    res.status(500).json({
+
+    res.json({ 
+      success: true,
+      message: "Hasta bilgileri başarıyla güncellendi",
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating patient:', error);
+    res.status(500).json({ 
       success: false,
-      message: "Hasta bilgileri güncellenirken bir hata oluştu",
-      error: err.message
+      message: "Hasta güncellenirken bir hata oluştu",
+      error: error.message
     });
   }
 };
@@ -313,24 +477,86 @@ exports.deletePatient = async (req, res) => {
   }
 };
 
+const { updateDoctorProfile } = require('../models/doctorProfileModel');
+const { updateUserProfile } = require('../models/userModel');
+
 // Doktor bilgilerini güncelleme endpoint'i
 exports.updateDoctor = async (req, res) => {
   try {
     const doctorId = req.params.id;
-    const updateData = req.body;
+    console.log('Update Doctor Request Body:', req.body);
     
-    const updatedDoctor = await updateDoctor(doctorId, updateData);
+    // Map frontend field names to backend field names
+    const {
+      name,          // Frontend field
+      email,
+      phoneNumber,   // Frontend field
+      specialization,// Frontend field
+      license_number,
+      experience_years,
+      biography,
+      city,
+      district,
+      hospital_name
+    } = req.body;
+
+    const full_name = name;
+    const phone_number = phoneNumber;
+    const specialty = specialization;
+
+    // Validate required fields
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        message: "İsim alanı boş bırakılamaz"
+      });
+    }
+
+    // User tablosundaki bilgileri güncelle
+    const userUpdateData = {
+      full_name: name,
+      email,
+      phone_number: phoneNumber
+    };
+    
+    const updatedUser = await updateUserProfile(doctorId, userUpdateData);
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Güncellenecek kullanıcı bulunamadı"
+      });
+    }
+
+    // Doctor profile tablosundaki bilgileri güncelle
+    const doctorUpdateData = {
+      specialty: specialization,
+      license_number,
+      experience_years,
+      biography,
+      city,
+      district,
+      hospital_name
+    };
+
+    const updatedDoctor = await updateDoctorProfile(doctorId, doctorUpdateData);
 
     if (!updatedDoctor) {
       return res.status(404).json({
         success: false,
-        message: "Güncellenecek doktor bulunamadı"
+        message: "Güncellenecek doktor profili bulunamadı"
       });
     }
 
+    // Birleştirilmiş güncel veriyi döndür
+    const updatedData = {
+      ...updatedUser,
+      ...updatedDoctor
+    };
+
     res.status(200).json({
       success: true,
-      data: updatedDoctor,
+      data: updatedData,
       message: "Doktor bilgileri başarıyla güncellendi"
     });
   } catch (err) {

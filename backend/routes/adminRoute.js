@@ -15,6 +15,7 @@ router.use('/doctors', doctorRouter);
 
 // Patient Routes
 const patientRouter = express.Router();
+patientRouter.post('/', authenticateToken, isAdmin, adminController.createPatient);
 patientRouter.get('/all', authenticateToken, isAdmin, adminController.getAllPatients);
 patientRouter.get('/:id', authenticateToken, isAdmin, adminController.getPatientById);
 patientRouter.put('/:id', authenticateToken, isAdmin, adminController.updatePatient);
