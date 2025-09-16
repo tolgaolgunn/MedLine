@@ -17,7 +17,7 @@ import { Search, MessageSquare, Eye, Send } from 'lucide-react';
 const Complaints = () => {
   // State declarations
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'submitted' | 'reviewing' | 'responded' | 'resolved'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'submitted' | 'responded'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
@@ -99,13 +99,9 @@ const Complaints = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'submitted':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">Yeni</Badge>;
-      case 'reviewing':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">İnceleniyor</Badge>;
+        return <Badge variant="outline" className="bg-black text-white border-black">Yeni</Badge>;
       case 'responded':
-        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">Yanıtlandı</Badge>;
-      case 'resolved':
-        return <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">Çözüldü</Badge>;
+        return <Badge variant="outline" className="bg-black text-white border-black">Yanıtlandı</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -143,9 +139,7 @@ const Complaints = () => {
               >
                 <option value="all">Tüm Durumlar</option>
                 <option value="submitted">Yeni</option>
-                <option value="reviewing">İnceleniyor</option>
                 <option value="responded">Yanıtlandı</option>
-                <option value="resolved">Çözüldü</option>
               </select>
               <select
                 value={sortOrder}
@@ -233,16 +227,14 @@ const Complaints = () => {
                 <div><b>Tarih:</b> {new Date(selectedFeedback.createdAt).toLocaleString('tr-TR')}</div>
                 <div><b>Durum:</b> {
                   selectedFeedback.status === 'submitted' ? 'Yeni' :
-                  selectedFeedback.status === 'reviewing' ? 'İnceleniyor' :
                   selectedFeedback.status === 'responded' ? 'Yanıtlandı' :
-                  selectedFeedback.status === 'resolved' ? 'Çözüldü' :
                   selectedFeedback.status
                 }</div>
               </div>
               
               <div>
                 <b>Mesaj:</b> 
-                <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                <div className="mt-2 p-3 bg-gray-100 rounded-md">
                   {selectedFeedback.message}
                 </div>
               </div>
@@ -250,13 +242,13 @@ const Complaints = () => {
               {selectedFeedback.response && (
                 <div>
                   <b>Yanıt:</b>
-                  <div className="mt-2 p-3 bg-blue-50 rounded-md">
+                  <div className="mt-2 p-3 bg-gray-100 rounded-md">
                     {selectedFeedback.response}
                   </div>
                 </div>
               )}
               
-              {(selectedFeedback.status === 'submitted' || selectedFeedback.status === 'reviewing') && (
+              {selectedFeedback.status === 'submitted' && (
                 <div className="space-y-2">
                   <b>Yanıt Yaz:</b>
                   <Textarea
@@ -264,6 +256,7 @@ const Complaints = () => {
                     onChange={(e) => setResponse(e.target.value)}
                     placeholder="Geri bildirime yanıtınızı yazın..."
                     rows={4}
+                    className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   />
                   <Button 
                     onClick={handleResponseSubmit} 

@@ -40,6 +40,20 @@ const PatientManagement = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+  const [showEditExitConfirmModal, setShowEditExitConfirmModal] = useState(false);
+  const [originalFormData, setOriginalFormData] = useState<PatientFormData>({
+    full_name: '',
+    email: '',
+    phone_number: '',
+    health_history: '',
+    password: '',
+    birth_date: '',
+    gender: undefined,
+    address: '',
+    blood_type: undefined,
+    national_id: ''
+  });
   const [formData, setFormData] = useState<PatientFormData>({
     full_name: '',
     email: '',
@@ -76,6 +90,68 @@ const PatientManagement = () => {
     e.preventDefault();
     if (!selectedPatient) return;
 
+    // E-posta format kontrolü
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Geçerli bir e-posta adresi giriniz');
+      return;
+    }
+
+    // TC Kimlik numarası validasyonu
+    if (formData.national_id) {
+      if (formData.national_id.length !== 11) {
+        toast.error('TC Kimlik numarası 11 haneli olmalıdır');
+        return;
+      }
+      if (!/^\d+$/.test(formData.national_id)) {
+        toast.error('TC Kimlik numarası sadece rakamlardan oluşmalıdır');
+        return;
+      }
+    }
+
+    // Telefon numarası validasyonu
+    if (formData.phone_number) {
+      if (formData.phone_number.length !== 10) {
+        toast.error('Telefon numarası 10 haneli olmalıdır');
+        return;
+      }
+      if (!/^\d+$/.test(formData.phone_number)) {
+        toast.error('Telefon numarası sadece rakamlardan oluşmalıdır');
+        return;
+      }
+    }
+
+    // Duplicate kontrolü - TC Kimlik No (excluding current patient)
+    if (formData.national_id) {
+      const existingPatientByTC = patients.find(patient => 
+        patient.national_id === formData.national_id && patient.user_id !== selectedPatient.user_id
+      );
+      if (existingPatientByTC) {
+        toast.error('Bu TC Kimlik numarası ile zaten kayıtlı bir hasta bulunmaktadır');
+        return;
+      }
+    }
+
+    // Duplicate kontrolü - Telefon numarası (excluding current patient)
+    if (formData.phone_number) {
+      const existingPatientByPhone = patients.find(patient => 
+        patient.phone_number === formData.phone_number && patient.user_id !== selectedPatient.user_id
+      );
+      if (existingPatientByPhone) {
+        toast.error('Bu telefon numarası ile zaten kayıtlı bir hasta bulunmaktadır');
+        return;
+      }
+    }
+
+    // Duplicate kontrolü - E-posta (excluding current patient)
+    const existingPatientByEmail = patients.find(patient => 
+      patient.email.toLowerCase() === formData.email.toLowerCase() && patient.user_id !== selectedPatient.user_id
+    );
+    if (existingPatientByEmail) {
+      toast.error('Bu e-posta adresi ile zaten kayıtlı bir hasta bulunmaktadır');
+      return;
+    }
+
     try {
       await axios.put(`/api/admin/patients/${selectedPatient.user_id}`, formData);
       toast.success('Hasta bilgileri güncellendi');
@@ -101,7 +177,7 @@ const PatientManagement = () => {
 
   const openEditDialog = (patient: Patient) => {
     setSelectedPatient(patient);
-    setFormData({
+    const initialData = {
       full_name: patient.full_name,
       email: patient.email,
       phone_number: patient.phone_number || '',
@@ -111,7 +187,9 @@ const PatientManagement = () => {
       address: patient.address || '',
       blood_type: patient.blood_type || undefined,
       national_id: patient.national_id || '',
-    });
+    };
+    setFormData(initialData);
+    setOriginalFormData(initialData);
     setIsEditDialogOpen(true);
   };
 
@@ -131,8 +209,110 @@ const PatientManagement = () => {
     setSelectedPatient(null);
   };
 
+  // Check if any form field has been filled
+  const isFormDirty = () => {
+    return formData.full_name.trim() !== '' ||
+           formData.email.trim() !== '' ||
+           formData.phone_number.trim() !== '' ||
+           formData.health_history.trim() !== '' ||
+           formData.password.trim() !== '' ||
+           formData.birth_date !== '' ||
+           formData.gender !== undefined ||
+           formData.address.trim() !== '' ||
+           formData.blood_type !== undefined ||
+           formData.national_id.trim() !== '';
+  };
+
+  // Handle dialog close with confirmation
+  const handleDialogClose = () => {
+    if (isFormDirty()) {
+      setShowExitConfirmModal(true);
+    } else {
+      setIsAddDialogOpen(false);
+      resetFormData();
+    }
+  };
+
+  // Confirm exit and close dialog
+  const confirmExit = () => {
+    setIsAddDialogOpen(false);
+    setShowExitConfirmModal(false);
+    resetFormData();
+  };
+
+  // Cancel exit and return to form
+  const cancelExit = () => {
+    setShowExitConfirmModal(false);
+  };
+
+  // Check if edit form has been modified
+  const isEditFormDirty = () => {
+    return formData.full_name !== originalFormData.full_name ||
+           formData.email !== originalFormData.email ||
+           formData.phone_number !== originalFormData.phone_number ||
+           formData.health_history !== originalFormData.health_history ||
+           formData.birth_date !== originalFormData.birth_date ||
+           formData.gender !== originalFormData.gender ||
+           formData.address !== originalFormData.address ||
+           formData.blood_type !== originalFormData.blood_type ||
+           formData.national_id !== originalFormData.national_id;
+  };
+
+  // Handle edit dialog close with confirmation
+  const handleEditDialogClose = () => {
+    if (isEditFormDirty()) {
+      setShowEditExitConfirmModal(true);
+    } else {
+      setIsEditDialogOpen(false);
+      resetFormData();
+    }
+  };
+
+  // Confirm edit exit and close dialog
+  const confirmEditExit = () => {
+    setIsEditDialogOpen(false);
+    setShowEditExitConfirmModal(false);
+    resetFormData();
+  };
+
+  // Cancel edit exit and return to form
+  const cancelEditExit = () => {
+    setShowEditExitConfirmModal(false);
+  };
+
   const handleAddPatient = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // E-posta format kontrolü
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Geçerli bir e-posta adresi giriniz');
+      return;
+    }
+
+    // Şifre validasyonu
+    if (formData.password) {
+      if (formData.password.length < 8) {
+        toast.error('Şifre en az 8 karakter uzunluğunda olmalıdır');
+        return;
+      }
+      if (!/[A-Z]/.test(formData.password)) {
+        toast.error('Şifre en az 1 büyük harf içermelidir');
+        return;
+      }
+      if (!/[a-z]/.test(formData.password)) {
+        toast.error('Şifre en az 1 küçük harf içermelidir');
+        return;
+      }
+      if (!/\d/.test(formData.password)) {
+        toast.error('Şifre en az 1 sayı içermelidir');
+        return;
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+        toast.error('Şifre en az 1 noktalama işareti içermelidir');
+        return;
+      }
+    }
 
     // TC Kimlik numarası validasyonu
     if (formData.national_id) {
@@ -144,6 +324,49 @@ const PatientManagement = () => {
         toast.error('TC Kimlik numarası sadece rakamlardan oluşmalıdır');
         return;
       }
+    }
+
+    // Telefon numarası validasyonu
+    if (formData.phone_number) {
+      if (formData.phone_number.length !== 10) {
+        toast.error('Telefon numarası 10 haneli olmalıdır');
+        return;
+      }
+      if (!/^\d+$/.test(formData.phone_number)) {
+        toast.error('Telefon numarası sadece rakamlardan oluşmalıdır');
+        return;
+      }
+    }
+
+    // Duplicate kontrolü - TC Kimlik No
+    if (formData.national_id) {
+      const existingPatientByTC = patients.find(patient => 
+        patient.national_id === formData.national_id
+      );
+      if (existingPatientByTC) {
+        toast.error('Bu TC Kimlik numarası ile zaten kayıtlı bir hasta bulunmaktadır');
+        return;
+      }
+    }
+
+    // Duplicate kontrolü - Telefon numarası
+    if (formData.phone_number) {
+      const existingPatientByPhone = patients.find(patient => 
+        patient.phone_number === formData.phone_number
+      );
+      if (existingPatientByPhone) {
+        toast.error('Bu telefon numarası ile zaten kayıtlı bir hasta bulunmaktadır');
+        return;
+      }
+    }
+
+    // Duplicate kontrolü - E-posta
+    const existingPatientByEmail = patients.find(patient => 
+      patient.email.toLowerCase() === formData.email.toLowerCase()
+    );
+    if (existingPatientByEmail) {
+      toast.error('Bu e-posta adresi ile zaten kayıtlı bir hasta bulunmaktadır');
+      return;
     }
     
     try {
@@ -172,7 +395,7 @@ const PatientManagement = () => {
       </div>
 
       {/* Yeni Hasta Ekleme Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Yeni Hasta Ekle</DialogTitle>
@@ -185,6 +408,7 @@ const PatientManagement = () => {
                   id="full_name"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   required
                 />
               </div>
@@ -195,6 +419,7 @@ const PatientManagement = () => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   required
                 />
               </div>
@@ -205,6 +430,7 @@ const PatientManagement = () => {
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   required
                 />
               </div>
@@ -213,7 +439,13 @@ const PatientManagement = () => {
                 <Input
                   id="phone_number"
                   value={formData.phone_number}
-                  onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                    setFormData({ ...formData, phone_number: value });
+                  }}
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  maxLength={10}
+                  placeholder="Telefon numarası (10 haneli)"
                 />
               </div>
               <div>
@@ -227,6 +459,7 @@ const PatientManagement = () => {
                   }}
                   maxLength={11}
                   placeholder="11 haneli TC Kimlik No"
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 />
               </div>
               <div>
@@ -236,13 +469,14 @@ const PatientManagement = () => {
                   type="date"
                   value={formData.birth_date}
                   onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 />
               </div>
               <div>
                 <Label htmlFor="gender">Cinsiyet</Label>
                 <select
                   id="gender"
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-md focus:border-gray-400 focus:outline-none"
                   value={formData.gender}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value as 'male' | 'female' | 'other' })}
                 >
@@ -256,7 +490,7 @@ const PatientManagement = () => {
                 <Label htmlFor="blood_type">Kan Grubu</Label>
                 <select
                   id="blood_type"
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-md focus:border-gray-400 focus:outline-none"
                   value={formData.blood_type}
                   onChange={(e) => setFormData({ ...formData, blood_type: e.target.value as PatientFormData['blood_type'] })}
                 >
@@ -277,24 +511,32 @@ const PatientManagement = () => {
               <Input
                 id="address"
                 value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value.slice(0, 200) })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                maxLength={200}
+                placeholder="Adres bilgisi (maksimum 200 karakter)"
               />
+              <div className="text-xs text-gray-500 mt-1">
+                {formData.address.length}/200 karakter
+              </div>
             </div>
             <div>
               <Label htmlFor="health_history">Sağlık Geçmişi</Label>
               <textarea
                 id="health_history"
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-md focus:border-gray-400 focus:outline-none"
                 rows={3}
                 value={formData.health_history}
-                onChange={(e) => setFormData({ ...formData, health_history: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, health_history: e.target.value.slice(0, 500) })}
+                maxLength={500}
+                placeholder="Sağlık geçmişi bilgileri (maksimum 500 karakter)"
               />
+              <div className="text-xs text-gray-500 mt-1">
+                {formData.health_history.length}/500 karakter
+              </div>
             </div>
             <div className="flex justify-end gap-4">
-              <Button type="button" variant="outline" onClick={() => {
-                setIsAddDialogOpen(false);
-                resetFormData();
-              }}>
+              <Button type="button" variant="outline" onClick={handleDialogClose}>
                 İptal
               </Button>
               <Button type="submit">
@@ -363,7 +605,7 @@ const PatientManagement = () => {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-black text-white">
                     Hasta
                   </span>
                 </td>
@@ -396,7 +638,7 @@ const PatientManagement = () => {
       </div>
 
       {/* Edit Patient Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogClose}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Hasta Düzenle</DialogTitle>
@@ -409,6 +651,7 @@ const PatientManagement = () => {
                   id="edit-name"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   required
                 />
               </div>
@@ -419,6 +662,7 @@ const PatientManagement = () => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   required
                 />
               </div>
@@ -427,7 +671,13 @@ const PatientManagement = () => {
                 <Input
                   id="edit-phone"
                   value={formData.phone_number}
-                  onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                    setFormData({ ...formData, phone_number: value });
+                  }}
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  maxLength={10}
+                  placeholder="Telefon numarası (10 haneli)"
                 />
               </div>
               <div>
@@ -441,6 +691,7 @@ const PatientManagement = () => {
                   }}
                   maxLength={11}
                   placeholder="11 haneli TC Kimlik No"
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 />
               </div>
               <div>
@@ -450,13 +701,14 @@ const PatientManagement = () => {
                   type="date"
                   value={formData.birth_date}
                   onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                  className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 />
               </div>
               <div>
                 <Label htmlFor="edit-gender">Cinsiyet</Label>
                 <select
                   id="edit-gender"
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-md focus:border-gray-400 focus:outline-none"
                   value={formData.gender}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value as 'male' | 'female' | 'other' })}
                 >
@@ -470,7 +722,7 @@ const PatientManagement = () => {
                 <Label htmlFor="edit-blood-type">Kan Grubu</Label>
                 <select
                   id="edit-blood-type"
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-md focus:border-gray-400 focus:outline-none"
                   value={formData.blood_type}
                   onChange={(e) => setFormData({ ...formData, blood_type: e.target.value as PatientFormData['blood_type'] })}
                 >
@@ -491,31 +743,99 @@ const PatientManagement = () => {
               <Input
                 id="edit-address"
                 value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value.slice(0, 200) })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                maxLength={200}
+                placeholder="Adres bilgisi (maksimum 200 karakter)"
               />
+              <div className="text-xs text-gray-500 mt-1">
+                {formData.address.length}/200 karakter
+              </div>
             </div>
             <div>
               <Label htmlFor="edit-health-history">Sağlık Geçmişi</Label>
               <textarea
                 id="edit-health-history"
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-md focus:border-gray-400 focus:outline-none"
                 rows={3}
                 value={formData.health_history}
-                onChange={(e) => setFormData({ ...formData, health_history: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, health_history: e.target.value.slice(0, 500) })}
+                maxLength={500}
+                placeholder="Sağlık geçmişi bilgileri (maksimum 500 karakter)"
               />
+              <div className="text-xs text-gray-500 mt-1">
+                {formData.health_history.length}/500 karakter
+              </div>
             </div>
             <div className="flex justify-end gap-4">
-              <Button type="button" variant="outline" onClick={() => {
-                setIsEditDialogOpen(false);
-                resetFormData();
-              }}>
+              <Button type="button" variant="outline" onClick={handleEditDialogClose}>
                 İptal
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={!isEditFormDirty()}>
                 Güncelle
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Exit Confirmation Modal */}
+      <Dialog open={showExitConfirmModal} onOpenChange={setShowExitConfirmModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Çıkış Onayı</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Formda doldurulmuş alanlar var. Çıkmak istediğinizden emin misiniz? 
+              Girilen bilgiler kaybolacaktır.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={cancelExit}
+                className="border-2 border-gray-300"
+              >
+                İptal
+              </Button>
+              <Button 
+                onClick={confirmExit}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Çık
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Exit Confirmation Modal */}
+      <Dialog open={showEditExitConfirmModal} onOpenChange={setShowEditExitConfirmModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Çıkış Onayı</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Hasta bilgilerinde değişiklik yapıldı. Çıkmak istediğinizden emin misiniz? 
+              Yapılan değişiklikler kaybolacaktır.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={cancelEditExit}
+                className="border-2 border-gray-300"
+              >
+                İptal
+              </Button>
+              <Button 
+                onClick={confirmEditExit}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Çık
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
