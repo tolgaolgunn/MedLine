@@ -70,7 +70,7 @@ export function Sidebar({ activeSection, setActiveSection, isCollapsed, setIsCol
     { id: 'patient-approvals', label: 'Hasta Onayları', icon: Stethoscope },
     { id: 'statistics', label: 'İstatistikler', icon: BarChart3 },
     { id: 'system-controls', label: 'Sistem Kontrolleri', icon: FileText },
-    { id: 'complaints', label: 'Geri Bildirim', icon: MessageSquare },
+    { id: 'complaints', label: 'Şikayet ve Öneriler', icon: MessageSquare },
     { id: 'system-settings', label: 'Sistem Ayarları', icon: Settings },
   ];
 

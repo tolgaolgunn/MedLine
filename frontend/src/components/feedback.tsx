@@ -6,7 +6,7 @@ import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { PageHeader } from './ui/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { MoreHorizontal, Edit, Trash2, Send, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Send, Loader2, Eye } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +47,9 @@ const FeedbackPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState("");
   const [editMessage, setEditMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Add states for detail dialog
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
 
   // API instance
   const api = axios.create({
@@ -187,6 +190,12 @@ const handleSubmit = async (e: React.FormEvent) => {
 };
 
 
+  // View feedback detail
+  const handleViewDetail = (feedback: Feedback) => {
+    setSelectedFeedback(feedback);
+    setIsDetailModalOpen(true);
+  };
+
   // Update feedback
   const handleEdit = (id: number) => {
     const feedback = feedbacks.find(fb => fb.feedback_id === id);
@@ -234,8 +243,8 @@ const handleSubmit = async (e: React.FormEvent) => {
   // Helper function to map backend types to display names
   const getFeedbackTypeDisplay = (backendType: FeedbackType): string => {
     const displayMap: Record<FeedbackType, string> = {
-      'ui_interface': 'Öneri',
-      'appointment_issue': 'Şikayet',
+      'ui_interface': 'Arayüz Önerisi',
+      'appointment_issue': 'Randevu Şikayeti',
       'technical_support': 'Teknik Destek',
       'other': 'Diğer'
     };
@@ -415,6 +424,10 @@ const handleSubmit = async (e: React.FormEvent) => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleViewDetail(feedback)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Detay
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEdit(feedback.feedback_id)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Düzenle
@@ -519,6 +532,58 @@ const handleSubmit = async (e: React.FormEvent) => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Geri Bildirim Detayı</DialogTitle>
+          </DialogHeader>
+          {selectedFeedback && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="font-semibold">Tür:</span>{' '}
+                  {getFeedbackTypeDisplay(selectedFeedback.feedback_type)}
+                </div>
+                <div>
+                  <span className="font-semibold">Durum:</span>{' '}
+                  <Badge variant={getStatusColor(selectedFeedback.status)}>
+                    {mapStatus(selectedFeedback.status)}
+                  </Badge>
+                </div>
+                <div>
+                  <span className="font-semibold">Tarih:</span>{' '}
+                  {new Date(selectedFeedback.created_at).toLocaleString('tr-TR')}
+                </div>
+              </div>
+              
+              <div>
+                <span className="font-semibold">Başlık:</span>
+                <div className="mt-1 p-3 bg-secondary/10 rounded-md">
+                  {selectedFeedback.title}
+                </div>
+              </div>
+
+              <div>
+                <span className="font-semibold">Mesaj:</span>
+                <div className="mt-1 p-3 bg-secondary/10 rounded-md">
+                  {selectedFeedback.message}
+                </div>
+              </div>
+
+              {selectedFeedback.admin_response && (
+                <div>
+                  <span className="font-semibold">Yanıt:</span>
+                  <div className="mt-1 p-3 bg-primary/10 rounded-md">
+                    {selectedFeedback.admin_response}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
