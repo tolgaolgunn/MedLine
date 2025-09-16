@@ -253,19 +253,11 @@ exports.getAllPatients = async (req, res) => {
 exports.getAllFeedbacks = async (req, res) => {
   try {
     const feedbacks = await getAllFeedbacks();
-    
-    res.status(200).json({
-      success: true,
-      data: feedbacks,
-      message: "Geri bildirimler başarıyla getirildi"
-    });
+    console.log('Sending feedbacks:', feedbacks); // Debug log
+    res.status(200).json(feedbacks);
   } catch (err) {
     console.error('Error fetching feedbacks:', err);
-    res.status(500).json({
-      success: false,
-      message: "Geri bildirimler getirilirken bir hata oluştu",
-      error: err.message
-    });
+    res.status(500).json({ error: "Geri bildirimler getirilirken bir hata oluştu" });
   }
 };
 

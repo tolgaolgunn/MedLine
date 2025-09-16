@@ -1,230 +1,155 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle as DialogTitleComponent,
+} from '../ui/dialog';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { PageHeader } from '../ui/PageHeader';
-import { 
-  MessageSquare, 
-  Search,
-  Eye
-} from 'lucide-react';
+import { feedbackService, Feedback } from '../../services/feedbackService';
+import { toast } from 'react-toastify';
+import { Search, MessageSquare, Eye, Send } from 'lucide-react';
 
-interface Complaint {
-  id: number;
-  userName: string;
-  userEmail: string;
-  userRole: 'patient' | 'doctor' | 'admin';
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
-  subject: string;
-  message: string;
-  submittedAt: string;
-  lastUpdated: string;
-}
-
-const Complaints: React.FC = () => {
-  const [complaints, setComplaints] = useState<Complaint[]>([
-    {
-      id: 1,
-      userName: "Ahmet Yılmaz",
-      userEmail: "ahmet@example.com",
-      userRole: "patient",
-      status: "open",
-      subject: "Randevu sistemi çalışmıyor",
-      message: "Doktor randevusu almak istiyorum ama sistem sürekli hata veriyor. Acil yardım gerekli.",
-      submittedAt: "15.12.2024 14:30",
-      lastUpdated: "15.12.2024 14:30"
-    },
-    {
-      id: 2,
-      userName: "Dr. Fatma Özkan",
-      userEmail: "fatma@example.com",
-      userRole: "doctor",
-      status: "in-progress",
-      subject: "Hasta geçmişi görüntüleme iyileştirmesi",
-      message: "Hasta geçmişini görüntülerken daha detaylı filtreleme seçenekleri eklenebilir.",
-      submittedAt: "15.12.2024 13:15",
-      lastUpdated: "15.12.2024 15:20"
-    },
-    {
-      id: 3,
-      userName: "Mehmet Demir",
-      userEmail: "mehmet@example.com",
-      userRole: "patient",
-      status: "open",
-      subject: "Reçete yazdırma hatası",
-      message: "Reçeteyi yazdırmaya çalıştığımda sayfa donuyor ve hiçbir şey yazdırılamıyor.",
-      submittedAt: "15.12.2024 12:45",
-      lastUpdated: "15.12.2024 12:45"
-    },
-    {
-      id: 4,
-      userName: "Ayşe Kaya",
-      userEmail: "ayse@example.com",
-      userRole: "patient",
-      status: "open",
-      subject: "Mobil uygulama önerisi",
-      message: "Mobil uygulama geliştirilirse çok daha kullanışlı olur.",
-      submittedAt: "15.12.2024 11:20",
-      lastUpdated: "15.12.2024 11:20"
-    }
-  ]);
-
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+const Complaints = () => {
+  // State declarations
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'submitted' | 'reviewing' | 'responded' | 'resolved'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortOrder, setSortOrder] = useState<string>('newest');
-  const [timeFilter, setTimeFilter] = useState<string>('all');
-  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [response, setResponse] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const filteredComplaints = complaints.filter(complaint => {
-    const matchesStatus = filterStatus === 'all' || complaint.status === filterStatus;
-    const matchesSearch = complaint.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         complaint.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         complaint.userName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Time filter logic
-    let matchesTime = true;
-    if (timeFilter !== 'all') {
-      const complaintDate = new Date(complaint.submittedAt.split(' ')[0].split('.').reverse().join('-'));
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Load feedbacks
+  const loadFeedbacks = async () => {
+    try {
+      const data = await feedbackService.getAllFeedbacks();
+      console.log('Received feedback data:', data);
+      // Ensure we're setting an array
+      const feedbackArray = Array.isArray(data) ? data : [];
+      console.log('Setting feedbacks:', feedbackArray);
+      setFeedbacks(feedbackArray);
+    } catch (error) {
+      console.error('Error loading feedbacks:', error);
+      console.error('Full error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      toast.error("Geri bildirimleri yüklerken bir hata oluştu.");
+      setFeedbacks([]); // Set empty array on error
+    }
+  };
+
+  // Lifecycle hooks
+  useEffect(() => {
+    loadFeedbacks();
+  }, []);
+
+  // Process feedbacks with filtering and sorting
+  const processedFeedbacks = useMemo(() => {
+    if (!Array.isArray(feedbacks)) {
+      return [];
+    }
+
+    const filtered = feedbacks.filter((feedback: Feedback) => {
+      if (!feedback) return false;
       
-      switch (timeFilter) {
-        case 'today':
-          matchesTime = complaintDate.getTime() === today.getTime();
-          break;
-        case 'yesterday':
-          const yesterday = new Date(today);
-          yesterday.setDate(yesterday.getDate() - 1);
-          matchesTime = complaintDate.getTime() === yesterday.getTime();
-          break;
-        case 'tomorrow':
-          const tomorrow = new Date(today);
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          matchesTime = complaintDate.getTime() === tomorrow.getTime();
-          break;
-        case 'thisWeek':
-          const startOfWeek = new Date(today);
-          startOfWeek.setDate(today.getDate() - today.getDay());
-          matchesTime = complaintDate >= startOfWeek;
-          break;
-        case 'thisMonth':
-          matchesTime = complaintDate.getMonth() === today.getMonth() && 
-                       complaintDate.getFullYear() === today.getFullYear();
-          break;
-        case 'thisYear':
-          matchesTime = complaintDate.getFullYear() === today.getFullYear();
-          break;
-      }
-    }
-    
-    return matchesStatus && matchesSearch && matchesTime;
-  }).sort((a, b) => {
-    const dateA = new Date(a.submittedAt.split(' ')[0].split('.').reverse().join('-'));
-    const dateB = new Date(b.submittedAt.split(' ')[0].split('.').reverse().join('-'));
-    
-    if (sortOrder === 'newest') {
-      return dateB.getTime() - dateA.getTime();
-    } else {
-      return dateA.getTime() - dateB.getTime();
-    }
-  });
+      const matchesStatus = filterStatus === 'all' || feedback.status === filterStatus;
+      
+      const matchesSearch = feedback.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          feedback.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          feedback.userEmail?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return matchesStatus && matchesSearch;
+    });
 
+    const sorted = [...filtered];
+    sorted.sort((a: Feedback, b: Feedback) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
 
+    return sorted;
+  }, [feedbacks, filterStatus, searchTerm, sortOrder]);
+
+  const handleResponseSubmit = async () => {
+    if (!selectedFeedback || !response.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await feedbackService.respondToFeedback(selectedFeedback.id, response);
+      await loadFeedbacks();
+      setShowDetailModal(false);
+      setResponse('');
+      toast.success("Geri bildirim yanıtı gönderildi.");
+    } catch (error) {
+      toast.error("Yanıt gönderilirken bir hata oluştu.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'open':
-        return <Badge variant="outline" className="bg-black text-white border-black">Açık</Badge>;
-      case 'in-progress':
-        return <Badge variant="outline" className="bg-black text-white border-black">İşlemde</Badge>;
+      case 'submitted':
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">Yeni</Badge>;
+      case 'reviewing':
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">İnceleniyor</Badge>;
+      case 'responded':
+        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">Yanıtlandı</Badge>;
       case 'resolved':
-        return <Badge variant="outline" className="bg-black text-white border-black">Çözüldü</Badge>;
-      case 'closed':
-        return <Badge variant="outline" className="bg-black text-white border-black">Kapatıldı</Badge>;
+        return <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">Çözüldü</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return <Badge variant="destructive">Admin</Badge>;
-      case 'doctor':
-        return <Badge variant="default">Doktor</Badge>;
-      case 'patient':
-        return <Badge variant="secondary">Hasta</Badge>;
-      default:
-        return <Badge variant="outline">{role}</Badge>;
-    }
-  };
-
-  const handleStatusChange = (complaintId: number, newStatus: string) => {
-    setComplaints(prev => 
-      prev.map(complaint => 
-        complaint.id === complaintId 
-          ? { ...complaint, status: newStatus as any, lastUpdated: new Date().toLocaleString('tr-TR') }
-          : complaint
-      )
-    );
-  };
-
-
-
   return (
-    <div className="p-6 space-y-6">
-      <PageHeader 
-        title="Şikayet ve Öneriler" 
-        subtitle="Kullanıcı geri bildirimlerini yönetin"
-      />
+    <div className="space-y-4 p-8">
+      {/* Custom header to replace PageHeader */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Geri Bildirimler</h1>
+        <p className="text-muted-foreground">Kullanıcı geri bildirimlerini yönetin</p>
+      </div>
 
-      {/* Filters */}
+      {/* Filters and Search */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="pt-6">
+          <div className="flex gap-4 mb-4 flex-col md:flex-row">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Şikayet/öneri ara..."
+                  placeholder="Ara..."
+                  className="w-full pl-8 pr-4 py-2 border rounded-md"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e) => setFilterStatus(e.target.value as any)}
                 className="px-3 py-2 border border-gray-300 rounded-md"
               >
                 <option value="all">Tüm Durumlar</option>
-                <option value="open">Açık</option>
-                <option value="in-progress">İşlemde</option>
+                <option value="submitted">Yeni</option>
+                <option value="reviewing">İnceleniyor</option>
+                <option value="responded">Yanıtlandı</option>
                 <option value="resolved">Çözüldü</option>
-                <option value="closed">Kapatıldı</option>
-              </select>
-              <select
-                value={timeFilter}
-                onChange={(e) => setTimeFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="all">Tüm Zamanlar</option>
-                <option value="today">Bugün</option>
-                <option value="yesterday">Dün</option>
-                <option value="tomorrow">Yarın</option>
-                <option value="thisWeek">Bu Hafta</option>
-                <option value="thisMonth">Bu Ay</option>
-                <option value="thisYear">Bu Yıl</option>
               </select>
               <select
                 value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
+                onChange={(e) => setSortOrder(e.target.value as any)}
                 className="px-3 py-2 border border-gray-300 rounded-md"
               >
                 <option value="newest">Tarihe göre (Önce en yeni)</option>
@@ -235,36 +160,36 @@ const Complaints: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Complaints List */}
+      {/* Feedbacks List */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Şikayet ve Öneriler ({filteredComplaints.length})
+            Geri Bildirimler ({processedFeedbacks.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredComplaints.map((complaint) => (
-              <div key={complaint.id} className="border rounded-lg p-4 hover:bg-gray-50">
+            {processedFeedbacks.map((feedback) => (
+              <div key={feedback.id} className="border rounded-lg p-4 hover:bg-gray-50">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4 flex-1">
                     <Avatar>
                       <AvatarFallback>
-                        {complaint.userName.split(' ').map(n => n[0]).join('')}
+                        {feedback.userName?.split(' ').map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-medium">{complaint.subject}</h3>
-                        {getStatusBadge(complaint.status)}
+                        <h3 className="font-medium">{feedback.userName}</h3>
+                        {getStatusBadge(feedback.status)}
                       </div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm text-gray-600">{complaint.userName}</span>
-                        {getRoleBadge(complaint.userRole)}
-                        <span className="text-sm text-gray-500">• {complaint.submittedAt}</span>
+                        <span className="text-sm text-gray-600">{feedback.userName}</span>
+                        <span className="text-sm text-gray-500">• {feedback.userEmail}</span>
+                        <span className="text-sm text-gray-500">• {new Date(feedback.createdAt).toLocaleString('tr-TR')}</span>
                       </div>
-                      <p className="text-sm text-gray-700 mb-3 line-clamp-2">{complaint.message}</p>
+                      <p className="text-sm text-gray-700 mb-3 line-clamp-2">{feedback.message}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -273,31 +198,21 @@ const Complaints: React.FC = () => {
                       size="sm"
                       className="border-2 border-gray-300 shadow-sm"
                       onClick={() => {
-                        setSelectedComplaint(complaint);
+                        setSelectedFeedback(feedback);
                         setShowDetailModal(true);
                       }}
                     >
                       <Eye className="w-4 h-4 mr-2" />
                       Detay
                     </Button>
-                    <select
-                      value={complaint.status}
-                      onChange={(e) => handleStatusChange(complaint.id, e.target.value)}
-                      className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option value="open">Açık</option>
-                      <option value="in-progress">İşlemde</option>
-                      <option value="resolved">Çözüldü</option>
-                      <option value="closed">Kapat</option>
-                    </select>
                   </div>
                 </div>
               </div>
             ))}
-            {filteredComplaints.length === 0 && (
+            {processedFeedbacks.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Filtrelere uygun şikayet/öneri bulunamadı</p>
+                <p>Filtrelere uygun geri bildirim bulunamadı</p>
               </div>
             )}
           </div>
@@ -305,27 +220,65 @@ const Complaints: React.FC = () => {
       </Card>
 
       {/* Detail Modal */}
-      {showDetailModal && selectedComplaint && (
-        <Dialog open={showDetailModal} onOpenChange={(open) => { if (!open) setShowDetailModal(false); }}>
-          <DialogContent className="max-w-md">
+      {showDetailModal && selectedFeedback && (
+        <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Geri Bildirim Detayı</DialogTitle>
+              <DialogTitleComponent>Geri Bildirim Detayı</DialogTitleComponent>
             </DialogHeader>
-            <div className="space-y-2">
-              <div><b>Kullanıcı:</b> {selectedComplaint.userName}</div>
-              <div><b>Rol:</b> {selectedComplaint.userRole === 'patient' ? 'Hasta' : selectedComplaint.userRole === 'doctor' ? 'Doktor' : 'Admin'}</div>
-              <div><b>E-posta:</b> {selectedComplaint.userEmail}</div>
-              <div><b>Tarih:</b> {selectedComplaint.submittedAt}</div>
-              <div><b>Durum:</b> {selectedComplaint.status === 'open' ? 'Açık' : selectedComplaint.status === 'in-progress' ? 'İşlemde' : selectedComplaint.status === 'resolved' ? 'Çözüldü' : 'Kapatıldı'}</div>
-              <div><b>Başlık:</b> {selectedComplaint.subject}</div>
-              <div><b>Açıklama:</b> {selectedComplaint.message}</div>
-              <div><b>Son Güncelleme:</b> {selectedComplaint.lastUpdated}</div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><b>Kullanıcı:</b> {selectedFeedback.userName}</div>
+                <div><b>E-posta:</b> {selectedFeedback.userEmail}</div>
+                <div><b>Tarih:</b> {new Date(selectedFeedback.createdAt).toLocaleString('tr-TR')}</div>
+                <div><b>Durum:</b> {
+                  selectedFeedback.status === 'submitted' ? 'Yeni' :
+                  selectedFeedback.status === 'reviewing' ? 'İnceleniyor' :
+                  selectedFeedback.status === 'responded' ? 'Yanıtlandı' :
+                  selectedFeedback.status === 'resolved' ? 'Çözüldü' :
+                  selectedFeedback.status
+                }</div>
+              </div>
+              
+              <div>
+                <b>Mesaj:</b> 
+                <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                  {selectedFeedback.message}
+                </div>
+              </div>
+              
+              {selectedFeedback.response && (
+                <div>
+                  <b>Yanıt:</b>
+                  <div className="mt-2 p-3 bg-blue-50 rounded-md">
+                    {selectedFeedback.response}
+                  </div>
+                </div>
+              )}
+              
+              {(selectedFeedback.status === 'submitted' || selectedFeedback.status === 'reviewing') && (
+                <div className="space-y-2">
+                  <b>Yanıt Yaz:</b>
+                  <Textarea
+                    value={response}
+                    onChange={(e) => setResponse(e.target.value)}
+                    placeholder="Geri bildirime yanıtınızı yazın..."
+                    rows={4}
+                  />
+                  <Button 
+                    onClick={handleResponseSubmit} 
+                    disabled={isSubmitting || !response.trim()}
+                    className="w-full"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Yanıtı Gönder
+                  </Button>
+                </div>
+              )}
             </div>
-            <Button onClick={() => setShowDetailModal(false)} className="w-full mt-4">Kapat</Button>
           </DialogContent>
         </Dialog>
       )}
-
     </div>
   );
 };

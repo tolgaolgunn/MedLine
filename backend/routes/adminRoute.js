@@ -22,11 +22,9 @@ patientRouter.put('/:id', authenticateToken, isAdmin, adminController.updatePati
 patientRouter.delete('/:id', authenticateToken, isAdmin, adminController.deletePatient);
 router.use('/patients', patientRouter);
 
-// Feedback Routes
-const feedbackRouter = express.Router();
-feedbackRouter.get('/', authenticateToken, isAdmin, adminController.getAllFeedbacks);
-feedbackRouter.put('/:id/respond', authenticateToken, isAdmin, adminController.respondToFeedback);
-router.use('/feedbacks', feedbackRouter);
+// Feedback/Complaints Routes
+router.get('/complaints', authenticateToken, isAdmin, adminController.getAllFeedbacks);
+router.put('/complaints/:id/respond', authenticateToken, isAdmin, adminController.respondToFeedback);
 
 // Appointment Routes
 const appointmentRouter = express.Router();

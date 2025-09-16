@@ -3,10 +3,17 @@ const db = require("../config/db");
 const getAllFeedbacks = async () => {
   const result = await db.query(
     `SELECT 
-      f.*,
-      u.full_name,
-      u.email,
-      u.role
+      f.feedback_id as id,
+      f.user_id as "userId",
+      u.full_name as "userName",
+      u.email as "userEmail",
+      f.title,
+      f.message,
+      f.feedback_type as type,
+      COALESCE(f.status, 'submitted') as status,
+      f.admin_response as response,
+      f.created_at as "createdAt",
+      f.updated_at as "updatedAt"
     FROM feedbacks f
     JOIN users u ON f.user_id = u.user_id
     ORDER BY f.created_at DESC`
@@ -37,7 +44,8 @@ const respondToFeedback = async (feedbackId, adminResponse) => {
       status = 'responded',
       updated_at = CURRENT_TIMESTAMP
      WHERE feedback_id = $2
-     RETURNING *`,
+     RETURNING feedback_id as id, user_id as "userId", title, message, feedback_type as type, 
+              status, admin_response as response, created_at as "createdAt", updated_at as "updatedAt"`,
     [adminResponse, feedbackId]
   );
   
