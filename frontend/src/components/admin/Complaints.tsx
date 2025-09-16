@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -34,12 +34,12 @@ const Complaints = () => {
       const feedbackArray = Array.isArray(data) ? data : [];
       console.log('Setting feedbacks:', feedbackArray);
       setFeedbacks(feedbackArray);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading feedbacks:', error);
       console.error('Full error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
       });
       toast.error("Geri bildirimleri yüklerken bir hata oluştu.");
       setFeedbacks([]); // Set empty array on error
@@ -89,7 +89,8 @@ const Complaints = () => {
       setShowDetailModal(false);
       setResponse('');
       toast.success("Geri bildirim yanıtı gönderildi.");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Response submission error:", error);
       toast.error("Yanıt gönderilirken bir hata oluştu.");
     } finally {
       setIsSubmitting(false);
@@ -226,9 +227,16 @@ const Complaints = () => {
                 <div><b>E-posta:</b> {selectedFeedback.userEmail}</div>
                 <div><b>Tarih:</b> {new Date(selectedFeedback.createdAt).toLocaleString('tr-TR')}</div>
                 <div><b>Durum:</b> {
-                  selectedFeedback.status === 'submitted' ? 'Yeni' :
-                  selectedFeedback.status === 'responded' ? 'Yanıtlandı' :
-                  selectedFeedback.status
+                  (() => {
+                    switch (selectedFeedback.status) {
+                      case 'submitted':
+                        return 'Yeni';
+                      case 'responded':
+                        return 'Yanıtlandı';
+                      default:
+                        return selectedFeedback.status;
+                    }
+                  })()
                 }</div>
               </div>
               

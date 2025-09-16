@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import axios from '../../lib/axios';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Card } from '../ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Label } from '../ui/label';
 import { toast } from 'react-toastify';
@@ -215,12 +214,12 @@ const PatientManagement = () => {
            formData.email.trim() !== '' ||
            formData.phone_number.trim() !== '' ||
            formData.health_history.trim() !== '' ||
-           formData.password.trim() !== '' ||
+           (formData.password && formData.password.trim() !== '') ||
            formData.birth_date !== '' ||
            formData.gender !== undefined ||
-           formData.address.trim() !== '' ||
+           (formData.address && formData.address.trim() !== '') ||
            formData.blood_type !== undefined ||
-           formData.national_id.trim() !== '';
+           (formData.national_id && formData.national_id.trim() !== '');
   };
 
   // Handle dialog close with confirmation
@@ -517,7 +516,7 @@ const PatientManagement = () => {
                 placeholder="Adres bilgisi (maksimum 200 karakter)"
               />
               <div className="text-xs text-gray-500 mt-1">
-                {formData.address.length}/200 karakter
+                {formData.address?.length || 0}/200 karakter
               </div>
             </div>
             <div>
@@ -532,7 +531,7 @@ const PatientManagement = () => {
                 placeholder="Sağlık geçmişi bilgileri (maksimum 500 karakter)"
               />
               <div className="text-xs text-gray-500 mt-1">
-                {formData.health_history.length}/500 karakter
+                {formData.health_history?.length || 0}/500 karakter
               </div>
             </div>
             <div className="flex justify-end gap-4">
@@ -749,7 +748,7 @@ const PatientManagement = () => {
                 placeholder="Adres bilgisi (maksimum 200 karakter)"
               />
               <div className="text-xs text-gray-500 mt-1">
-                {formData.address.length}/200 karakter
+                {formData.address?.length || 0}/200 karakter
               </div>
             </div>
             <div>
@@ -764,7 +763,7 @@ const PatientManagement = () => {
                 placeholder="Sağlık geçmişi bilgileri (maksimum 500 karakter)"
               />
               <div className="text-xs text-gray-500 mt-1">
-                {formData.health_history.length}/500 karakter
+                {formData.health_history?.length || 0}/500 karakter
               </div>
             </div>
             <div className="flex justify-end gap-4">
