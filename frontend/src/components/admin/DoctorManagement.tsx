@@ -45,6 +45,20 @@ const DoctorManagement = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+  const [originalFormData, setOriginalFormData] = useState<DoctorFormData>({
+    name: '',
+    email: '',
+    password: '',
+    specialization: '',
+    phoneNumber: '',
+    city: '',
+    district: '',
+    hospital_name: '',
+    experience_years: '',
+    license_number: '',
+    biography: '',
+  });
   const [formData, setFormData] = useState<DoctorFormData>({
     name: '',
     email: '',
@@ -81,9 +95,9 @@ const DoctorManagement = () => {
   const handleAddDoctor = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Form validasyonu
+    // Tüm alanların doldurulup doldurulmadığını kontrol et
     if (!formData.name.trim()) {
-      toast.error('İsim alanı boş bırakılamaz');
+      toast.error('Ad Soyad alanı boş bırakılamaz');
       return;
     }
 
@@ -92,10 +106,82 @@ const DoctorManagement = () => {
       return;
     }
 
+    if (!formData.password.trim()) {
+      toast.error('Şifre alanı boş bırakılamaz');
+      return;
+    }
+
+    if (!formData.specialization.trim()) {
+      toast.error('Uzmanlık alanı boş bırakılamaz');
+      return;
+    }
+
+    if (!formData.license_number.trim()) {
+      toast.error('Lisans numarası alanı boş bırakılamaz');
+      return;
+    }
+
+    if (!formData.phoneNumber.trim()) {
+      toast.error('Telefon alanı boş bırakılamaz');
+      return;
+    }
+
+    if (!formData.city.trim()) {
+      toast.error('Şehir alanı boş bırakılamaz');
+      return;
+    }
+
+    if (!formData.district.trim()) {
+      toast.error('İlçe alanı boş bırakılamaz');
+      return;
+    }
+
+    if (!formData.hospital_name.trim()) {
+      toast.error('Hastane adı alanı boş bırakılamaz');
+      return;
+    }
+
+    if (!formData.biography.trim()) {
+      toast.error('Biyografi alanı boş bırakılamaz');
+      return;
+    }
+
     // E-posta format kontrolü
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       toast.error('Geçerli bir e-posta adresi giriniz');
+      return;
+    }
+
+    // Şifre validasyonu
+    if (formData.password.length < 8) {
+      toast.error('Şifre en az 8 karakter uzunluğunda olmalıdır');
+      return;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      toast.error('Şifre en az 1 büyük harf içermelidir');
+      return;
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      toast.error('Şifre en az 1 küçük harf içermelidir');
+      return;
+    }
+    if (!/\d/.test(formData.password)) {
+      toast.error('Şifre en az 1 sayı içermelidir');
+      return;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+      toast.error('Şifre en az 1 noktalama işareti içermelidir');
+      return;
+    }
+
+    // Telefon numarası validasyonu
+    if (formData.phoneNumber.length !== 10) {
+      toast.error('Telefon numarası 10 haneli olmalıdır');
+      return;
+    }
+    if (!/^\d+$/.test(formData.phoneNumber)) {
+      toast.error('Telefon numarası sadece rakamlardan oluşmalıdır');
       return;
     }
 
@@ -207,7 +293,7 @@ const DoctorManagement = () => {
 
   const openEditDialog = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
-    setFormData({
+    const initialData = {
       name: doctor.full_name || '',
       email: doctor.email || '',
       password: '',
@@ -219,7 +305,9 @@ const DoctorManagement = () => {
       experience_years: doctor.experience_years?.toString() || '',
       license_number: doctor.license_number || '',
       biography: doctor.biography || '',
-    });
+    };
+    setFormData(initialData);
+    setOriginalFormData(initialData);
     setIsEditDialogOpen(true);
   };
 
@@ -238,6 +326,57 @@ const DoctorManagement = () => {
       biography: '',
     });
     setSelectedDoctor(null);
+  };
+
+  // Check if any form field has been filled
+  const isFormDirty = () => {
+    return formData.name.trim() !== '' ||
+           formData.email.trim() !== '' ||
+           formData.password.trim() !== '' ||
+           formData.specialization.trim() !== '' ||
+           formData.phoneNumber.trim() !== '' ||
+           formData.city.trim() !== '' ||
+           formData.district.trim() !== '' ||
+           formData.hospital_name.trim() !== '' ||
+           formData.experience_years.trim() !== '' ||
+           formData.license_number.trim() !== '' ||
+           formData.biography.trim() !== '';
+  };
+
+  // Handle dialog close with confirmation
+  const handleDialogClose = () => {
+    if (isFormDirty()) {
+      setShowExitConfirmModal(true);
+    } else {
+      setIsAddDialogOpen(false);
+      resetFormData();
+    }
+  };
+
+  // Confirm exit and close dialog
+  const confirmExit = () => {
+    setIsAddDialogOpen(false);
+    setShowExitConfirmModal(false);
+    resetFormData();
+  };
+
+  // Cancel exit and return to form
+  const cancelExit = () => {
+    setShowExitConfirmModal(false);
+  };
+
+  // Check if edit form has been modified
+  const isEditFormDirty = () => {
+    return formData.name !== originalFormData.name ||
+           formData.email !== originalFormData.email ||
+           formData.specialization !== originalFormData.specialization ||
+           formData.phoneNumber !== originalFormData.phoneNumber ||
+           formData.city !== originalFormData.city ||
+           formData.district !== originalFormData.district ||
+           formData.hospital_name !== originalFormData.hospital_name ||
+           formData.experience_years !== originalFormData.experience_years ||
+           formData.license_number !== originalFormData.license_number ||
+           formData.biography !== originalFormData.biography;
   };
 
   const filteredDoctors = doctors.filter((doctor) =>
@@ -348,7 +487,7 @@ const DoctorManagement = () => {
       </div>
 
       {/* Add Doctor Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Yeni Doktor Ekle</DialogTitle>
@@ -360,6 +499,7 @@ const DoctorManagement = () => {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 required
               />
             </div>
@@ -370,6 +510,7 @@ const DoctorManagement = () => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 required
               />
             </div>
@@ -380,6 +521,7 @@ const DoctorManagement = () => {
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 required
               />
             </div>
@@ -389,6 +531,8 @@ const DoctorManagement = () => {
                 id="specialization"
                 value={formData.specialization}
                 onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                required
               />
             </div>
             <div>
@@ -397,6 +541,7 @@ const DoctorManagement = () => {
                 id="license_number"
                 value={formData.license_number}
                 onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 placeholder="ABC1234567"
                 required
               />
@@ -409,6 +554,8 @@ const DoctorManagement = () => {
                 min="0"
                 value={formData.experience_years}
                 onChange={(e) => setFormData({ ...formData, experience_years: e.target.value })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                required
               />
             </div>
             <div>
@@ -416,7 +563,14 @@ const DoctorManagement = () => {
               <Input
                 id="phoneNumber"
                 value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                  setFormData({ ...formData, phoneNumber: value });
+                }}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                maxLength={10}
+                placeholder="Telefon numarası (10 haneli)"
+                required
               />
             </div>
             <div>
@@ -425,6 +579,8 @@ const DoctorManagement = () => {
                 id="city"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                required
               />
             </div>
             <div>
@@ -433,6 +589,8 @@ const DoctorManagement = () => {
                 id="district"
                 value={formData.district}
                 onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                required
               />
             </div>
             <div>
@@ -441,6 +599,8 @@ const DoctorManagement = () => {
                 id="hospital_name"
                 value={formData.hospital_name}
                 onChange={(e) => setFormData({ ...formData, hospital_name: e.target.value })}
+                className="border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                required
               />
             </div>
             <div>
@@ -448,14 +608,24 @@ const DoctorManagement = () => {
               <Textarea
                 id="biography"
                 value={formData.biography}
-                onChange={(e) => setFormData({ ...formData, biography: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, biography: e.target.value.slice(0, 500) })}
                 placeholder="Doktorun özgeçmişi, uzmanlık alanları ve diğer önemli bilgiler..."
-                className="h-32"
+                className="h-32 border-2 border-gray-300 focus:border-gray-400 focus:outline-none"
+                maxLength={500}
+                required
               />
+              <div className="text-xs text-gray-500 mt-1">
+                {formData.biography.length}/500 karakter
+              </div>
             </div>
-            <Button type="submit" className="w-full">
-              Ekle
-            </Button>
+            <div className="flex justify-end gap-4">
+              <Button type="button" variant="outline" onClick={handleDialogClose}>
+                İptal
+              </Button>
+              <Button type="submit">
+                Ekle
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -556,10 +726,40 @@ const DoctorManagement = () => {
                 className="h-32"
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={!isEditFormDirty()}>
               Güncelle
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Exit Confirmation Modal */}
+      <Dialog open={showExitConfirmModal} onOpenChange={setShowExitConfirmModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Çıkış Onayı</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Formda doldurulmuş alanlar var. Çıkmak istediğinizden emin misiniz? 
+              Girilen bilgiler kaybolacaktır.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={cancelExit}
+                className="border-2 border-gray-300"
+              >
+                İptal
+              </Button>
+              <Button 
+                onClick={confirmExit}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Çık
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
