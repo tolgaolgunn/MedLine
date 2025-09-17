@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     national_id VARCHAR(11) UNIQUE,
     role VARCHAR(20) NOT NULL CHECK (role IN ('patient', 'doctor', 'admin')),
     is_approved BOOLEAN DEFAULT FALSE,
+    last_login TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

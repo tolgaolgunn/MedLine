@@ -23,6 +23,7 @@ interface Doctor {
   member_since?: string;
   is_approved?: boolean;
   approved_by_admin?: boolean;
+  last_login?: string;
 }
 
 interface DoctorFormData {
@@ -459,7 +460,7 @@ const DoctorManagement = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date().toLocaleDateString('tr-TR')}
+                  {doctor.last_login ? new Date(doctor.last_login).toLocaleDateString('tr-TR') : 'Bilgi yok'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(doctor.member_since || '').toLocaleDateString('tr-TR')}
@@ -637,6 +638,20 @@ const DoctorManagement = () => {
             <DialogTitle>Doktor Düzenle</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleUpdateDoctor} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <Label>Üyelik Tarihi</Label>
+                <div className="text-sm text-gray-600 mt-1">
+                  {selectedDoctor?.member_since ? new Date(selectedDoctor.member_since).toLocaleDateString('tr-TR') : 'Bilgi yok'}
+                </div>
+              </div>
+              <div>
+                <Label>Son Giriş</Label>
+                <div className="text-sm text-gray-600 mt-1">
+                  {selectedDoctor?.last_login ? new Date(selectedDoctor.last_login).toLocaleDateString('tr-TR') : 'Bilgi yok'}
+                </div>
+              </div>
+            </div>
             <div>
               <Label htmlFor="edit-name">Ad Soyad</Label>
               <Input

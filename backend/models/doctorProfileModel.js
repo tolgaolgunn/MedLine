@@ -86,6 +86,7 @@ const getAllDoctorsWithUser = async () => {
       d.district, 
       d.hospital_name,
       u.created_at AS member_since,
+      u.last_login,
       u.is_approved,
       d.approved_by_admin
     FROM users u
