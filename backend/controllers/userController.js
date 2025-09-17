@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const db = require("../config/db");
 const { getUserByEmail, getUserByNationalId,createUser, getUserById, updateUserProfile, updateUserPassword } = require("../models/userModel");
 const { sendResetMail } = require('../services/mailService'); 
 const { createPatientProfile, updatePatientProfile, getPatientProfileByUserId } = require("../models/patientProfileModel");
@@ -64,6 +65,13 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: "Geçersiz e-posta veya şifre." });
     }
+
+    // Update last login time with Turkey timezone
+    const turkeyTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+    await db.query(
+      `UPDATE users SET last_login = $1 WHERE user_id = $2`,
+      [turkeyTime, user.user_id]
+    );
 
     const token = jwt.sign(
       { 
