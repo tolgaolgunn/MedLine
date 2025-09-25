@@ -378,47 +378,47 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
       </div>
 
       {/* Hızlı İstatistikler */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 transition-colors duration-200">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="p-4 sm:p-5 md:p-6 transition-colors duration-200">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg transition-colors duration-200">
-              <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg transition-colors duration-200">
+              <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{upcomingAppointments.length}</p>
+              <p className="text-xl sm:text-2xl font-bold">{upcomingAppointments.length}</p>
               <p className="text-sm text-muted-foreground">Yaklaşan Randevu</p>
             </div>
           </div>
         </Card>
-        <Card className="p-6 transition-colors duration-200">
+        <Card className="p-4 sm:p-5 md:p-6 transition-colors duration-200">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg transition-colors duration-200">
-              <Pill className="w-6 h-6 text-green-600 dark:text-green-400" />
+            <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-900/20 rounded-lg transition-colors duration-200">
+              <Pill className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">3</p>
+              <p className="text-xl sm:text-2xl font-bold">3</p>
               <p className="text-sm text-muted-foreground">Aktif Reçete</p>
             </div>
           </div>
         </Card>
-        <Card className="p-6 transition-colors duration-200">
+        <Card className="p-4 sm:p-5 md:p-6 transition-colors duration-200">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg transition-colors duration-200">
-              <Stethoscope className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <div className="p-2 sm:p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg transition-colors duration-200">
+              <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">8</p>
+              <p className="text-xl sm:text-2xl font-bold">8</p>
               <p className="text-sm text-muted-foreground">Toplam Muayene</p>
             </div>
           </div>
         </Card>
-        <Card className="p-6 transition-colors duration-200">
+        <Card className="p-4 sm:p-5 md:p-6 transition-colors duration-200">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg transition-colors duration-200">
-              <MessageSquare className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            <div className="p-2 sm:p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg transition-colors duration-200">
+              <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">5</p>
+              <p className="text-xl sm:text-2xl font-bold">5</p>
               <p className="text-sm text-muted-foreground">Yeni Mesaj</p>
             </div>
           </div>
