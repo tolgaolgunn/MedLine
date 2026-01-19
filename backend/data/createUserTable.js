@@ -123,7 +123,7 @@ async function initializeDatabase() {
         `);
 
         // Admin kullanıcı ekleme
-        const email = 'admin@healthcare.com';
+        const email = 'admin1@healthcare.com';
         const password = 'Admin1234';
         const fullName = 'Admin User';
         const phoneNumber = '05555555555';

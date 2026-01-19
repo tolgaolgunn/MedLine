@@ -8,12 +8,12 @@ const userRoutes = require('./routes/userRoutes');
 const patientRoutes = require('./routes/patientRoute');
 const doctorRoutes = require('./routes/doctorRoute');
 const adminRoutes = require('./routes/adminRoute');
-
+const aiRoutes = require('./routes/aiRoute');
 const app = express();
 
 app.use(cors({
     origin: 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
@@ -23,6 +23,7 @@ app.use('/api', userRoutes);
 app.use('/api', patientRoutes);
 app.use('/api/doctor', doctorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
 
 initializeDatabase().then(() => {
     const PORT = process.env.PORT || 3005;
