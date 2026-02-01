@@ -1,52 +1,56 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import io
-from PIL import Image
-# Dikkat: Ağır model loader'ları SİLDİK
 from rag_service import RAGService
 from dotenv import load_dotenv
+import uvicorn
 
-# .env yükle (KAGGLE_API_URL burada olmalı)
 load_dotenv()
 
-app = FastAPI(title="MedLine AI Client (Lightweight)")
+app = FastAPI(title="MedLine AI Client (Interface)")
 
+# CORS Ayarları (Frontend bağlantısı için)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"], # Geliştirme aşamasında tüm kaynaklara izin verelim
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# RAG Servisi (Sadece PDF işler ve Kaggle'a sorar)
-rag_service = RAGService()
+rag_service = None
 
-# İstek Modeli
 class ChatRequest(BaseModel):
     question: str
 
 @app.on_event("startup")
 async def startup_event():
-    print(">>> [CLIENT] MedLine İstemcisi Başladı.")
-    print(">>> PDF'ler taranıyor...")
-    rag_service.ingest_documents() # PDF'leri vektöre çevir (Hızlıdır)
+    global rag_service
+    print(">>> [CLIENT] MedLine İstemcisi Başlatılıyor...")
+    try:
+        rag_service = RAGService()
+        # Veritabanını kontrol et / oluştur
+        rag_service.ingest_documents() 
+        print(">>> [CLIENT] RAG Servisi Hazır.")
+    except Exception as e:
+        print(f"!!! KRİTİK HATA: RAG Servisi başlatılamadı: {e}")
+        rag_service = None
 
 @app.post("/api/rag_chat")
 async def rag_chat(req: ChatRequest):
-    """
-    1. PDF'ten bilgi bul.
-    2. Kaggle'daki MedGemma'ya sor.
-    """
+    global rag_service
+    if not rag_service:
+        raise HTTPException(status_code=503, detail="AI Servisi henüz başlatılamadı.")
+
     try:
-        # 1. Yerel veritabanından bağlamı bul (Bilgisayarında çalışır - CPU)
+        # 1. Yerel veritabanından bağlam (context) bul
         context = rag_service.get_relevant_context(req.question)
         if not context:
-            context = "Veritabanında spesifik bilgi yok."
+            context = "Veritabanında bu konuyla ilgili spesifik bir doküman bulunamadı. Genel tıbbi bilginle cevapla."
 
-        # 2. Kaggle'a git ve cevabı al
-        print(f"--> Kaggle'a Soruluyor: {req.question}")
+        print(f"--> Soru Kaggle'a iletiliyor: {req.question}")
+        
+        # 2. Bağlam + Soruyu Kaggle LLM'e gönder
         answer = rag_service.ask_kaggle_llm(context, req.question)
         
         return {"answer": answer}
@@ -56,19 +60,22 @@ async def rag_chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/analyze_image")
-async def analyze_image(file: UploadFile = File(...)):
-    """
-    Görüntüyü alır, Kaggle'a yollar.
-    """
+async def analyze_image(
+    file: UploadFile = File(...),
+    modality: str = Form(...)
+):
+    global rag_service
+    if not rag_service:
+        raise HTTPException(status_code=503, detail="AI Servisi hazır değil.")
+        
     try:
         image_data = await file.read()
-        # Kaggle'a dosyayı forward et (ilet)
-        result = rag_service.ask_kaggle_vision(image_data)
+        # Kaggle'a resmi ve modaliteyi gönder
+        result = rag_service.ask_kaggle_vision(image_data, modality)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    import uvicorn
-    # Bilgisayarında 8000 portunda çalışır
+    # Localhost 8000 portunda çalıştır
     uvicorn.run(app, host="0.0.0.0", port=8000)
