@@ -4,7 +4,7 @@ import glob
 from groq import Groq
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from dotenv import load_dotenv
 
@@ -81,9 +81,14 @@ class RAGService:
     def ask_llm(self, context, question):
         """Groq API kullanarak hızlı yanıt üretir."""
         full_prompt = (
-            "Sen yardımsever bir tıbbi yapay zeka asistanısın.\n"
-            "Görevin, kullanıcının sorularını bağlama (context) dayalı veya genel tıbbi bilginle yanıtlamaktır.\n\n"
-            f"Bağlam Bilgisi:\n{context}\n\n"
+            "Sen MedLine Asistanı'sın, uzman bir medikal yardımcı gibi davranmalısın.\n"
+            "Sana aşağıda 'Bağlam Bilgisi' (Context) sağlanacaktır.\n"
+            "TALİMATLAR:\n"
+            "1. Eğer 'Bağlam Bilgisi' içinde sorunun cevabı varsa, ÖNCELİKLİ OLARAK o bilgiyi kullan.\n"
+            "2. Eğer 'Bağlam Bilgisi' boşsa veya soruyu cevaplamak için yetersizse, KENDİ genel tıbbi bilgilerini kullanarak kapsamlı ve doğru bir cevap ver.\n"
+            "3. Cevapların her zaman Türkçe, profesyonel, nazik ve bilgilendirici olsun.\n"
+            "4. Asla 'bilmiyorum' veya 'dokümanda yok' deme, kullanıcıya her zaman yardımcı ol.\n\n"
+            f"Bağlam Bilgisi (Dokümanlardan Gelen):\n{context if context else 'Bağlam bilgisi bulunmuyor, genel bilgilerini kullan.'}\n\n"
             f"Kullanıcı Sorusu: {question}\n"
             "Cevap (Doğrudan ve Türkçe):"
         )
@@ -105,3 +110,18 @@ class RAGService:
         """Groq Llama-3.2 Vision modeli ile resim analizi (Opsiyonel)"""
         # Şimdilik text odaklı devam ediyoruz, isterseniz vision modelini buraya ekleyebiliriz.
         return {"result": "Vision analizi bu versiyonda Groq Llama-3.2-Vision ile yapılabilir."}
+
+    def speech_to_text(self, audio_file_path):
+        """Groq Whisper modelini kullanarak sesi metne çevirir."""
+        try:
+            with open(audio_file_path, "rb") as file:
+                transcription = self.client.audio.transcriptions.create(
+                    file=(audio_file_path, file.read()),
+                    model="whisper-large-v3",
+                    prompt="Bu, medikal bir asistan ile yapılan Türkçe bir konuşmadır. Tıbbi terimler, hastalıklar ve tedavi yöntemleri içerir.",
+                    language="tr",
+                    response_format="text"
+                )
+            return transcription
+        except Exception as e:
+            return f"Ses dönüştürme hatası: {str(e)}"
