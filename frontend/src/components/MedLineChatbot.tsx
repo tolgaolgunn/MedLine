@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, User, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Bot, User, Loader2, Mic, MicOff } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -16,10 +16,15 @@ const MedLineChatbot: React.FC = () => {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [isListening, setIsListening] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
+
+
 
     useEffect(() => {
         scrollToBottom();
@@ -70,6 +75,71 @@ const MedLineChatbot: React.FC = () => {
             sendMessage();
         }
     };
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                await sendAudioToBackend(audioBlob);
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsListening(true);
+        } catch (error) {
+            console.error("Mikrofon hatası:", error);
+            alert("Mikrofona erişilemedi.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isListening) {
+            mediaRecorderRef.current.stop();
+            setIsListening(false);
+        }
+    };
+
+    const sendAudioToBackend = async (audioBlob: Blob) => {
+        setIsLoading(true);
+        const formData = new FormData();
+        formData.append("file", audioBlob, "recording.webm");
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/api/speech_to_text", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("STT servisi hatası");
+
+            const data = await response.json();
+            if (data.text) {
+                setInput((prev) => (prev ? `${prev} ${data.text}` : data.text));
+            }
+        } catch (error) {
+            console.error("STT Hatası:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleMicClick = () => {
+        if (isListening) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    };
 
     return (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
@@ -110,8 +180,8 @@ const MedLineChatbot: React.FC = () => {
                                 </div>
                                 <div
                                     className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${message.role === "user"
-                                            ? "bg-blue-600 text-white rounded-tr-none"
-                                            : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
+                                        ? "bg-blue-600 text-white rounded-tr-none"
+                                        : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
                                         }`}
                                 >
                                     {message.role === "bot" ? (
@@ -148,8 +218,8 @@ const MedLineChatbot: React.FC = () => {
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyPress}
-                                placeholder="Bir soru sorun..."
-                                className="flex-1 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-gray-700"
+                                placeholder={isListening ? "Dinleniyor..." : "Bir soru sorun..."}
+                                className={`flex-1 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-gray-700 ${isListening ? "bg-red-50 border-red-200" : ""}`}
                                 disabled={isLoading}
                             />
                             <button
@@ -159,6 +229,19 @@ const MedLineChatbot: React.FC = () => {
                             >
                                 <Send className="w-5 h-5" />
                             </button>
+                            <button
+                                onClick={handleMicClick}
+                                disabled={isLoading}
+                                className={`p-2 rounded-full transition-colors ${isListening
+                                    ? "bg-red-500 text-white animate-pulse"
+                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                    }`}
+                                title="Sesle Yaz"
+                            >
+                                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                            </button>
+
+
                         </div>
                     </div>
                 </div>
