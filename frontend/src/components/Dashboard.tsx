@@ -13,11 +13,11 @@ import {
 } from './ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
-import { 
-  Calendar, 
-  Clock, 
-  Activity, 
-  Pill, 
+import {
+  Calendar,
+  Clock,
+  Activity,
+  Pill,
   AlertCircle,
   TrendingUp,
   Heart,
@@ -36,12 +36,12 @@ import { DoctorSearch } from "./DoctorSearch";
 import Appointments from "./Appointments";
 import { MedicalRecords } from "./MedicalRecords";
 import { Prescriptions } from "./prescriptions";
-import { Notifications } from "./notifications";   
+import { Notifications } from "./notifications";
 import { Topbar } from "./Topbar";
 import { DoctorAppointments, DoctorDashboard } from "./doctor";
 import { DoctorProfile } from "./doctor/DoctorProfile";
 import DoctorReports from "./DoctorReports";
-import  Feedback  from "./feedback"; 
+import Feedback from "./feedback";
 import PatientVideoCallButton from "./PatientVideoCallButton";
 import { Settings } from "./Settings";
 
@@ -66,6 +66,7 @@ export function Dashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [userRole, setUserRole] = useState<string>('patient');
+  const [userId, setUserId] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -77,7 +78,8 @@ export function Dashboard() {
         const userObj = JSON.parse(userStr);
         const role = userObj.role || 'patient';
         setUserRole(role);
-        
+        setUserId(userObj.user_id);
+
         // Eğer doktor ise ve /dashboard sayfasındaysa /doctor/dashboard'a yönlendir
         if (role === 'doctor' && window.location.pathname === '/dashboard') {
           navigate('/doctor/dashboard');
@@ -126,7 +128,7 @@ export function Dashboard() {
       if (!res.ok) return;
 
       const data = await res.json();
-      console.log("API'den gelen veri:", data); 
+      console.log("API'den gelen veri:", data);
 
       const now = new Date();
       const upcoming = data
@@ -175,7 +177,7 @@ export function Dashboard() {
     return "İyi Akşamlar";
   };
 
- 
+
 
   const renderContent = () => {
     switch (activeSection) {
@@ -183,7 +185,7 @@ export function Dashboard() {
         return userRole === 'doctor' ? (
           <DoctorDashboard />
         ) : (
-          <DashboardHome 
+          <DashboardHome
             upcomingAppointments={upcomingAppointments}
             loadingAppointments={loadingAppointments}
             getGreetingTime={getGreetingTime}
@@ -214,7 +216,7 @@ export function Dashboard() {
         return userRole === 'doctor' ? (
           <DoctorDashboard />
         ) : (
-          <DashboardHome 
+          <DashboardHome
             upcomingAppointments={upcomingAppointments}
             loadingAppointments={loadingAppointments}
             getGreetingTime={getGreetingTime}
@@ -226,6 +228,11 @@ export function Dashboard() {
 
   return (
     <div className="flex h-screen bg-background">
+      {/* Global Video Call Component for Patients */}
+      {userRole === 'patient' && userId && (
+        <PatientVideoCallButton userId={String(userId)} />
+      )}
+
       <Sidebar
         activeSection={activeSection}
         setActiveSection={setActiveSectionWithRoute}
@@ -258,12 +265,12 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
       }
       userId = userObj.user_id || '';
     }
-  } catch {}
+  } catch { }
 
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<Array<{text: string, timestamp: number}>>([]);
+  const [recentSearches, setRecentSearches] = useState<Array<{ text: string, timestamp: number }>>([]);
   const [searchFilter, setSearchFilter] = useState<string>('all');
   try {
     const userStr = localStorage.getItem('user');
@@ -275,7 +282,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
         userName = userObj.email;
       }
     }
-  } catch {}
+  } catch { }
 
   // Mount olduğunda localStorage'dan yükle
   useEffect(() => {
@@ -290,10 +297,10 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
         console.error("User parse hatası:", err);
       }
     }
-    
+
     const localStorageKey = `recentSearches_${currentUserRole}`;
     const savedSearches = localStorage.getItem(localStorageKey);
-    
+
     if (savedSearches) {
       try {
         setRecentSearches(JSON.parse(savedSearches));
@@ -309,19 +316,19 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
 
 
 
-  
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInMs = now.getTime() - date.getTime();
-    
+
     // Geçersiz tarih kontrolü
     if (isNaN(diffInMs) || diffInMs < 0) {
       return 'Az önce';
     }
-    
+
     const diffInHours = diffInMs / (1000 * 60 * 60);
-    
+
     if (diffInHours < 1) {
       const diffInMinutes = Math.floor(diffInHours * 60);
       return `${diffInMinutes} dakika önce`;
@@ -344,7 +351,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
 
     return recentSearches.filter(search => {
       const searchDate = new Date(search.timestamp);
-      
+
       switch (searchFilter) {
         case 'today':
           return searchDate >= today;
@@ -364,9 +371,8 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      {/* Video Görüşme Bileşeni - Gizli olarak eklendi, sadece doktor aradığında görünecek */}
-      {userId && <PatientVideoCallButton userId={userId} />}
-      
+      {/* Video Görüşme Bileşeni - Dashboard'a taşındı */}
+
       {/* Karşılama Bölümü */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -445,13 +451,13 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
               <div className="text-center py-8 text-muted-foreground">
                 <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>Yaklaşan randevunuz bulunmuyor</p>
-                          <Button 
-                            variant="outline" 
+                <Button
+                  variant="outline"
                   className="mt-4 !border !border-black hover:!border-gray-700 hover:!bg-gray-50"
                   onClick={() => setActiveSection('doctor-search')}
-                          >
+                >
                   Doktor Ara
-                          </Button>
+                </Button>
               </div>
             ) : (
               upcomingAppointments.map((appointment: any) => (
@@ -482,44 +488,44 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                 </div>
               ))
             )}
-            </div>
-          </Card>
+          </div>
+        </Card>
 
         {showDetailModal && selectedAppointment && (
-  <Dialog open={showDetailModal} onOpenChange={(open) => { if (!open) setShowDetailModal(false); }}>
-    <DialogContent className="max-w-md">
-      <DialogHeader>
-        <DialogTitle>Randevu Detayı</DialogTitle>
-      </DialogHeader>
-      <div className="space-y-2">
-        <div><b>Doktor:</b> {selectedAppointment.doctor_name || 'Doktor'}</div>
-        <div><b>Hastane:</b> {selectedAppointment.hospital_name || '-'}</div>
-        <div><b>Tarih:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleDateString('tr-TR') : '-'}</div>
-        <div><b>Saat:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '-'}</div>
-        <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
-        <div><b>Branş:</b> {selectedAppointment.specialty || selectedAppointment.doctor_specialty || '-'}</div>
-        <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'pending' ? 'Beklemede' : selectedAppointment.status === 'cancelled' ? 'İptal Edildi' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : '-'}</div>
-      </div>
-      <Button onClick={() => setShowDetailModal(false)} className="w-full mt-4">Kapat</Button>
-    </DialogContent>
-  </Dialog>
-)}
+          <Dialog open={showDetailModal} onOpenChange={(open) => { if (!open) setShowDetailModal(false); }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Randevu Detayı</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2">
+                <div><b>Doktor:</b> {selectedAppointment.doctor_name || 'Doktor'}</div>
+                <div><b>Hastane:</b> {selectedAppointment.hospital_name || '-'}</div>
+                <div><b>Tarih:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleDateString('tr-TR') : '-'}</div>
+                <div><b>Saat:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '-'}</div>
+                <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
+                <div><b>Branş:</b> {selectedAppointment.specialty || selectedAppointment.doctor_specialty || '-'}</div>
+                <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'pending' ? 'Beklemede' : selectedAppointment.status === 'cancelled' ? 'İptal Edildi' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : '-'}</div>
+              </div>
+              <Button onClick={() => setShowDetailModal(false)} className="w-full mt-4">Kapat</Button>
+            </DialogContent>
+          </Dialog>
+        )}
         <div className="space-y-6">
           {/* Hızlı İşlemler */}
           <Card className="p-6 transition-colors duration-200">
             <h2 className="text-xl font-semibold mb-4">Hızlı İşlemler</h2>
             <div className="space-y-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-blue-50 hover:border-blue-300 transition-colors"
                 onClick={() => setActiveSection('doctor-search')}
               >
                 <Users className="w-5 h-5 text-blue-600" />
                 <span className="text-sm font-medium">Doktor Ara</span>
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-green-50 hover:border-green-300 transition-colors"
                 onClick={() => setActiveSection('appointments')}
               >
@@ -527,8 +533,8 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                 <span className="text-sm font-medium">Randevu Al</span>
               </Button>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-orange-50 hover:border-orange-300 transition-colors"
                 onClick={() => setShowHistoryModal(true)}
               >
@@ -538,17 +544,17 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
             </div>
           </Card>
           {/* Geçmiş Aramalar Modal */}
-           <Dialog open={showHistoryModal} onOpenChange={(open) => {
-             if (!open) {
-               setShowHistoryModal(false);
-             }
-           }}>
-           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto [&>button]:hidden" 
-           onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <Dialog open={showHistoryModal} onOpenChange={(open) => {
+            if (!open) {
+              setShowHistoryModal(false);
+            }
+          }}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto [&>button]:hidden"
+              onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>Geçmiş Aramalar</DialogTitle>
               </DialogHeader>
-              
+
               {/* Filtre Butonları */}
               <div className="flex flex-wrap gap-2 mb-4">
                 <Button
@@ -615,8 +621,8 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                           size="sm"
                           onClick={() => {
                             // Arama yapmak için topbar'daki search fonksiyonunu tetikle
-                            window.dispatchEvent(new CustomEvent('setSearchValue', { 
-                              detail: { value: search.text } 
+                            window.dispatchEvent(new CustomEvent('setSearchValue', {
+                              detail: { value: search.text }
                             }));
                             setShowHistoryModal(false);
                           }}
@@ -635,8 +641,8 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                 )}
               </div>
               <DialogFooter className="flex gap-2">
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={() => {
                     // userRole'a göre doğru localStorage anahtarını kullan
                     const userStr = localStorage.getItem('user');
@@ -649,7 +655,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                         console.error("User parse hatası:", err);
                       }
                     }
-                    
+
                     const localStorageKey = `recentSearches_${currentUserRole}`;
                     setRecentSearches([]);
                     localStorage.removeItem(localStorageKey);
@@ -660,8 +666,8 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                 >
                   Aramaları Temizle
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setShowHistoryModal(false);
                   }}
