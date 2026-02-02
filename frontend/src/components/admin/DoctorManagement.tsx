@@ -400,7 +400,7 @@ const DoctorManagement = () => {
           placeholder="Doktor ara..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
+          className="max-w-sm border-2 border-black"
         />
       </div>
 
