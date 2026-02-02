@@ -549,7 +549,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
 
       {/* Detay Modalı */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-2xl max-h-[calc(100vh-3rem)] sm:max-h-[90vh] overflow-y-auto mx-auto my-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Stethoscope className="w-5 h-5" />

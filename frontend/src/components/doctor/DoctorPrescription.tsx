@@ -1130,7 +1130,7 @@ const PrescriptionManagement: React.FC = () => {
 
       {selectedPrescription && (
         <Dialog open={!!selectedPrescription} onOpenChange={() => setSelectedPrescription(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-4xl max-h-[calc(100vh-3rem)] sm:max-h-[80vh] overflow-y-auto mx-auto my-auto" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Reçete Detayları - {selectedPrescription.patientName}</DialogTitle>
             </DialogHeader>
@@ -1198,7 +1198,7 @@ const PrescriptionManagement: React.FC = () => {
 
       {editingPrescription && (
         <Dialog open={isEditPrescriptionOpen} onOpenChange={setIsEditPrescriptionOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-4xl max-h-[calc(100vh-3rem)] sm:max-h-[90vh] overflow-y-auto mx-auto my-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Reçete Düzenle - {editingPrescription.patientName}</DialogTitle>
             </DialogHeader>

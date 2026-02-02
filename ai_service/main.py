@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import uvicorn
 import os
 import shutil
+import socket
 from contextlib import asynccontextmanager
 
 load_dotenv()
@@ -62,5 +63,38 @@ async def stt_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def is_port_in_use(port):
+    """Port'un kullanımda olup olmadığını kontrol eder"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(('0.0.0.0', port))
+            return False
+        except OSError:
+            return True
+
+def find_available_port(start_port=8000, max_attempts=10):
+    """Kullanılabilir bir port bulur"""
+    for i in range(max_attempts):
+        port = start_port + i
+        if not is_port_in_use(port):
+            return port
+    return None
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8000))
+    
+    # Port kontrolü
+    if is_port_in_use(port):
+        print(f">>> [UYARI] Port {port} kullanımda! Alternatif port aranıyor...")
+        available_port = find_available_port(port)
+        if available_port:
+            port = available_port
+            print(f">>> [BİLGİ] Port {port} kullanılacak.")
+        else:
+            print(">>> [HATA] Uygun port bulunamadı!")
+            exit(1)
+    
+    print(f">>> [SERVER] AI Service başlatılıyor: http://0.0.0.0:{port}")
+    print(f">>> [SERVER] API Dokümantasyonu: http://localhost:{port}/docs")
+    
+    uvicorn.run(app, host="0.0.0.0", port=port)

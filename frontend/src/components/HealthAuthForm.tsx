@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from './ui/form'  ;
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 
 type AuthMode = "login" | "register" | "forgot-password" | "reset-password" | "reset-success";
 
@@ -67,6 +68,8 @@ export function HealthAuthForm() {
   const [showConfirmResetPassword, setShowConfirmResetPassword] = useState(false);
   const [isCheckingPassword, setIsCheckingPassword] = useState(false);
   const [isSamePassword, setIsSamePassword] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -1118,9 +1121,27 @@ export function HealthAuthForm() {
                         className="border-slate-300 data-[state=checked]:bg-slate-800 data-[state=checked]:border-slate-800"
                       />
                       <span>
-                        <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-slate-800 hover:underline cursor-pointer inline">Kullanım Koşulları</a>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShowTermsModal(true);
+                          }}
+                          className="text-slate-800 hover:underline cursor-pointer inline"
+                        >
+                          Kullanım Koşulları
+                        </button>
                         <span> ve </span>
-                        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-slate-800 hover:underline cursor-pointer inline">Gizlilik Politikası</a>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShowPrivacyModal(true);
+                          }}
+                          className="text-slate-800 hover:underline cursor-pointer inline"
+                        >
+                          Gizlilik Politikası
+                        </button>
                         <span>'nı okudum ve kabul ediyorum.</span>
                       </span>
                     </Label>
@@ -1162,6 +1183,218 @@ export function HealthAuthForm() {
           </div>
         </div>
       </div>
+
+      {/* Kullanım Koşulları Modal */}
+      <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
+        <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-3xl max-h-[calc(100vh-3rem)] sm:max-h-[90vh] overflow-y-auto mx-auto my-auto">
+          <DialogHeader>
+            <DialogTitle>Kullanım Koşulları</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm text-gray-700">
+            <div>
+              <h3 className="font-semibold text-base mb-2">1. Genel Hükümler</h3>
+              <p>
+                MedLine sağlık platformu , kullanıcılarına sağlık hizmetleri sunmak amacıyla tasarlanmıştır. 
+                Bu kullanım koşulları, Platform'un kullanımına ilişkin hak ve yükümlülükleri düzenlemektedir. 
+                Platform'u kullanarak, bu koşulları kabul etmiş sayılırsınız.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">2. Hizmet Kapsamı</h3>
+              <p>
+                MedLine platformu aşağıdaki hizmetleri sunmaktadır:
+              </p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li>Doktor-hasta randevu yönetimi</li>
+                <li>Online ve yüz yüze randevu seçenekleri</li>
+                <li>Reçete yönetimi ve görüntüleme</li>
+                <li>Tıbbi kayıt takibi</li>
+                <li>AI destekli sağlık danışmanlığı</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">3. Kullanıcı Yükümlülükleri</h3>
+              <p>Kullanıcılar aşağıdaki yükümlülüklere uymakla sorumludur:</p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li>Doğru, güncel ve eksiksiz bilgi sağlamak</li>
+                <li>Hesap güvenliğini sağlamak ve şifreyi gizli tutmak</li>
+                <li>Platform'u yasalara aykırı amaçlarla kullanmamak</li>
+                <li>Başkalarının haklarına saygı göstermek</li>
+                <li>Sahte veya yanıltıcı bilgi vermemek</li>
+                <li>Kullanım koşullarını ve gizlilik politikasını okumak ve kabul etmek</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">4. Randevu İptali ve Değişiklik</h3>
+              <p>
+                Randevularınızı en az 24 saat öncesinden iptal veya değiştirme hakkına sahipsiniz. 
+                Geç iptaller için doktorunuzla iletişime geçmeniz gerekmektedir.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">5. Sorumluluk Reddi</h3>
+              <p>
+                Platform, sağlık hizmetlerinin yerine geçmez. Acil durumlarda 112'yi arayınız. 
+                Platform üzerinden verilen bilgiler genel bilgilendirme amaçlıdır ve profesyonel tıbbi tavsiye yerine geçmez.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">6. Fikri Mülkiyet</h3>
+              <p>
+                Platform'un tüm içeriği, tasarımı ve yazılımı MedLine'a aittir ve telif hakları ile korunmaktadır.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">7. Değişiklikler</h3>
+              <p>
+                MedLine, bu kullanım koşullarını herhangi bir zamanda değiştirme hakkını saklı tutar. 
+                Değişiklikler Platform üzerinden duyurulacaktır.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">8. İletişim</h3>
+              <p>
+                Kullanım koşulları ile ilgili sorularınız için bizimle iletişime geçebilirsiniz.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Gizlilik Politikası Modal */}
+      <Dialog open={showPrivacyModal} onOpenChange={setShowPrivacyModal}>
+        <DialogContent className="max-w-[calc(100%-3rem)] sm:max-w-3xl max-h-[calc(100vh-3rem)] sm:max-h-[90vh] overflow-y-auto mx-auto my-auto">
+          <DialogHeader>
+            <DialogTitle>Gizlilik Politikası ve KVKK Aydınlatma Metni</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm text-gray-700">
+            <div>
+              <h3 className="font-semibold text-base mb-2">1. Veri Sorumlusu</h3>
+              <p>
+                MedLine sağlık platformu olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında 
+                veri sorumlusu sıfatıyla kişisel verilerinizi işlemekteyiz.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">2. İşlenen Kişisel Veriler</h3>
+              <p>Aşağıdaki kişisel verileriniz işlenmektedir:</p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li><strong>Kimlik Bilgileri:</strong> Ad, soyad, TC Kimlik No, doğum tarihi</li>
+                <li><strong>İletişim Bilgileri:</strong> E-posta, telefon numarası, adres</li>
+                <li><strong>Sağlık Verileri:</strong> Tıbbi geçmiş, randevu kayıtları, reçete bilgileri, kan grubu</li>
+                <li><strong>Hesap Bilgileri:</strong> Kullanıcı adı, şifre (şifrelenmiş)</li>
+                <li><strong>İşlem Bilgileri:</strong> Randevu geçmişi, platform kullanım kayıtları</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">3. Veri İşleme Amaçları</h3>
+              <p>Kişisel verileriniz aşağıdaki amaçlarla işlenmektedir:</p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li>Sağlık hizmetlerinin sunulması ve yönetimi</li>
+                <li>Randevu oluşturma ve takibi</li>
+                <li>Reçete yönetimi</li>
+                <li>Hasta-doktor iletişiminin sağlanması</li>
+                <li>Yasal yükümlülüklerin yerine getirilmesi</li>
+                <li>Platform güvenliğinin sağlanması</li>
+                <li>Hizmet kalitesinin iyileştirilmesi</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">4. Veri İşleme Hukuki Sebepleri</h3>
+              <p>Kişisel verileriniz aşağıdaki hukuki sebeplere dayanarak işlenmektedir:</p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li>KVKK Madde 5/2-a: Açık rıza</li>
+                <li>KVKK Madde 5/2-c: Sözleşmenin kurulması veya ifası</li>
+                <li>KVKK Madde 5/2-e: Veri sorumlusunun hukuki yükümlülüğünü yerine getirmesi</li>
+                <li>KVKK Madde 6/3: Sağlık hizmetlerinin planlanması, yönetimi ve finansmanı</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">5. Verilerin Paylaşılması</h3>
+              <p>
+                Kişisel verileriniz, yalnızca yasal zorunluluklar ve hizmet sunumu için gerekli olduğu ölçüde, 
+                aşağıdaki taraflarla paylaşılabilir:
+              </p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li>Randevu aldığınız doktorlar ve sağlık kuruluşları</li>
+                <li>Yasal yükümlülükler gereği yetkili kamu kurum ve kuruluşları</li>
+                <li>Hizmet sağlayıcılarımız (sunucu, hosting vb.) - sadece teknik destek amaçlı</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">6. Veri Güvenliği</h3>
+              <p>
+                Kişisel verilerinizin güvenliği için teknik ve idari önlemler alınmaktadır:
+              </p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li>SSL/TLS şifreleme protokolleri</li>
+                <li>Güvenli veritabanı yönetimi</li>
+                <li>Erişim kontrolü ve yetkilendirme</li>
+                <li>Düzenli güvenlik denetimleri</li>
+                <li>Şifrelerin hash'lenerek saklanması</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">7. KVKK Kapsamındaki Haklarınız</h3>
+              <p>KVKK Madde 11 uyarınca aşağıdaki haklara sahipsiniz:</p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme</li>
+                <li>İşlenmişse bilgi talep etme</li>
+                <li>İşleme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme</li>
+                <li>Yurt içi/yurt dışı aktarılan üçüncü kişileri bilme</li>
+                <li>Eksik veya yanlış işlenmişse düzeltilmesini isteme</li>
+                <li>KVKK'da öngörülen şartlar çerçevesinde silinmesini veya yok edilmesini isteme</li>
+                <li>Düzeltme, silme, yok etme işlemlerinin aktarıldığı üçüncü kişilere bildirilmesini isteme</li>
+                <li>İşlenen verilerin münhasıran otomatik sistemler ile analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme</li>
+                <li>Kanuna aykırı işleme nedeniyle zarara uğramanız halinde zararın giderilmesini talep etme</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">8. Çerezler</h3>
+              <p>
+                Platform, kullanıcı deneyimini iyileştirmek için çerezler kullanmaktadır. 
+                Çerez tercihlerinizi tarayıcı ayarlarınızdan yönetebilirsiniz.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">9. Veri Saklama Süresi</h3>
+              <p>
+                Kişisel verileriniz, işleme amacının gerektirdiği süre boyunca ve yasal saklama süreleri 
+                (örneğin, sağlık kayıtları için 10 yıl) boyunca saklanmaktadır.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-base mb-2">10. İletişim ve Başvuru</h3>
+              <p>
+                KVKK kapsamındaki haklarınızı kullanmak için bizimle iletişime geçebilirsiniz. 
+                Ayrıca, Kişisel Verileri Koruma Kurulu'na şikayette bulunma hakkınız saklıdır.
+              </p>
+            </div>
+
+            <div className="pt-4 border-t">
+              <p className="text-xs text-gray-500">
+                Bu politika KVKK'ya uygun olarak hazırlanmıştır. 
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

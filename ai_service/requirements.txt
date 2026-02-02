@@ -6,6 +6,8 @@ python-dotenv
 langchain
 langchain-community
 langchain-huggingface
+langchain-chroma
 pypdf
 chromadb
 sentence-transformers
+groq
