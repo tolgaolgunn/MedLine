@@ -5,9 +5,13 @@ import { Play, Mic, MicOff, Video, VideoOff, PhoneOff, Star } from "lucide-react
 import getSocket from "../../lib/socket";
 
 interface Appointment {
+  appointmentId: number;
   id: number;
-  patientId: number;
-  patientName: string;
+  appointment_id?: number;
+  patientId?: number;
+  patient_id?: number;
+  patientName?: string;
+  patientname?: string;
   patientAge: number;
   specialty: string;
   date: string;
@@ -33,7 +37,8 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [socketId, setSocketId] = useState<string | null>(null);
   const [patientId, setPatientId] = useState<string>("");
-  
+  const [connectionStatus, setConnectionStatus] = useState<string>("Hazırlanıyor...");
+
   // Yeni state'ler
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showRating, setShowRating] = useState(false);
@@ -45,6 +50,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
+  const iceCandidatesQueue = useRef<RTCIceCandidateInit[]>([]);
 
   const socket = getSocket();
 
@@ -113,97 +119,95 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
       status: 'Gönderildi' as const,
       createdAt: new Date().toISOString()
     };
-    
+
     // LocalStorage'dan mevcut geri bildirimleri al
     const existingFeedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
     existingFeedbacks.push(feedback);
     localStorage.setItem('feedbacks', JSON.stringify(existingFeedbacks));
-    
+
     setShowRating(false);
     setRating(0);
     setComment("");
   };
 
-  // ✅ Video görüşmesi başlat
+  // Remote stream geldiğinde video elementine bağla
+  useEffect(() => {
+    if (remoteStream && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
+  const patientIdRef = useRef<string>("");
+
   const startVideoCall = async () => {
     setOpen(true);
-
-    // Find current appointment and set patientId
     const current = appointments.find((app) => isCurrentAppointment(app));
     if (!current) return;
-    setPatientId(String(current.patientId));
+
+    // @ts-ignore
+    const pId = String(current.patient_id || current.patientId);
+    setPatientId(pId);
+    patientIdRef.current = pId;
 
     try {
-      // Kamera ve mikrofon erişimi
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
-
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.muted = true; // Local video muted to prevent echo
       }
       setMicOn(true);
       setCamOn(true);
 
-      // WebRTC Peer oluştur
-      const peer = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      });
+      const peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
       peerRef.current = peer;
 
-      // Local stream ekle
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
-      // ICE Candidate gönder
       peer.onicecandidate = (event) => {
-        if (event.candidate && patientId) {
-          socket.emit("signal", {
-            to: patientId,
-            data: { type: "candidate", candidate: event.candidate },
-          });
+        if (event.candidate) {
+          socket.emit("signal", { to: pId, data: { type: "candidate", candidate: event.candidate } });
         }
       };
 
-      // Remote stream al
       peer.ontrack = (event) => {
-        const [remoteStreamObj] = event.streams;
-        setRemoteStream(remoteStreamObj);
-        if (remoteVideoRef.current)
-          remoteVideoRef.current.srcObject = remoteStreamObj;
+        setRemoteStream(event.streams[0]);
       };
 
-      // Offer oluştur ve gönder
-      if (patientId) {
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-        socket.emit("signal", { to: patientId, data: { type: "offer", offer } });
-      }
+      peer.oniceconnectionstatechange = () => {
+        console.log("ICE Connection State Change:", peer.iceConnectionState);
+        setConnectionStatus(peer.iceConnectionState);
+      };
 
-      // Signaling eventleri dinle
-      const handleSignal = async ({ from, data }: any) => {
+      peer.onconnectionstatechange = () => {
+        console.log("Peer Connection State Change:", peer.connectionState);
+        if (peer.connectionState === 'connected') {
+          setConnectionStatus("Bağlandı");
+        }
+      };
+
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      socket.emit("signal", { to: pId, data: { type: "offer", offer } });
+
+      socket.on("signal", async ({ data }) => {
         if (!peerRef.current) return;
-
         if (data.type === "answer") {
-          await peerRef.current.setRemoteDescription(
-            new RTCSessionDescription(data.answer)
-          );
+          await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
         } else if (data.type === "candidate") {
           try {
-            await peerRef.current.addIceCandidate(
-              new RTCIceCandidate(data.candidate)
-            );
+            await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
           } catch (e) {
-            console.error("ICE Candidate error:", e);
+            console.error("Error adding ice candidate", e);
           }
+        } else if (data.type === "reject") {
+          alert("Hasta aramayı reddetti.");
+          handleExit();
         }
-      };
-
-      socket.on("signal", handleSignal);
+      });
     } catch (err) {
-      console.error("Camera access error:", err);
-      setOpen(false); // Hata durumunda dialog'u kapat
+      console.error(err);
+      setOpen(false);
     }
   };
 
@@ -239,7 +243,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
         peerRef.current = null;
       }
       setRemoteStream(null);
-      
+
       // Signal event listener'ını temizle
       socket.off("signal");
     }
@@ -255,7 +259,8 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
             isCurrentAppointment(app)
           );
           if (current) {
-            handleStartAppointment(current.id);
+            // @ts-ignore
+            handleStartAppointment(current.appointment_id || current.id);
             startVideoCall();
           }
         }}
@@ -264,61 +269,54 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
         Online Randevuyu Başlat
       </Button>
 
-      <Dialog open={open} onOpenChange={() => {}}>
-        <DialogContent 
-          className="max-w-full w-full [&>button]:hidden" 
-          onPointerDownOutside={(e) => e.preventDefault()}
-        >
+      <Dialog open={open} onOpenChange={() => { }}>
+        <DialogContent className="max-w-[95vw] md:max-w-4xl w-full p-6 [&>button]:hidden">
           <DialogHeader>
-            <DialogTitle>Görüntülü Sohbet</DialogTitle>
+            <DialogTitle className="text-xl font-bold border-b pb-2">Görüntülü Sohbet <span className="text-sm font-normal text-gray-500">({connectionStatus})</span></DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col items-center gap-4">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full max-w-[2500px] h-[400px] rounded-lg object-cover bg-black"
-            />
-            {remoteStream && (
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 w-full h-full min-h-[500px]">
+            {/* SİZ (Doktor) */}
+            <div className="relative w-full h-full bg-slate-100 rounded-2xl overflow-hidden border shadow-inner">
               <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className="w-full max-w-[2500px] h-[400px] rounded-lg object-cover bg-black mt-4 border-2 border-blue-400"
+                ref={videoRef}
+                autoPlay playsInline muted
+                className="w-full h-full object-cover scale-x-[-1]"
               />
-            )}
-            <div className="flex gap-4 justify-center mt-2">
-              <Button
-                onClick={toggleMic}
-                variant={micOn ? "default" : "outline"}
-                size="icon"
-              >
-                {micOn ? (
-                  <Mic className="w-6 h-6" />
-                ) : (
-                  <MicOff className="w-6 h-6 text-red-500" />
-                )}
-              </Button>
-              <Button
-                onClick={toggleCam}
-                variant={camOn ? "default" : "outline"}
-                size="icon"
-              >
-                {camOn ? (
-                  <Video className="w-6 h-6" />
-                ) : (
-                  <VideoOff className="w-6 h-6 text-red-500" />
-                )}
-              </Button>
-              <Button
-                onClick={handleExit}
-                variant="destructive"
-                size="icon"
-              >
-                <PhoneOff className="w-6 h-6" />
-              </Button>
+              <span className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1 rounded-md text-sm font-medium backdrop-blur-sm">
+                Siz
+              </span>
             </div>
+
+            {/* HASTA */}
+            <div className="relative w-full h-full bg-black rounded-2xl overflow-hidden border-2 border-blue-500 shadow-lg">
+              {remoteStream ? (
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-white/50 animate-pulse">
+                  Bağlantı bekleniyor...
+                </div>
+              )}
+              <span className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1 rounded-md text-sm font-medium backdrop-blur-sm">
+                Hasta
+              </span>
+            </div>
+          </div>
+
+          <div className="flex gap-6 justify-center mt-6">
+            <Button onClick={toggleMic} variant={micOn ? "secondary" : "destructive"} size="lg" className="rounded-full w-14 h-14 shadow-md">
+              {micOn ? <Mic /> : <MicOff />}
+            </Button>
+            <Button onClick={toggleCam} variant={camOn ? "secondary" : "destructive"} size="lg" className="rounded-full w-14 h-14 shadow-md">
+              {camOn ? <Video /> : <VideoOff />}
+            </Button>
+            <Button onClick={handleExit} variant="destructive" size="lg" className="rounded-full px-8 h-14 flex gap-2 font-bold shadow-md">
+              <PhoneOff /> Görüşmeyi Sonlandır
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -346,9 +344,9 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
       </Dialog>
 
       {/* Değerlendirme Modalı */}
-      <Dialog open={showRating} onOpenChange={() => {}}>
-        <DialogContent 
-          className="max-w-md [&>button]:hidden" 
+      <Dialog open={showRating} onOpenChange={() => { }}>
+        <DialogContent
+          className="max-w-md [&>button]:hidden"
           onPointerDownOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
@@ -358,7 +356,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            
+
             {/* Yıldız Değerlendirmesi */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -372,13 +370,12 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
                     onClick={() => setRating(star)}
                     className="text-2xl hover:scale-110 transition-transform"
                   >
-                                         <Star
-                       className={`w-6 h-6 ${
-                         star <= rating
-                           ? "text-black fill-current"
-                           : "text-gray-300"
-                       }`}
-                     />
+                    <Star
+                      className={`w-6 h-6 ${star <= rating
+                        ? "text-black fill-current"
+                        : "text-gray-300"
+                        }`}
+                    />
                   </button>
                 ))}
               </div>
@@ -397,28 +394,28 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
               <label className="text-sm font-medium text-gray-700 mb-2 block">
                 Yorum
               </label>
-                             <textarea
-                 value={comment}
-                 onChange={(e) => setComment(e.target.value)}
-                 placeholder="MedLine hakkında yorumunuzu yazın..."
-                 className="w-full p-3 border border-black rounded-md resize-none focus:outline-none focus:ring-0 focus:border-black"
-                 rows={3}
-                 maxLength={500}
-               />
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="MedLine hakkında yorumunuzu yazın..."
+                className="w-full p-3 border border-black rounded-md resize-none focus:outline-none focus:ring-0 focus:border-black"
+                rows={3}
+                maxLength={500}
+              />
               <p className="text-xs text-gray-500 mt-1">
                 {comment.length}/500 karakter
               </p>
             </div>
           </div>
           <DialogFooter className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={handleRatingExit} 
+            <Button
+              variant="outline"
+              onClick={handleRatingExit}
               className="border-2 border-gray-300 shadow-sm"
             >
               İptal
             </Button>
-            <Button 
+            <Button
               onClick={submitRating}
               disabled={rating === 0}
               className="border-2 border-gray-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"

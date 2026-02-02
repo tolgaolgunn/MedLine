@@ -6,12 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { PageHeader } from './ui/PageHeader';
-import { 
-  Calendar, 
-  Clock, 
-  Filter, 
-  Eye, 
-  Play, 
+import {
+  Calendar,
+  Clock,
+  Filter,
+  Eye,
+  Play,
   FileText,
   User,
   Stethoscope,
@@ -69,49 +69,49 @@ const Appointments: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   // Fetch appointments
-const fetchAppointments = async () => {
-  try {
-    setLoading(true);
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const token = localStorage.getItem('token');
-    
-    if (!user.user_id) {
-      throw new Error('Kullanıcı bilgileri alınamadı');
-    }
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const token = localStorage.getItem('token');
 
-    if (!token) {
-      throw new Error('Oturum bilgisi bulunamadı');
-    }
+      if (!user.user_id) {
+        throw new Error('Kullanıcı bilgileri alınamadı');
+      }
 
-    const response = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Randevular yüklenirken bir hata oluştu');
-    }
-    
-    const data = await response.json();
-    
-    // API'den gelen veriyi işle
-    const formattedAppointments = data.map((apt: any) => ({
-      ...apt,
-      date: new Date(apt.datetime).toLocaleDateString('tr-TR'),
-      time: new Date(apt.datetime).toLocaleTimeString('tr-TR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }));
+      if (!token) {
+        throw new Error('Oturum bilgisi bulunamadı');
+      }
 
-    setAppointments(formattedAppointments);
-  } catch (err) {
-    setError(err instanceof Error ? err.message : 'Bir hata oluştu');
-  } finally {
-    setLoading(false);
-  }
-};
+      const response = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Randevular yüklenirken bir hata oluştu');
+      }
+
+      const data = await response.json();
+
+      // API'den gelen veriyi işle
+      const formattedAppointments = data.map((apt: any) => ({
+        ...apt,
+        date: new Date(apt.datetime).toLocaleDateString('tr-TR'),
+        time: new Date(apt.datetime).toLocaleTimeString('tr-TR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }));
+
+      setAppointments(formattedAppointments);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch appointments on component mount
   useEffect(() => {
@@ -121,7 +121,7 @@ const fetchAppointments = async () => {
   // Randevunun şu anda aktif olup olmadığını kontrol et (30 dakika öncesi ve 10 dakika sonrası)
   const isCurrentAppointment = (appointment: Appointment) => {
     if (!appointment.date || !appointment.time) return false;
-    
+
     const [day, month, year] = appointment.date.split('.');
     const [hour, minute] = appointment.time.split(':');
     const appointmentDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
@@ -151,15 +151,15 @@ const fetchAppointments = async () => {
   // Online randevu başlatma işlemi
   const handleStartAppointment = (appointmentId: number) => {
     console.log('Online randevu başlatılıyor:', appointmentId);
-    alert('Video görüşmesi başlatılıyor...');
+    alert('Lütfen doktorunuzun aramasını bekleyin. Çağrı geldiğinde "Görüşmeye Katıl" penceresi otomatik olarak açılacaktır.');
   };
 
   // Randevu iptal etme işlemi
   const handleCancelAppointment = async (appointment: Appointment) => {
     try {
       // Örnek veri olduğu için sadece state'i güncelle
-      setAppointments(prev => prev.map(app => 
-        app.appointment_id === appointment.appointment_id 
+      setAppointments(prev => prev.map(app =>
+        app.appointment_id === appointment.appointment_id
           ? { ...app, status: 'cancelled' as const }
           : app
       ));
@@ -186,7 +186,7 @@ const fetchAppointments = async () => {
   const handleQuickActionToggle = (action: string) => {
     setTempFilters(prev => ({
       ...prev,
-      activeFilters: prev.activeFilters.includes(action) 
+      activeFilters: prev.activeFilters.includes(action)
         ? prev.activeFilters.filter(f => f !== action)
         : [...prev.activeFilters, action]
     }));
@@ -266,20 +266,20 @@ const fetchAppointments = async () => {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
-    
+
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     return appointments.filter(appointment => {
       if (!appointment.date || !appointment.time) return false;
-      
+
       // Tarih ve saat kontrolü için appointment datetime'ını oluştur
       const [day, month, year] = appointment.date.split('.');
       const [hour, minute] = appointment.time.split(':');
       const appointmentDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
-      
+
       // Geçmiş randevuları filtrele
       if (appointmentDate < today) {
         return false;
@@ -335,13 +335,13 @@ const fetchAppointments = async () => {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-     {/* Sayfa Başlığı */}
+      {/* Sayfa Başlığı */}
       <div className="mb-8">
-       <PageHeader
-       title='Randevu Yönetimi'
-       subtitle='Randevularını görüntüleyin ve yönetin.'
-       ></PageHeader>
-      </div> 
+        <PageHeader
+          title='Randevu Yönetimi'
+          subtitle='Randevularını görüntüleyin ve yönetin.'
+        ></PageHeader>
+      </div>
 
       {/* Ana İçerik */}
       <div className="w-full">
@@ -353,8 +353,8 @@ const fetchAppointments = async () => {
               <h2 className="text-xl font-semibold">Randevular</h2>
               <div className="flex items-center gap-3">
                 {/* Filtre Butonu */}
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex items-center gap-2 border-2 border-gray-300 shadow-sm"
                   onClick={handleOpenFilterModal}
                 >
@@ -402,7 +402,7 @@ const fetchAppointments = async () => {
                           {appointment.date} - {appointment.time} • {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}
                         </p>
                       </div>
-                      
+
                       {/* Aksiyon Butonları */}
                       <div className="flex items-center gap-2">
                         {isCurrentAppointment(appointment) && appointment.type === 'online' && appointment.status === 'confirmed' && (
@@ -416,7 +416,7 @@ const fetchAppointments = async () => {
                             Görüşmeye Katıl
                           </Button>
                         )}
-                        
+
                         <button
                           type="button"
                           onClick={() => {
@@ -427,7 +427,7 @@ const fetchAppointments = async () => {
                         >
                           Detay
                         </button>
-                        
+
                         {appointment.status === 'confirmed' && !isCurrentAppointment(appointment) && (
                           <Button
                             size="sm"
@@ -477,8 +477,8 @@ const fetchAppointments = async () => {
               {/* Özel Tarih Aralığı Girişleri */}
               {tempFilters.filter === 'custom' && (
                 <div className="mt-3 flex gap-2">
-                  <Input 
-                    type="date" 
+                  <Input
+                    type="date"
                     value={tempFilters.startDate}
                     className="w-full"
                     onChange={(e) => {
@@ -487,8 +487,8 @@ const fetchAppointments = async () => {
                     }}
                     placeholder="Başlangıç"
                   />
-                  <Input 
-                    type="date" 
+                  <Input
+                    type="date"
                     value={tempFilters.endDate}
                     className="w-full"
                     onChange={(e) => {
@@ -518,19 +518,19 @@ const fetchAppointments = async () => {
                 ))}
               </div>
             </div>
-            
+
             {/* Aksiyon Butonları */}
             <div className="pt-4 border-t space-y-2">
-              <Button 
+              <Button
                 onClick={applyFilters}
                 disabled={!hasUnsavedChanges}
                 className="w-full border-2 border-gray-300 shadow-sm"
               >
                 Filtreleri Uygula
               </Button>
-              
+
               {(tempFilters.filter !== 'all' || tempFilters.activeFilters.length > 0) && (
-                <Button 
+                <Button
                   variant="outline"
                   onClick={clearAllFilters}
                   className="w-full border-2 border-gray-300 shadow-sm"
@@ -632,8 +632,8 @@ const fetchAppointments = async () => {
             <Button variant="outline" onClick={() => setShowCancelConfirm(false)} className="border-2 border-gray-300 shadow-sm">
               İptal
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={() => appointmentToCancel && handleCancelAppointment(appointmentToCancel)}
               className="border-2 border-gray-300 shadow-sm"
             >
