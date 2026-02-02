@@ -314,7 +314,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   placeholder="Geri bildirim başlığını girin"
                   required
                   maxLength={TITLE_LIMIT}
-                  className="min-h-[40px] resize-none"
+                  className="min-h-[40px] resize-none border-2 border-gray-300 focus:border-gray-400 focus:outline-none"
                 />
                 <div className="flex justify-end text-xs mt-1">
                   <span className="text-muted-foreground">
@@ -335,7 +335,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                     }
                   }}
                   placeholder="Geri bildiriminizi detaylı olarak yazın..."
-                  className="min-h-[120px] resize-none"
+                  className="min-h-[120px] resize-none border-2 border-gray-300 focus:border-gray-400 focus:outline-none"
                   required
                   maxLength={MESSAGE_LIMIT}
                 />
@@ -483,7 +483,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 placeholder="Geri bildirim başlığını girin"
                 required
                 maxLength={TITLE_LIMIT}
-                className="min-h-[40px] resize-none"
+                className="min-h-[40px] resize-none border-2 border-gray-300 focus:border-gray-400 focus:outline-none"
               />
               <div className="flex justify-end text-xs mt-1">
                 <span className="text-muted-foreground">
@@ -504,7 +504,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   }
                 }}
                 placeholder="Geri bildiriminizi detaylı olarak yazın..."
-                className="min-h-[120px] resize-none"
+                className="min-h-[120px] resize-none border-2 border-gray-300 focus:border-gray-400 focus:outline-none"
                 required
                 maxLength={MESSAGE_LIMIT}
               />
@@ -562,14 +562,14 @@ const handleSubmit = async (e: React.FormEvent) => {
               
               <div>
                 <span className="font-semibold">Başlık:</span>
-                <div className="mt-1 p-3 bg-secondary/10 rounded-md">
+                <div className="mt-1 p-3 bg-gray-100 rounded-md">
                   {selectedFeedback.title}
                 </div>
               </div>
 
               <div>
                 <span className="font-semibold">Mesaj:</span>
-                <div className="mt-1 p-3 bg-secondary/10 rounded-md">
+                <div className="mt-1 p-3 bg-gray-100 rounded-md">
                   {selectedFeedback.message}
                 </div>
               </div>
@@ -577,7 +577,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               {selectedFeedback.admin_response && (
                 <div>
                   <span className="font-semibold">Yanıt:</span>
-                  <div className="mt-1 p-3 bg-primary/10 rounded-md">
+                  <div className="mt-1 p-3 bg-gray-100 rounded-md">
                     {selectedFeedback.admin_response}
                   </div>
                 </div>

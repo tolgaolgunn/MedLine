@@ -691,7 +691,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                   {selected.general_instructions && (
                     <div className="mb-3">
                       <span className="font-medium text-gray-700">Genel Talimatlar:</span>
-                      <p className="text-gray-700 bg-blue-50 p-3 rounded-lg mt-1">
+                      <p className="text-gray-700 bg-gray-100 p-3 rounded-lg mt-1">
                         {selected.general_instructions}
                       </p>
                     </div>
@@ -700,7 +700,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                   {selected.usage_instructions && (
                     <div>
                       <span className="font-medium text-gray-700">Kullanım Talimatları:</span>
-                      <p className="text-gray-700 bg-green-50 p-3 rounded-lg mt-1">
+                      <p className="text-gray-700 bg-gray-100 p-3 rounded-lg mt-1">
                         {selected.usage_instructions}
                       </p>
                     </div>
