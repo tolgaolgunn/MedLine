@@ -40,7 +40,7 @@ import { Notifications } from "./notifications";
 import { Topbar } from "./Topbar";
 import { DoctorAppointments, DoctorDashboard } from "./doctor";
 import { DoctorProfile } from "./doctor/DoctorProfile";
-import DoctorReports from "./DoctorReports";
+import DoctorReports from "./doctor/DoctorReports";
 import Feedback from "./feedback";
 import PatientVideoCallButton from "./PatientVideoCallButton";
 import { Settings } from "./Settings";
