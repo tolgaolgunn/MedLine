@@ -1,6 +1,7 @@
     const express = require('express');
     const path = require('path');
     const cors = require('cors');
+    const net = require('net');
     require('dotenv').config();
 
     const initializeDatabase = require('./data/createUserTable');
@@ -25,8 +26,46 @@
     app.use('/api/admin', adminRoutes);
     app.use('/api/ai', aiRoutes);
 
-    initializeDatabase().then(() => {
-        const PORT = process.env.PORT || 3005;
+    // Port kontrolü fonksiyonu
+    function isPortInUse(port) {
+        return new Promise((resolve) => {
+            const server = net.createServer();
+            server.listen(port, () => {
+                server.once('close', () => resolve(false));
+                server.close();
+            });
+            server.on('error', () => resolve(true));
+        });
+    }
+
+    // Kullanılabilir port bulma fonksiyonu
+    async function findAvailablePort(startPort = 3005, maxAttempts = 10) {
+        for (let i = 0; i < maxAttempts; i++) {
+            const port = startPort + i;
+            const inUse = await isPortInUse(port);
+            if (!inUse) {
+                return port;
+            }
+        }
+        return null;
+    }
+
+    initializeDatabase().then(async () => {
+        let PORT = parseInt(process.env.PORT) || 3005;
+        
+        // Port kontrolü
+        if (await isPortInUse(PORT)) {
+            console.log(`>>> [UYARI] Port ${PORT} kullanımda! Alternatif port aranıyor...`);
+            const availablePort = await findAvailablePort(PORT);
+            if (availablePort) {
+                PORT = availablePort;
+                console.log(`>>> [BİLGİ] Port ${PORT} kullanılacak.`);
+            } else {
+                console.error('>>> [HATA] Uygun port bulunamadı!');
+                process.exit(1);
+            }
+        }
+        
         const server = app.listen(PORT, () => {
             console.log("Server is starting...");
             console.log('Server is running on port ' + PORT);
