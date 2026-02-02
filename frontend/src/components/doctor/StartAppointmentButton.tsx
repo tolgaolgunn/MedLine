@@ -5,17 +5,18 @@ import { Play, Mic, MicOff, Video, VideoOff, PhoneOff, Star } from "lucide-react
 import getSocket from "../../lib/socket";
 
 interface Appointment {
-  appointmentId: number;
+  appointmentId?: number;
   id: number;
-  appointment_id?: number;
+  appointment_id: number;
   patientId?: number;
-  patient_id?: number;
+  patient_id: number;
   patientName?: string;
-  patientname?: string;
-  patientAge: number;
+  patientname: string;
+  patientAge: string;
   specialty: string;
   date: string;
   time: string;
+  datetime: string;
   type: "online" | "face_to_face";
   status: "confirmed" | "pending" | "completed" | "cancelled";
 }

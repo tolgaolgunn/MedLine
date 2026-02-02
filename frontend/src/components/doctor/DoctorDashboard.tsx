@@ -429,7 +429,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
       {/* Başlık */}
       <PageHeader 
         title="Doktor Paneli"
@@ -437,81 +437,81 @@ useEffect(() => {
         showBackButton={false}
       />
       {/* İstatistikler */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Toplam Hasta</p>
-                <p className="text-2xl font-bold">{totalPatients}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Toplam Hasta</p>
+                <p className="text-xl sm:text-2xl font-bold">{totalPatients}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Bugünkü Randevular</p>
-                <p className="text-2xl font-bold">{todayAppointmentCount}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Bugünkü Randevular</p>
+                <p className="text-xl sm:text-2xl font-bold">{todayAppointmentCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-1.5 sm:p-2 bg-yellow-100 rounded-lg flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Bekleyen</p>
-                <p className="text-2xl font-bold">{pendingAppointments}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Bekleyen</p>
+                <p className="text-xl sm:text-2xl font-bold">{pendingAppointments}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Reçeteler</p>
-                <p className="text-2xl font-bold">0</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Reçeteler</p>
+                <p className="text-xl sm:text-2xl font-bold">0</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Yaklaşan Randevular */}
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Yaklaşan Randevular</CardTitle>
-              <div className="flex gap-2">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-2">
+              <CardTitle className="text-lg sm:text-xl">Yaklaşan Randevular</CardTitle>
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <Select value={filterStatus} onValueChange={(value) => handleFilterChange('status', value)}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-full sm:w-32 text-xs sm:text-sm">
                     <SelectValue placeholder="Durum" />
                   </SelectTrigger>
                     <SelectContent>
@@ -524,7 +524,7 @@ useEffect(() => {
                 </Select>
                 
                 <Select value={filterType} onValueChange={(value) => handleFilterChange('type', value)}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-full sm:w-32 text-xs sm:text-sm">
                     <SelectValue placeholder="Randevu Tipi" />
                   </SelectTrigger>
                   <SelectContent>
@@ -538,25 +538,25 @@ useEffect(() => {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             <div className="space-y-3">
               {upcomingAppointments.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>{getEmptyMessage()}</p>
+                  <p className="text-sm sm:text-base">{getEmptyMessage()}</p>
                 </div>
               ) : (
                 upcomingAppointments.map((appointment) => (
-                  <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <p className="font-medium">{appointment.patientName}</p>
-                        <p className="text-sm text-gray-600">{appointment.time} - {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
-                        <p className="text-xs text-gray-500">{appointment.specialty}</p>
+                  <div key={appointment.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors gap-3">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm sm:text-base truncate">{appointment.patientName}</p>
+                        <p className="text-xs sm:text-sm text-gray-600">{appointment.time} - {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</p>
+                        <p className="text-xs text-gray-500 truncate">{appointment.specialty}</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                    <Badge className={getStatusColor(appointment.status)}>
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                    <Badge className={`${getStatusColor(appointment.status)} text-xs whitespace-nowrap`}>
                        {appointment.status === 'confirmed' ? 'Onaylandı' :
                        appointment.status === 'completed' ? 'Tamamlandı' : 
                        appointment.status === 'cancelled' ? 'İptal Edildi' : 'Beklemede'}
@@ -564,14 +564,14 @@ useEffect(() => {
                                              {appointment.status === 'pending' && (
                          <>
                           <button
-                             className="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm transition-all duration-200 text-sm"
+                             className="bg-green-500 hover:bg-green-600 text-white font-semibold py-1.5 px-3 sm:px-4 rounded-md shadow-sm transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
                              onClick={() => handleUpdateStatus(appointment.id, 'confirmed')}
                              >
                              Onayla
                              </button>
                              <button
                              onClick={() => handleUpdateStatus(appointment.id, 'cancelled')}
-                             className="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm transition-all duration-200 text-sm"
+                             className="bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 px-3 sm:px-4 rounded-md shadow-sm transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
                              >
                              İptal Et
                              </button>
@@ -580,20 +580,22 @@ useEffect(() => {
                        
                        {appointment.status === 'confirmed' && (
                          <button
-                           className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm transition-all duration-200 text-sm"
+                           className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-3 sm:px-4 rounded-md shadow-sm transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
                            onClick={() => handleUpdateStatus(appointment.id, 'completed')}
                          >
-                           Tamamlandı
+                           Tamamla
                          </button>
                        )}
                          {isCurrentAppointment(appointment) && appointment.status !== 'cancelled' && (
                           <Button
                           size="sm"
                           variant="outline"
+                          className="text-xs sm:text-sm whitespace-nowrap"
                           onClick={() => {/* Randevuyu başlat işlemi */}}
                         >
-                          <Play className="w-4 h-4 mr-1" />
-                          Randevuyu Başlat
+                          <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                          <span className="hidden sm:inline">Randevuyu Başlat</span>
+                          <span className="sm:hidden">Başlat</span>
                         </Button>
                        )}
                       <button
@@ -602,7 +604,7 @@ useEffect(() => {
                                 setSelectedAppointment(appointment);
                                 setShowDetail(true);
                             }}
-                            className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1 px-4 rounded-md transition-all duration-200 text-sm"
+                            className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1.5 px-3 sm:px-4 rounded-md transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
                             >
                             Detay
                             </button>
@@ -617,40 +619,40 @@ useEffect(() => {
 
         {/* Hızlı İşlemler */}
         <Card className="lg:col-span-1 h-fit">
-          <CardHeader>
-            <CardTitle>Hızlı İşlemler</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl">Hızlı İşlemler</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-2 sm:space-y-3">
               <Button 
                 variant="outline" 
-                className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-green-50 hover:border-green-300 transition-colors"
+                className="w-full h-10 sm:h-12 flex items-center justify-start space-x-2 sm:space-x-3 hover:bg-green-50 hover:border-green-300 transition-colors text-sm"
                 onClick={() => {
                   navigate('/doctor/patients', { state: { from: '/doctor/dashboard' } });
                 }}
               >
-                <Users className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-medium">Hasta Yönetimi</span>
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium">Hasta Yönetimi</span>
               </Button>
               
               <Button 
                 variant="outline" 
-                className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-purple-50 hover:border-purple-300 transition-colors"
+                className="w-full h-10 sm:h-12 flex items-center justify-start space-x-2 sm:space-x-3 hover:bg-purple-50 hover:border-purple-300 transition-colors text-sm"
                 onClick={() => {
                   navigate('/doctor/prescriptions', { state: { from: '/doctor/dashboard' } });
                 }}
               >
-                <Pill className="w-5 h-5 text-purple-600" />
-                <span className="text-sm font-medium">Reçete Yönetimi</span>
+                <Pill className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium">Reçete Yönetimi</span>
               </Button>
 
               <Button 
                 variant="outline" 
-                className="w-full h-12 flex items-center justify-start space-x-3 hover:bg-orange-50 hover:border-orange-300 transition-colors"
+                className="w-full h-10 sm:h-12 flex items-center justify-start space-x-2 sm:space-x-3 hover:bg-orange-50 hover:border-orange-300 transition-colors text-sm"
                 onClick={() => setShowHistoryModal(true)}
               >
-                <History className="w-5 h-5 text-orange-600" />
-                <span className="text-sm font-medium">Geçmiş Aramalar</span>
+                <History className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium">Geçmiş Aramalar</span>
               </Button>
             </div>
           </CardContent>
@@ -659,7 +661,7 @@ useEffect(() => {
 
       {showDetail && selectedAppointment && (
         <Dialog open={showDetail} onOpenChange={handleCloseDetail}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Randevu Detayı</DialogTitle>
             </DialogHeader>
@@ -687,9 +689,9 @@ useEffect(() => {
               
             {/* Status Değiştirme Butonları */}
                <div className="border-t pt-4">
-                                   <div className="flex items-center gap-4">
-                    <h4 className="font-semibold text-gray-900 whitespace-nowrap">Durum Değiştir:</h4>
-                   <div className="flex gap-2">
+                                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Durum Değiştir:</h4>
+                   <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                      {selectedAppointment.status === 'pending' && (
                        <>
                          <Button

@@ -438,25 +438,25 @@ const PrescriptionManagement: React.FC = () => {
     };
 
     return (
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <Label htmlFor="patientSelect">Hasta Seç *</Label>
+            <Label htmlFor="patientSelect" className="text-xs sm:text-sm">Hasta Seç *</Label>
             {patientsLoading ? (
               <div className="flex items-center space-x-2 p-2 border rounded-md">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                <span className="text-sm text-gray-500">Hastalar yükleniyor...</span>
+                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-blue-500"></div>
+                <span className="text-xs sm:text-sm text-gray-500">Hastalar yükleniyor...</span>
               </div>
             ) : patients.length === 0 ? (
               <div className="p-2 border rounded-md bg-yellow-50 border-yellow-200">
                 <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4 text-yellow-600" />
-                  <span className="text-sm text-yellow-800">Henüz kayıtlı hasta yok</span>
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600" />
+                  <span className="text-xs sm:text-sm text-yellow-800">Henüz kayıtlı hasta yok</span>
                 </div>
                 <Button
                   type="button"
                   variant="link"
-                  className="p-0 h-auto text-yellow-700 font-medium"
+                  className="p-0 h-auto text-yellow-700 font-medium text-xs sm:text-sm"
                   onClick={() => window.open('/patients', '_blank')}
                 >
                   Hasta eklemek için tıklayın
@@ -464,24 +464,24 @@ const PrescriptionManagement: React.FC = () => {
               </div>
             ) : (
               <Select value={formData.patientId} onValueChange={handlePatientSelect}>
-                <SelectTrigger className="border border-gray-300 rounded-md">
+                <SelectTrigger className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm">
                   <SelectValue placeholder="Hasta seçin...">
                     {formData.patientId ? (
                       <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2" />
-                        {patients.find(p => String(p.patient_id) === formData.patientId)?.patient_name}
+                        <User className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        <span className="truncate">{patients.find(p => String(p.patient_id) === formData.patientId)?.patient_name}</span>
                       </div>
                     ) : null}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {patients.map((patient) => (
-                    <SelectItem key={patient.patient_id} value={String(patient.patient_id)}>
+                    <SelectItem key={patient.patient_id} value={String(patient.patient_id)} className="text-xs sm:text-sm">
                       <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4" />
-                        <span>{patient.patient_name}</span>
+                        <User className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="truncate">{patient.patient_name}</span>
                         {patient.phone_number && (
-                          <span className="text-xs text-gray-500">({patient.phone_number})</span>
+                          <span className="text-xs text-gray-500 truncate">({patient.phone_number})</span>
                         )}
                       </div>
                     </SelectItem>
@@ -491,11 +491,11 @@ const PrescriptionManagement: React.FC = () => {
             )}
           </div>
           <div>
-            <Label htmlFor="diagnosis">Tanı *</Label>
+            <Label htmlFor="diagnosis" className="text-xs sm:text-sm">Tanı *</Label>
             <Input
               id="diagnosis"
               value={formData.diagnosis}
-              className="border border-gray-300 rounded-md"
+              className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
               onChange={(e) => setFormData({...formData, diagnosis: e.target.value})}
               placeholder="Tanı girin..."
               required
@@ -504,97 +504,97 @@ const PrescriptionManagement: React.FC = () => {
         </div>
 
         <div>
-          <Label htmlFor="instructions">Genel Talimatlar</Label>
+          <Label htmlFor="instructions" className="text-xs sm:text-sm">Genel Talimatlar</Label>
           <Textarea
             id="instructions"
             value={formData.instructions}
             onChange={(e) => setFormData({...formData, instructions: e.target.value})}
             placeholder="Genel kullanım talimatları..."
-            className="border border-gray-300 rounded-md py-2 px-3"
+            className="border border-gray-300 rounded-md py-2 px-3 text-xs sm:text-sm h-20 sm:h-24"
             maxLength={200}
           />
-          <div className="text-sm text-gray-500 mt-1 text-right">
+          <div className="text-xs sm:text-sm text-gray-500 mt-1 text-right">
             {formData.instructions.length}/200
           </div>
         </div>
 
         <div>
-          <Label htmlFor="nextVisit">Sonraki Kontrol (Opsiyonel)</Label>
+          <Label htmlFor="nextVisit" className="text-xs sm:text-sm">Sonraki Kontrol (Opsiyonel)</Label>
           <Input
             id="nextVisit"
             type="date"
-            className="border border-gray-300 rounded-md shadow-sm w-1/3"
+            className="border border-gray-300 rounded-md shadow-sm w-full sm:w-1/3 h-9 sm:h-10 text-xs sm:text-sm"
             value={formData.nextVisit}
             onChange={(e) => setFormData({...formData, nextVisit: e.target.value})}
           />
         </div>
 
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <Label className="font-semibold">İlaçlar *</Label>
-            <Button type="button" variant="outline" size="sm" onClick={addMedication}>
-              <Plus className="w-4 h-4 mr-1" /> İlaç Ekle
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-2">
+            <Label className="font-semibold text-xs sm:text-sm">İlaçlar *</Label>
+            <Button type="button" variant="outline" size="sm" onClick={addMedication} className="text-xs sm:text-sm w-full sm:w-auto">
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> İlaç Ekle
             </Button>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {formData.medications.map((medication, index) => (
               <Card key={index}>
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <Label htmlFor={`medication-name-${index}`}>İlaç Adı *</Label>
+                      <Label htmlFor={`medication-name-${index}`} className="text-xs sm:text-sm">İlaç Adı *</Label>
                       <Input
                         id={`medication-name-${index}`}
                         value={medication.name}
                         onChange={(e) => updateMedication(index, 'name', e.target.value)}
                         placeholder="İlaç adı girin..."
-                        className="border border-gray-300 rounded-md"
+                        className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`medication-dosage-${index}`}>Doz *</Label>
+                      <Label htmlFor={`medication-dosage-${index}`} className="text-xs sm:text-sm">Doz *</Label>
                       <Input
                         id={`medication-dosage-${index}`}
                         value={medication.dosage}
                         onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
                         placeholder="Örn: 500mg"
-                        className="border border-gray-300 rounded-md"
+                        className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`medication-frequency-${index}`}>Sıklık</Label>
+                      <Label htmlFor={`medication-frequency-${index}`} className="text-xs sm:text-sm">Sıklık</Label>
                       <Input
                         id={`medication-frequency-${index}`}
                         value={medication.frequency}
                         onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
                         placeholder="Örn: Günde 3 kez"
-                        className="border border-gray-300 rounded-md"
+                        className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`medication-duration-${index}`}>Süre</Label>
+                      <Label htmlFor={`medication-duration-${index}`} className="text-xs sm:text-sm">Süre</Label>
                       <Input
                         id={`medication-duration-${index}`}
                         value={medication.duration}
                         onChange={(e) => updateMedication(index, 'duration', e.target.value)}
                         placeholder="Örn: 7 gün"
-                        className="border border-gray-300 rounded-md"
+                        className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
                       />
                     </div>
                   </div>
-                  <div className="mt-4">
-                    <Label htmlFor={`medication-instructions-${index}`}>Kullanım Talimatları</Label>
+                  <div className="mt-3 sm:mt-4">
+                    <Label htmlFor={`medication-instructions-${index}`} className="text-xs sm:text-sm">Kullanım Talimatları</Label>
                     <Textarea
                       id={`medication-instructions-${index}`}
                       value={medication.instructions}
                       onChange={(e) => updateMedication(index, 'instructions', e.target.value)}
-                      className="border border-gray-300 rounded-md py-2 px-3"
+                      className="border border-gray-300 rounded-md py-2 px-3 text-xs sm:text-sm h-16 sm:h-20"
                       maxLength={200}
                     />
-                    <div className="text-sm text-gray-500 mt-1 text-right">
+                    <div className="text-xs sm:text-sm text-gray-500 mt-1 text-right">
                       {medication.instructions.length}/200
                     </div>
                   </div>
@@ -603,10 +603,10 @@ const PrescriptionManagement: React.FC = () => {
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="mt-2"
+                      className="mt-2 text-xs sm:text-sm"
                       onClick={() => removeMedication(index)}
                     >
-                      <Trash2 className="w-4 h-4 mr-1" /> Kaldır
+                      <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Kaldır
                     </Button>
                   )}
                 </CardContent>
@@ -615,16 +615,16 @@ const PrescriptionManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-end space-x-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
           <Button 
             type="button" 
             variant="outline" 
             onClick={handleClose}
-            className="!border-2 !border-gray-300 !rounded-md"
+            className="!border-2 !border-gray-300 !rounded-md text-xs sm:text-sm w-full sm:w-auto"
           >
             İptal
           </Button>
-          <Button type="submit" disabled={!formData.patientId || patientsLoading}>
+          <Button type="submit" disabled={!formData.patientId || patientsLoading} className="text-xs sm:text-sm w-full sm:w-auto">
             Reçete Oluştur
           </Button>
         </div>
@@ -723,20 +723,20 @@ const PrescriptionManagement: React.FC = () => {
     };
 
     return (
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <Label htmlFor="edit-patientSelect">Hasta Seç *</Label>
+            <Label htmlFor="edit-patientSelect" className="text-xs sm:text-sm">Hasta Seç *</Label>
             {patientsLoading ? (
               <div className="flex items-center space-x-2 p-2 border rounded-md">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                <span className="text-sm text-gray-500">Hastalar yükleniyor...</span>
+                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-blue-500"></div>
+                <span className="text-xs sm:text-sm text-gray-500">Hastalar yükleniyor...</span>
               </div>
             ) : patients.length === 0 ? (
               <div className="p-2 border rounded-md bg-yellow-50 border-yellow-200">
                 <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4 text-yellow-600" />
-                  <span className="text-sm text-yellow-800">Henüz kayıtlı hasta yok</span>
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600" />
+                  <span className="text-xs sm:text-sm text-yellow-800">Henüz kayıtlı hasta yok</span>
                 </div>
               </div>
             ) : (
@@ -744,24 +744,24 @@ const PrescriptionManagement: React.FC = () => {
                 value={formData.patientId} 
                 onValueChange={handlePatientSelect}
               >
-                <SelectTrigger className="border border-gray-300 rounded-md">
+                <SelectTrigger className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm">
                   <SelectValue placeholder="Hasta seçin...">
                     {formData.patientId ? (
                       <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2" />
-                        {patients.find(p => String(p.patient_id) === formData.patientId)?.patient_name}
+                        <User className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        <span className="truncate">{patients.find(p => String(p.patient_id) === formData.patientId)?.patient_name}</span>
                       </div>
                     ) : null}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {patients.map((patient) => (
-                    <SelectItem key={patient.patient_id} value={String(patient.patient_id)}>
+                    <SelectItem key={patient.patient_id} value={String(patient.patient_id)} className="text-xs sm:text-sm">
                       <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4" />
-                        <span>{patient.patient_name}</span>
+                        <User className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="truncate">{patient.patient_name}</span>
                         {patient.phone_number && (
-                          <span className="text-xs text-gray-500">({patient.phone_number})</span>
+                          <span className="text-xs text-gray-500 truncate">({patient.phone_number})</span>
                         )}
                       </div>
                     </SelectItem>
@@ -771,50 +771,50 @@ const PrescriptionManagement: React.FC = () => {
             )}
           </div>
           <div>
-            <Label htmlFor="edit-diagnosis">Tanı *</Label>
+            <Label htmlFor="edit-diagnosis" className="text-xs sm:text-sm">Tanı *</Label>
             <Input
               id="edit-diagnosis"
               value={formData.diagnosis}
               onChange={(e) => setFormData({...formData, diagnosis: e.target.value})}
-              className="border border-gray-300 rounded-md"
+              className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
               required
             />
           </div>
         </div>
 
         <div>
-          <Label htmlFor="edit-instructions">Genel Talimatlar</Label>
+          <Label htmlFor="edit-instructions" className="text-xs sm:text-sm">Genel Talimatlar</Label>
           <Textarea
             id="edit-instructions"
             value={formData.instructions}
             onChange={(e) => setFormData({...formData, instructions: e.target.value})}
-            className="border border-gray-300 rounded-md py-2 px-3"
+            className="border border-gray-300 rounded-md py-2 px-3 text-xs sm:text-sm h-20 sm:h-24"
             maxLength={200}
             placeholder="Genel kullanım talimatları (maksimum 200 karakter)"
           />
-          <div className="text-sm text-gray-500 mt-1 text-right">
+          <div className="text-xs sm:text-sm text-gray-500 mt-1 text-right">
             {formData.instructions.length}/200
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <Label htmlFor="edit-nextVisit">Sonraki Kontrol (Opsiyonel)</Label>
+            <Label htmlFor="edit-nextVisit" className="text-xs sm:text-sm">Sonraki Kontrol (Opsiyonel)</Label>
             <Input
               id="edit-nextVisit"
               type="date"
               value={formData.nextVisit}
               onChange={(e) => setFormData({...formData, nextVisit: e.target.value})}
-              className="border border-gray-300 rounded-md"
+              className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
             />
           </div>
           <div>
-            <Label htmlFor="edit-status">Durum</Label>
+            <Label htmlFor="edit-status" className="text-xs sm:text-sm">Durum</Label>
             <Select
               value={formData.status}
               onValueChange={(value) => setFormData({...formData, status: value as 'active' | 'completed' | 'cancelled'})}
             >
-              <SelectTrigger className="border border-gray-300 rounded-md">
+              <SelectTrigger className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm">
                 <SelectValue placeholder="Durum seçin" />
               </SelectTrigger>
               <SelectContent>
@@ -827,68 +827,68 @@ const PrescriptionManagement: React.FC = () => {
         </div>
 
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <Label className="font-semibold">İlaçlar *</Label>
-            <Button type="button" variant="outline" size="sm" onClick={addMedication}>
-              <Plus className="w-4 h-4 mr-1" /> İlaç Ekle
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-2">
+            <Label className="font-semibold text-xs sm:text-sm">İlaçlar *</Label>
+            <Button type="button" variant="outline" size="sm" onClick={addMedication} className="text-xs sm:text-sm w-full sm:w-auto">
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> İlaç Ekle
             </Button>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {formData.medications.map((medication, index) => (
               <Card key={index}>
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <Label htmlFor={`edit-medication-name-${index}`}>İlaç Adı *</Label>
+                      <Label htmlFor={`edit-medication-name-${index}`} className="text-xs sm:text-sm">İlaç Adı *</Label>
                       <Input
                         id={`edit-medication-name-${index}`}
                         value={medication.name}
                         onChange={(e) => updateMedication(index, 'name', e.target.value)}
-                        className="border border-gray-300 rounded-md"
+                        className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`edit-medication-dosage-${index}`}>Doz *</Label>
+                      <Label htmlFor={`edit-medication-dosage-${index}`} className="text-xs sm:text-sm">Doz *</Label>
                       <Input
                         id={`edit-medication-dosage-${index}`}
                         value={medication.dosage}
                         onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
-                        className="border border-gray-300 rounded-md"
+                        className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`edit-medication-frequency-${index}`}>Sıklık</Label>
+                      <Label htmlFor={`edit-medication-frequency-${index}`} className="text-xs sm:text-sm">Sıklık</Label>
                       <Input
                         id={`edit-medication-frequency-${index}`}
                         value={medication.frequency}
                         onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
-                        className="border border-gray-300 rounded-md"
+                        className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`edit-medication-duration-${index}`}>Süre</Label>
+                      <Label htmlFor={`edit-medication-duration-${index}`} className="text-xs sm:text-sm">Süre</Label>
                       <Input
                         id={`edit-medication-duration-${index}`}
                         value={medication.duration}
                         onChange={(e) => updateMedication(index, 'duration', e.target.value)}
-                        className="border border-gray-300 rounded-md"
+                        className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
                       />
                     </div>
                   </div>
-                  <div className="mt-4">
-                    <Label htmlFor={`edit-medication-instructions-${index}`}>Kullanım Talimatları</Label>
+                  <div className="mt-3 sm:mt-4">
+                    <Label htmlFor={`edit-medication-instructions-${index}`} className="text-xs sm:text-sm">Kullanım Talimatları</Label>
                     <Textarea
                       id={`edit-medication-instructions-${index}`}
                       value={medication.instructions}
                       onChange={(e) => updateMedication(index, 'instructions', e.target.value)}
-                      className="border border-gray-300 rounded-md py-2 px-3"
+                      className="border border-gray-300 rounded-md py-2 px-3 text-xs sm:text-sm h-16 sm:h-20"
                       maxLength={200}
                       placeholder="Kullanım talimatları (maksimum 200 karakter)"
                     />
-                    <div className="text-sm text-gray-500 mt-1 text-right">
+                    <div className="text-xs sm:text-sm text-gray-500 mt-1 text-right">
                       {medication.instructions.length}/200
                     </div>
                   </div>
@@ -897,10 +897,10 @@ const PrescriptionManagement: React.FC = () => {
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="mt-2"
+                      className="mt-2 text-xs sm:text-sm"
                       onClick={() => removeMedication(index)}
                     >
-                      <Trash2 className="w-4 h-4 mr-1" /> Kaldır
+                      <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Kaldır
                     </Button>
                   )}
                 </CardContent>
@@ -909,19 +909,19 @@ const PrescriptionManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-end space-x-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
           <Button 
             type="button" 
             variant="outline" 
             onClick={onClose}
-            className="!border-2 !border-gray-300 !rounded-md"
+            className="!border-2 !border-gray-300 !rounded-md text-xs sm:text-sm w-full sm:w-auto"
           >
             İptal
           </Button>
           <Button 
             type="submit" 
             disabled={!hasChanges}
-            className={!hasChanges ? "opacity-50 cursor-not-allowed" : ""}
+            className={`text-xs sm:text-sm w-full sm:w-auto ${!hasChanges ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             Güncelle
           </Button>
@@ -931,19 +931,21 @@ const PrescriptionManagement: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <PageHeader 
           title="Reçete Yönetimi"
           subtitle="Reçetelerinizi oluşturun ve yönetin"
         />
         <Dialog open={isAddPrescriptionOpen} onOpenChange={setIsAddPrescriptionOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsAddPrescriptionOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Yeni Reçete
+            <Button onClick={() => setIsAddPrescriptionOpen(true)} className="w-full sm:w-auto text-xs sm:text-sm">
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> 
+              <span className="hidden sm:inline">Yeni Reçete</span>
+              <span className="sm:hidden">Yeni</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Yeni Reçete Oluştur</DialogTitle>
             </DialogHeader>
@@ -957,20 +959,20 @@ const PrescriptionManagement: React.FC = () => {
       </div>
 
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col md:flex-row gap-3 sm:gap-4 items-center">
             <div className="relative flex-1 w-full border border-gray-300 rounded-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4" />
               <Input
                 placeholder="Hasta adı veya tanıya göre ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-8 sm:pl-10 h-9 sm:h-10 text-xs sm:text-sm"
               />
             </div>
             <div className="w-full md:w-40">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="border border-gray-300 rounded-md">
+                <SelectTrigger className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm">
                   <SelectValue placeholder="Durum" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1038,26 +1040,26 @@ const PrescriptionManagement: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {filteredPrescriptions.map((prescription) => (
             <Card key={prescription.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>{prescription.patientName}</CardTitle>
-                    <p className="text-sm text-gray-600">Reçete No: {prescription.prescriptionCode}</p>
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-base sm:text-lg truncate">{prescription.patientName}</CardTitle>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">Reçete No: {prescription.prescriptionCode}</p>
                   </div>
-                  <Badge className={getStatusColor(prescription.status)}>
+                  <Badge className={`${getStatusColor(prescription.status)} text-xs whitespace-nowrap`}>
                     {prescription.status === 'active' ? 'Aktif' :
                      prescription.status === 'completed' ? 'Tamamlandı' : 'İptal'}
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
+              <CardContent className="p-4 sm:p-6 pt-0 space-y-2 sm:space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
+                  <div className="min-w-0">
                     <span className="font-medium">Tanı:</span>
-                    <p className="text-gray-600">{prescription.diagnosis}</p>
+                    <p className="text-gray-600 truncate">{prescription.diagnosis}</p>
                   </div>
                   <div>
                     <span className="font-medium">Tarih:</span>
@@ -1066,60 +1068,66 @@ const PrescriptionManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <span className="font-medium text-sm">İlaçlar:</span>
+                  <span className="font-medium text-xs sm:text-sm">İlaçlar:</span>
                   <div className="mt-1 space-y-1">
                     {prescription.medications.map((med, index) => (
-                      <div key={index} className="flex items-center space-x-2 text-sm">
-                        <Pill className="w-4 h-4 text-gray-400" />
-                        <span className="font-medium">{med.name}</span>
-                        <span className="text-gray-600">- {med.dosage}</span>
+                      <div key={index} className="flex items-center space-x-2 text-xs sm:text-sm min-w-0">
+                        <Pill className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+                        <span className="font-medium truncate">{med.name}</span>
+                        <span className="text-gray-600 truncate">- {med.dosage}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {prescription.nextVisit && (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span>Sonraki kontrol: {prescription.nextVisit}</span>
+                  <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+                    <span className="truncate">Sonraki kontrol: {prescription.nextVisit}</span>
                   </div>
                 )}
 
-                <div className="flex space-x-2 pt-3 border-t border-gray-100">
+                <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border border-black hover:border-black"
+                    className="border border-black hover:border-black text-xs sm:text-sm flex-1 sm:flex-initial"
                     onClick={() => setSelectedPrescription(prescription)}
                   >
-                    <Eye className="w-4 h-4 mr-1" /> Görüntüle
+                    <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> 
+                    <span className="hidden sm:inline">Görüntüle</span>
+                    <span className="sm:hidden">Gör</span>
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border border-black hover:border-black"
+                    className="border border-black hover:border-black text-xs sm:text-sm flex-1 sm:flex-initial"
                     onClick={() => printPrescription(prescription)}
                   >
-                    <Printer className="w-4 h-4 mr-1" /> Yazdır
+                    <Printer className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> 
+                    <span className="hidden sm:inline">Yazdır</span>
+                    <span className="sm:hidden">Yaz</span>
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline"
-                    className="border border-black hover:border-black"
+                    className="border border-black hover:border-black text-xs sm:text-sm flex-1 sm:flex-initial"
                     onClick={() => {
                       setEditingPrescription(prescription);
                       setIsEditPrescriptionOpen(true);
                     }}
                   >
-                    <Edit className="w-4 h-4 mr-1" /> Düzenle
+                    <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> 
+                    <span className="hidden sm:inline">Düzenle</span>
+                    <span className="sm:hidden">Düz</span>
                   </Button>
                   <Button 
                     size="sm" 
                     variant="destructive"
-                    className="border-2 border-red-300 hover:border-red-400"
+                    className="border-2 border-red-300 hover:border-red-400 text-xs sm:text-sm flex-1 sm:flex-initial"
                     onClick={() => handleDeletePrescription(prescription.id)}
                   >
-                    <Trash2 className="w-4 h-4 mr-1" /> Sil
+                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> Sil
                   </Button>
                 </div>
               </CardContent>
@@ -1130,50 +1138,52 @@ const PrescriptionManagement: React.FC = () => {
 
       {selectedPrescription && (
         <Dialog open={!!selectedPrescription} onOpenChange={() => setSelectedPrescription(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
-              <DialogTitle>Reçete Detayları - {selectedPrescription.patientName}</DialogTitle>
+              <DialogTitle className="text-base sm:text-lg truncate">Reçete Detayları - {selectedPrescription.patientName}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
                 <div>
-                  <Label className="font-semibold">Hasta</Label>
-                  <p>{selectedPrescription.patientName}</p>
+                  <Label className="font-semibold text-xs sm:text-sm">Hasta</Label>
+                  <p className="text-xs sm:text-sm truncate">{selectedPrescription.patientName}</p>
                 </div>
                 <div>
-                  <Label className="font-semibold">Doktor</Label>
-                  <p>{currentDoctorName}</p>
+                  <Label className="font-semibold text-xs sm:text-sm">Doktor</Label>
+                  <p className="text-xs sm:text-sm truncate">{currentDoctorName}</p>
                 </div>
                 <div>
-                  <Label className="font-semibold">Tarih</Label>
-                  <p>{selectedPrescription.date}</p>
+                  <Label className="font-semibold text-xs sm:text-sm">Tarih</Label>
+                  <p className="text-xs sm:text-sm">{selectedPrescription.date}</p>
                 </div>
               </div>
 
               <div>
-                <Label className="font-semibold">Tanı</Label>
-                <p className="mt-2 p-3 bg-gray-50 rounded-lg">{selectedPrescription.diagnosis}</p>
+                <Label className="font-semibold text-xs sm:text-sm">Tanı</Label>
+                <p className="mt-2 p-3 bg-gray-50 rounded-lg text-xs sm:text-sm break-words">{selectedPrescription.diagnosis}</p>
               </div>
 
               <div>
-                <Label className="font-semibold">İlaçlar</Label>
-                <div className="mt-2 space-y-3">
+                <Label className="font-semibold text-xs sm:text-sm">İlaçlar</Label>
+                <div className="mt-2 space-y-2 sm:space-y-3">
                   {selectedPrescription.medications.map((medication, index) => (
                     <Card key={index}>
-                      <CardContent className="p-4 bg-gray-50 rounded-lg">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="font-medium">{medication.name}</p>
-                            <p className="text-sm text-gray-600">{medication.dosage}</p>
+                      <CardContent className="p-3 sm:p-4 bg-gray-50 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                          <div className="min-w-0">
+                            <p className="font-medium text-xs sm:text-sm truncate">{medication.name}</p>
+                            <p className="text-xs sm:text-sm text-gray-600 truncate">{medication.dosage}</p>
                           </div>
                           <div>
-                            <p className="text-sm"><span className="font-medium">Sıklık:</span> {medication.frequency}</p>
-                            <p className="text-sm"><span className="font-medium">Süre:</span> {medication.duration}</p>
+                            <p className="text-xs sm:text-sm"><span className="font-medium">Sıklık:</span> {medication.frequency || 'Belirtilmemiş'}</p>
+                            <p className="text-xs sm:text-sm"><span className="font-medium">Süre:</span> {medication.duration || 'Belirtilmemiş'}</p>
                           </div>
                         </div>
-                        <div className="mt-2">
-                          <p className="text-sm"><span className="font-medium">Kullanım:</span> {medication.instructions}</p>
-                        </div>
+                        {medication.instructions && (
+                          <div className="mt-2">
+                            <p className="text-xs sm:text-sm break-words"><span className="font-medium">Kullanım:</span> {medication.instructions}</p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -1181,14 +1191,14 @@ const PrescriptionManagement: React.FC = () => {
               </div>
 
               <div>
-                <Label className="font-semibold">Genel Talimatlar</Label>
-                <p className="mt-2 p-3 bg-gray-50 rounded-lg">{selectedPrescription.instructions}</p>
+                <Label className="font-semibold text-xs sm:text-sm">Genel Talimatlar</Label>
+                <p className="mt-2 p-3 bg-gray-50 rounded-lg text-xs sm:text-sm break-words">{selectedPrescription.instructions || 'Belirtilmemiş'}</p>
               </div>
 
               {selectedPrescription.nextVisit && (
                 <div>
-                  <Label className="font-semibold">Sonraki Kontrol</Label>
-                  <p className="mt-2 p-3 bg-gray-50 rounded-lg">{selectedPrescription.nextVisit}</p>
+                  <Label className="font-semibold text-xs sm:text-sm">Sonraki Kontrol</Label>
+                  <p className="mt-2 p-3 bg-gray-50 rounded-lg text-xs sm:text-sm">{selectedPrescription.nextVisit}</p>
                 </div>
               )}
             </div>
@@ -1198,9 +1208,9 @@ const PrescriptionManagement: React.FC = () => {
 
       {editingPrescription && (
         <Dialog open={isEditPrescriptionOpen} onOpenChange={setIsEditPrescriptionOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
-              <DialogTitle>Reçete Düzenle - {editingPrescription.patientName}</DialogTitle>
+              <DialogTitle className="text-base sm:text-lg truncate">Reçete Düzenle - {editingPrescription.patientName}</DialogTitle>
             </DialogHeader>
             <EditPrescriptionForm 
               key={editFormKey}

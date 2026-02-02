@@ -6,7 +6,7 @@ import { Dashboard } from "./components/Dashboard";
 import { DoctorDashboard, DoctorAppointments, PatientManagement, DoctorPrescription, DoctorLayout, DoctorProfile } from "./components/doctor";
 import Feedback from "./components/feedback";
 import { Profile } from "./components/Profile";
-import DoctorReports from "./components/DoctorReports";
+import DoctorReports from "./components/doctor/DoctorReports";
 import { Notifications } from "./components/notifications";
 import { Settings } from "./components/Settings";
 import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";

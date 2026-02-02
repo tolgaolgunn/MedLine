@@ -359,7 +359,7 @@ const mapped = res.data.map((item: any) => {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-full mx-auto overflow-x-hidden">
       {/* Page Header */}
       <PageHeader 
         title="Randevu Yönetimi"
@@ -367,24 +367,25 @@ const mapped = res.data.map((item: any) => {
       />
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Upcoming Appointments Section */}
         <div className="lg:col-span-2">
-          <Card className="p-6">
+          <Card className="p-4 sm:p-6">
             {/* Section Header with Filters */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Randevular</h2>
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+              <h2 className="text-lg sm:text-xl font-semibold">Randevular</h2>
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 {/* Filter Button */}
                 <Button 
                   variant="outline" 
-                  className="flex items-center gap-2 border-2 border-gray-300 shadow-sm"
+                  className="flex items-center gap-2 border-2 border-gray-300 shadow-sm text-xs sm:text-sm flex-1 sm:flex-initial"
                   onClick={handleOpenFilterModal}
                 >
-                  <Filter className="w-4 h-4" />
-                  <span>{getActiveFiltersText()}</span>
+                  <Filter className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">{getActiveFiltersText()}</span>
+                  <span className="sm:hidden">Filtre</span>
                   {(filter !== 'today' || activeFilters.length > 0) && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 text-xs">
                       {activeFilters.length + (filter !== 'today' ? 1 : 0)} 
                     </Badge>
                   )}
@@ -392,7 +393,7 @@ const mapped = res.data.map((item: any) => {
 
                 {/* Filter Modal */}
                 <Dialog open={isFilterModalOpen} onOpenChange={handleCloseFilterModal}>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Filtreler</DialogTitle>
                     </DialogHeader>
@@ -485,31 +486,31 @@ const mapped = res.data.map((item: any) => {
             </div>
 
             {/* Appointments List */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {getFilteredAppointments().length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Seçilen filtrelere uygun randevu bulunamadı.</p>
+                  <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-sm sm:text-base">Seçilen filtrelere uygun randevu bulunamadı.</p>
                 </div>
               ) : (
                 getFilteredAppointments()
                   .map((appointment) => (
-                    <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
+                    <div key={appointment.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors gap-3">
                       {/* Appointment Info */}
-                      <div>
-    <p className="font-medium">
+                      <div className="min-w-0 flex-1">
+    <p className="font-medium text-sm sm:text-base truncate">
       {appointment.patientname || 'İsimsiz Hasta'}
     </p>
-    <p className="text-sm text-gray-600">
+    <p className="text-xs sm:text-sm text-gray-600 truncate">
       {appointment.patientAge} yaş • {appointment.specialty}
     </p>
-    <p className="text-xs text-gray-500">
+    <p className="text-xs text-gray-500 truncate">
       {appointment.date} - {appointment.time} • 
       {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}
     </p>
   </div>
                       {/* Action Buttons */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
 
                         <button
                           type="button"
@@ -517,7 +518,7 @@ const mapped = res.data.map((item: any) => {
                             setSelectedAppointment(appointment);
                             setShowDetail(true);
                           }}
-                          className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1 px-4 rounded-md transition-all duration-200 text-sm"
+                          className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1.5 px-3 sm:px-4 rounded-md transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
                         >
                           Detay
                         </button>
@@ -531,50 +532,50 @@ const mapped = res.data.map((item: any) => {
 
         {/* Current Appointment Section */}
         <div>
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Şu Anki Randevu</h2>
+          <Card className="p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Şu Anki Randevu</h2>
             
             {appointments.find(app => isCurrentAppointment(app)) ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Time Display */}
-                <div className="text-center p-4 bg-primary/10 rounded-lg">
-                  <div className="text-2xl font-bold text-primary mb-2">
+                <div className="text-center p-3 sm:p-4 bg-primary/10 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold text-primary mb-2">
                     {appointments.find(app => isCurrentAppointment(app))?.time}
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
                     {appointments.find(app => isCurrentAppointment(app))?.date}
                   </div>
                 </div>
 
                 {/* Patient Information */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Hasta</Label>
-                    <p className="font-medium">{appointments.find(app => isCurrentAppointment(app))?.patientname}</p>
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Hasta</Label>
+                    <p className="font-medium text-sm sm:text-base truncate">{appointments.find(app => isCurrentAppointment(app))?.patientname}</p>
                   </div>
                   
                   <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Yaş</Label>
-                    <p>{appointments.find(app => isCurrentAppointment(app))?.patientAge} yaş</p>
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Yaş</Label>
+                    <p className="text-sm sm:text-base">{appointments.find(app => isCurrentAppointment(app))?.patientAge} yaş</p>
                   </div>
                   
                   <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Uzmanlık</Label>
-                    <p>{appointments.find(app => isCurrentAppointment(app))?.specialty}</p>
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Uzmanlık</Label>
+                    <p className="text-sm sm:text-base truncate">{appointments.find(app => isCurrentAppointment(app))?.specialty}</p>
                   </div>
                   
                   <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Randevu Türü</Label>
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Randevu Türü</Label>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={appointments.find(app => isCurrentAppointment(app))?.type === 'online' ? 'secondary' : 'outline'}>
+                      <Badge variant={appointments.find(app => isCurrentAppointment(app))?.type === 'online' ? 'secondary' : 'outline'} className="text-xs">
                         {appointments.find(app => isCurrentAppointment(app))?.type === 'online' ? 'Online' : 'Yüz Yüze'}
                       </Badge>
                     </div>
                   </div>
                   
                   <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Şikayet</Label>
-                    <p className="text-sm">Belirtilmemiş</p>
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Şikayet</Label>
+                    <p className="text-xs sm:text-sm">Belirtilmemiş</p>
                   </div>
                 </div>
 
@@ -588,32 +589,34 @@ const mapped = res.data.map((item: any) => {
 )}
 
                 {/* Action Buttons */}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                           variant="outline"
                           onClick={() => {
                             setSelectedAppointment(appointments.find(app => isCurrentAppointment(app)) || null);
                             setShowDetail(true);
                           }}
-                          className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                          className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors text-xs sm:text-sm"
                         >
-                          <Eye className="w-4 h-4 mr-1" />
-                        Randevu Detayı
+                          <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        <span className="hidden sm:inline">Randevu Detayı</span>
+                        <span className="sm:hidden">Detay</span>
                         </Button>
                                      <Button 
                      variant="outline" 
-                     className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                     className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors text-xs sm:text-sm"
                      onClick={handleOpenPatientHistory}
                    >
-                     <FileText className="w-4 h-4 mr-1" />
-                     Hasta Geçmişi
+                     <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                     <span className="hidden sm:inline">Hasta Geçmişi</span>
+                     <span className="sm:hidden">Geçmiş</span>
                    </Button>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Şu anda aktif randevu yok</p>
+              <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm sm:text-base">Şu anda aktif randevu yok</p>
               </div>
             )}
           </Card>
@@ -623,29 +626,29 @@ const mapped = res.data.map((item: any) => {
              {/* Appointment Detail Modal */}
        {showDetail && selectedAppointment && (
          <Dialog open={showDetail} onOpenChange={setShowDetail}>
-           <DialogContent>
+           <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
              <DialogHeader>
-               <DialogTitle>Randevu Detayı</DialogTitle>
+               <DialogTitle className="text-lg sm:text-xl">Randevu Detayı</DialogTitle>
              </DialogHeader>
-             <div className="space-y-2">
-               <div><b>Hasta:</b> {selectedAppointment.patientname}</div>
+             <div className="space-y-2 text-sm sm:text-base">
+               <div className="break-words"><b>Hasta:</b> {selectedAppointment.patientname}</div>
                <div><b>Tarih:</b> {selectedAppointment.date}</div>
                <div><b>Saat:</b> {selectedAppointment.time}</div>
                <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
-               <div><b>Branş:</b> {selectedAppointment.specialty}</div>
+               <div className="break-words"><b>Branş:</b> {selectedAppointment.specialty}</div>
                <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
              </div>
-             <Button onClick={() => setShowDetail(false)} className="border-2 border-gray-300 shadow-sm">Kapat</Button>
+             <Button onClick={() => setShowDetail(false)} className="border-2 border-gray-300 shadow-sm text-xs sm:text-sm w-full sm:w-auto">Kapat</Button>
            </DialogContent>
          </Dialog>
        )}
 
        {/* Patient History Modal */}
        <Dialog open={showPatientHistory} onOpenChange={setShowPatientHistory}>
-         <DialogContent className="max-w-2xl">
+         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
            <DialogHeader>
-             <DialogTitle>Hasta Geçmişi</DialogTitle>
-             <DialogDescription>Hastaya ait son 1 senelik geçmiş kayıtları görüntüleyebilirsiniz.</DialogDescription>
+             <DialogTitle className="text-lg sm:text-xl">Hasta Geçmişi</DialogTitle>
+             <DialogDescription className="text-xs sm:text-sm">Hastaya ait son 1 senelik geçmiş kayıtları görüntüleyebilirsiniz.</DialogDescription>
            </DialogHeader>
            {/* Geçmiş randevuları filtrele ve göster */}
            {(() => {
@@ -677,13 +680,13 @@ const mapped = res.data.map((item: any) => {
                );
              }
              return (
-               <div className="space-y-4 max-h-[350px] overflow-y-auto px-2">
+               <div className="space-y-3 sm:space-y-4 max-h-[350px] overflow-y-auto px-1 sm:px-2">
                  {historyList.map((app, idx) => (
-                   <div key={app.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                     <div>
-                       <p className="font-medium">{app.date} - {app.time}</p>
-                       <p className="text-sm text-gray-700">{app.specialty}</p>
-                       <p className="text-xs text-gray-500">{app.type === 'online' ? 'Online' : 'Yüz Yüze'} • {app.status === 'confirmed' ? 'Onaylandı' : app.status === 'completed' ? 'Tamamlandı' : app.status === 'pending' ? 'Beklemede' : 'İptal'}</p>
+                   <div key={app.id} className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border">
+                     <div className="min-w-0 flex-1">
+                       <p className="font-medium text-sm sm:text-base truncate">{app.date} - {app.time}</p>
+                       <p className="text-xs sm:text-sm text-gray-700 truncate">{app.specialty}</p>
+                       <p className="text-xs text-gray-500 truncate">{app.type === 'online' ? 'Online' : 'Yüz Yüze'} • {app.status === 'confirmed' ? 'Onaylandı' : app.status === 'completed' ? 'Tamamlandı' : app.status === 'pending' ? 'Beklemede' : 'İptal'}</p>
                      </div>
                    </div>
                  ))}
@@ -704,20 +707,20 @@ const mapped = res.data.map((item: any) => {
           setShowExitConfirm(false);
         }
       }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[95vw] sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Çıkış Onayı</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Çıkış Onayı</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-xs sm:text-sm text-gray-600">
               Filtreleriniz kaydedilmedi. Çıkmak istediğinizden emin misiniz?
             </p>
           </div>
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={cancelExit} className="border-2 border-gray-300 shadow-sm">
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={cancelExit} className="border-2 border-gray-300 shadow-sm text-xs sm:text-sm w-full sm:w-auto">
               İptal
             </Button>
-            <Button variant="destructive" onClick={confirmExit} className="border-2 border-gray-300 shadow-sm">
+            <Button variant="destructive" onClick={confirmExit} className="border-2 border-gray-300 shadow-sm text-xs sm:text-sm w-full sm:w-auto">
               Çık
             </Button>
           </DialogFooter>
