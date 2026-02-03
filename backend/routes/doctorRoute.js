@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorContoller');
 const { authenticateToken, isDoctor } = require('../middleware/auth');
+const { upload } = require('../middleware/uploadMiddleware');
 
 router.use(authenticateToken, isDoctor);
 
@@ -26,5 +27,12 @@ router.put('/prescriptions/:id', doctorController.updatePrescription);
 router.delete('/prescriptions/:id', doctorController.deletePrescription);
 router.get('/patients/:patientId/prescriptions', doctorController.getPatientPrescriptions);
 router.patch('/prescriptions/:id/status', doctorController.updatePrescriptionStatus);
+
+// Tıbbi sonuç işlemleri (doktor)
+router.get('/results/:patientId', doctorController.getMedicalResultsByPatient);
+// Sadece metin sonuç ekleme
+router.post('/results', doctorController.addMedicalResult);
+// Dosya eklenebilen sonuç ekleme (PDF / görsel)
+router.post('/results-with-files', upload.array('files', 5), doctorController.addMedicalResultWithFiles);
 
 module.exports = router;

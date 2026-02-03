@@ -2,6 +2,7 @@ const { Pool } = require('pg');
 const db = require('../config/db');
 const { body, validationResult, param } = require('express-validator');
 const { sendAppointmentConfirmation } = require('../services/mailService');
+const MedicalResultModel = require('../models/medicalResultModel');
 
 // Randevu oluşturma
 exports.createAppointment = async (req, res) => {
@@ -596,6 +597,67 @@ exports.deleteFeedback = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Geri bildirim silinirken bir hata oluştu'
+    });
+  }
+};
+
+// Medical Results - Hasta için sonuç listesini getir
+exports.getMyMedicalResults = async (req, res) => {
+  try {
+    const patientId = req.params.patientId || req.user?.user_id;
+
+    if (!patientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hasta ID\'si gereklidir',
+      });
+    }
+
+    const results = await MedicalResultModel.getResultsByPatientId(patientId);
+
+    return res.status(200).json({
+      success: true,
+      data: results,
+    });
+  } catch (err) {
+    console.error('Error fetching medical results:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Tıbbi sonuçlar alınırken bir hata oluştu',
+    });
+  }
+};
+
+// Medical Results - Belirli bir sonucu detaylı getir
+exports.getMedicalResultDetail = async (req, res) => {
+  try {
+    const { patientId, resultId } = req.params;
+
+    if (!patientId || !resultId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hasta ID ve sonuç ID gereklidir',
+      });
+    }
+
+    const result = await MedicalResultModel.getResultDetailForPatient(patientId, resultId);
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sonuç bulunamadı',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (err) {
+    console.error('Error fetching medical result detail:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Sonuç detayları alınırken bir hata oluştu',
     });
   }
 };
