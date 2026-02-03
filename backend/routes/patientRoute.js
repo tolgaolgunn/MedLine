@@ -18,6 +18,10 @@ router.put('/patient/prescriptions/:prescriptionId/status', patientController.up
 router.get('/patient/results/:patientId', patientController.getMyMedicalResults);
 router.get('/patient/results/:patientId/:resultId', patientController.getMedicalResultDetail);
 
+// Patient statistics routes
+router.get('/patient/prescriptions/active/count/:patientId', patientController.getActivePrescriptionCount);
+router.get('/patient/appointments/completed/count/:patientId', patientController.getCompletedAppointmentCount);
+
 // Feedback routes
 router.get('/feedback/:userId', patientController.getUserFeedbacks);
 router.post('/feedback', patientController.createFeedback);

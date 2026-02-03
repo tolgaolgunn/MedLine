@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { toast } from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -6,7 +7,7 @@ import { Badge } from '../ui/badge';
 import { PageHeader } from '../ui/PageHeader';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '../ui/dialog';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Search, Plus, Phone, Mail, Calendar } from 'lucide-react';
@@ -140,6 +141,7 @@ const PatientManagement: React.FC = () => {
   const [expandedResultId, setExpandedResultId] = useState<number | null>(null);
   const [resultTitle, setResultTitle] = useState('');
   const [resultDetails, setResultDetails] = useState('');
+  const [resultRecordType, setResultRecordType] = useState<string>('');
   const [resultFiles, setResultFiles] = useState<File[]>([]);
   const [filePreviews, setFilePreviews] = useState<{ url: string; type: 'image' | 'pdf'; name: string }[]>([]);
   const [isSavingResult, setIsSavingResult] = useState(false);
@@ -149,6 +151,11 @@ const PatientManagement: React.FC = () => {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [formHasChanges, setFormHasChanges] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Sonuçlar için filtreleme, arama ve sıralama
+  const [resultSearchTerm, setResultSearchTerm] = useState('');
+  const [resultFilterType, setResultFilterType] = useState<string>('all');
+  const [resultSortBy, setResultSortBy] = useState<'date' | 'title' | 'type'>('date');
+  const [resultSortOrder, setResultSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // 2. Remove redundant state
   // Remove activeSearchTerm and activeFilterStatus states
@@ -231,7 +238,48 @@ const PatientManagement: React.FC = () => {
     fetchPatients();
   }, [currentDoctorId]);
 
-  // 5. Filtered patients with useMemo
+  // 5. Filtered and sorted results with useMemo
+  const filteredAndSortedResults = useMemo(() => {
+    if (!patientResults || patientResults.length === 0) return [];
+
+    let filtered = [...patientResults];
+
+    // Arama filtresi
+    if (resultSearchTerm) {
+      const searchLower = resultSearchTerm.toLowerCase();
+      filtered = filtered.filter((r: any) => 
+        r.title?.toLowerCase().includes(searchLower) ||
+        r.details?.toLowerCase().includes(searchLower) ||
+        r.record_type?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Tür filtresi
+    if (resultFilterType !== 'all') {
+      filtered = filtered.filter((r: any) => r.record_type === resultFilterType);
+    }
+
+    // Sıralama
+    filtered.sort((a: any, b: any) => {
+      let comparison = 0;
+      
+      if (resultSortBy === 'date') {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        comparison = dateA - dateB;
+      } else if (resultSortBy === 'title') {
+        comparison = (a.title || '').localeCompare(b.title || '', 'tr');
+      } else if (resultSortBy === 'type') {
+        comparison = (a.record_type || '').localeCompare(b.record_type || '', 'tr');
+      }
+
+      return resultSortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [patientResults, resultSearchTerm, resultFilterType, resultSortBy, resultSortOrder]);
+
+  // 6. Filtered patients with useMemo
   const filteredPatients = useMemo(() => {
     return patients.filter(patient => {
       if (!patient || !patient.patient_name || !patient.email) {
@@ -242,15 +290,16 @@ const PatientManagement: React.FC = () => {
       const matchesSearch = searchTerm ? (
         patient.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (patient.phone_number && patient.phone_number.includes(searchTerm))
+        (patient.phone_number && patient.phone_number.includes(searchTerm)) ||
+        (patient.patient_id && patient.patient_id.toString().includes(searchTerm))
       ) : true;
       
       return matchesDoctor && matchesSearch;
     });
   }, [patients, currentDoctorId, searchTerm]);
 
-  // 6. Helper functions (not hooks)
-  const handleAddPatient = (newPatient: {
+  // 7. Helper functions (not hooks)
+  const handleAddPatient = async (newPatient: {
     patient_name: string;
     email: string;
     phone_number: string;
@@ -259,24 +308,105 @@ const PatientManagement: React.FC = () => {
     address: string;
     blood_type: string;
     medical_history: string;
+    password: string;
   }) => {
-    const patient: Patient = {
-      patient_id: `P${String(patients.length + 1).padStart(3, '0')}`,
-      patient_name: newPatient.patient_name,
-      email: newPatient.email,
-      phone_number: newPatient.phone_number,
-      birth_date: newPatient.birth_date,
-      gender: newPatient.gender,
-      address: newPatient.address,
-      medical_history: newPatient.medical_history,
-      blood_type: newPatient.blood_type,
-      doctor_id: currentDoctorId,
-      total_appointments: 0,
-      last_appointment_date: '',
-      first_appointment_date: new Date().toISOString().split('T')[0]
-    };
-    setPatients([...patients, patient]);
-    setIsAddPatientOpen(false);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3005/api/doctor/patients/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          full_name: newPatient.patient_name,
+          email: newPatient.email,
+          password: newPatient.password,
+          phone_number: newPatient.phone_number,
+          birth_date: newPatient.birth_date,
+          gender: newPatient.gender,
+          address: newPatient.address,
+          blood_type: newPatient.blood_type,
+          medical_history: newPatient.medical_history,
+        }),
+      });
+
+      let json;
+      try {
+        json = await response.json();
+      } catch (parseError) {
+        // JSON parse hatası, response text olabilir
+        const text = await response.text();
+        throw new Error(text || 'Hasta eklenirken bir hata oluştu');
+      }
+
+      if (!response.ok || json?.success === false) {
+        const errorMessage = json?.message || json?.error || `HTTP ${response.status}: ${response.statusText}`;
+        console.error('Backend error response:', json);
+        throw new Error(errorMessage);
+      }
+
+      // Başarılı oldu, hastaları yeniden yükle
+      // Transaction commit edildikten sonra liste yenilensin
+      const refreshPatients = async (retryCount = 0) => {
+        try {
+          console.log(`Refreshing patients list, attempt ${retryCount + 1}...`);
+          const fetchResponse = await fetch(`http://localhost:3005/api/doctor/patients/${currentDoctorId}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+          });
+
+          if (fetchResponse.ok) {
+            const data = await fetchResponse.json();
+            console.log('Fetched patients:', data.length, 'patients');
+            setPatients(data);
+            
+            // Yeni eklenen hastanın listede olup olmadığını kontrol et
+            const newPatientInList = data.find((p: any) => 
+              p.patient_name === newPatient.patient_name || 
+              p.email === newPatient.email
+            );
+            
+            if (newPatientInList) {
+              toast.success('Hasta başarıyla eklendi!');
+            } else if (retryCount < 3) {
+              // Hasta listede yoksa tekrar dene
+              console.log('New patient not in list yet, retrying...');
+              setTimeout(() => refreshPatients(retryCount + 1), 2000);
+            } else {
+              toast.success('Hasta başarıyla eklendi! Liste yenileniyor...');
+            }
+          } else {
+            const errorText = await fetchResponse.text();
+            console.error('Failed to fetch patients:', fetchResponse.status, errorText);
+            if (retryCount < 3) {
+              setTimeout(() => refreshPatients(retryCount + 1), 2000);
+            } else {
+              toast.success('Hasta başarıyla eklendi! Sayfayı yenileyin.');
+            }
+          }
+        } catch (fetchError) {
+          console.error('Error fetching updated patients:', fetchError);
+          if (retryCount < 3) {
+            setTimeout(() => refreshPatients(retryCount + 1), 2000);
+          } else {
+            toast.success('Hasta başarıyla eklendi! Sayfayı yenileyin.');
+          }
+        }
+      };
+
+      // İlk deneme için bekleme (transaction commit ve appointment oluşması için)
+      setTimeout(() => refreshPatients(0), 1500);
+
+      setIsAddPatientOpen(false);
+      setFormHasChanges(false);
+    } catch (err: any) {
+      console.error('Error adding patient:', err);
+      toast.error(err.message || 'Hasta eklenirken bir hata oluştu');
+    }
   };
 
   const confirmExit = () => {
@@ -296,9 +426,14 @@ const PatientManagement: React.FC = () => {
     setIsAddingResult(false);
     setResultTitle('');
     setResultDetails('');
+    setResultRecordType('');
     setResultFiles([]);
     setResultError(null);
     setResultSuccess(null);
+    setResultSearchTerm('');
+    setResultFilterType('all');
+    setResultSortBy('date');
+    setResultSortOrder('desc');
 
     try {
       const token = localStorage.getItem('token');
@@ -354,6 +489,7 @@ const PatientManagement: React.FC = () => {
         formData.append('patientId', resultsPatient.patient_id);
         formData.append('title', resultTitle);
         formData.append('details', resultDetails);
+        formData.append('recordType', resultRecordType || 'Diğer');
         resultFiles.forEach((file) => {
           formData.append('files', file);
         });
@@ -376,6 +512,7 @@ const PatientManagement: React.FC = () => {
             patientId: resultsPatient.patient_id,
             title: resultTitle,
             details: resultDetails,
+            recordType: resultRecordType || 'Diğer',
           }),
         });
       }
@@ -391,6 +528,7 @@ const PatientManagement: React.FC = () => {
       setResultSuccess('Sonuç başarıyla kaydedildi.');
       setResultTitle('');
       setResultDetails('');
+      setResultRecordType('');
       setResultFiles([]);
       // Yeni eklenen sonucu liste başına ekle
       setPatientResults(prev => (created ? [created, ...prev] : prev));
@@ -456,6 +594,9 @@ const PatientManagement: React.FC = () => {
           <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Yeni Hasta Ekle</DialogTitle>
+              <DialogDescription>
+                Yeni hasta bilgilerini doldurun. Tüm alanlar zorunludur.
+              </DialogDescription>
             </DialogHeader>
             <AddPatientForm 
               onSubmit={handleAddPatient} 
@@ -473,7 +614,7 @@ const PatientManagement: React.FC = () => {
             <div className="relative flex-1 w-full border-2 border-gray-300 rounded-md">
               <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4" />
               <Input
-                placeholder="Hasta ara (isim, email, telefon)..."
+                placeholder="Hasta ara (isim, email, telefon, ID)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8 sm:pl-10 h-9 sm:h-10 text-xs sm:text-sm"
@@ -524,6 +665,9 @@ const PatientManagement: React.FC = () => {
           <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-base sm:text-lg truncate">Hasta Detayları - {selectedPatient.patient_name}</DialogTitle>
+              <DialogDescription>
+                Hasta bilgilerini görüntüleyin.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-3 sm:space-y-4">
@@ -577,6 +721,9 @@ const PatientManagement: React.FC = () => {
         <DialogContent className="max-w-[95vw] sm:max-w-md [&>button]:hidden">
           <DialogHeader>
             <DialogTitle className="text-base sm:text-lg">Kaydetmeden Çıkış</DialogTitle>
+            <DialogDescription>
+              Yapılan değişiklikler kaybolacaktır.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <p className="text-xs sm:text-sm text-gray-600">
@@ -605,9 +752,72 @@ const PatientManagement: React.FC = () => {
               <DialogTitle className="text-base sm:text-lg">
                 Sonuçlar - {resultsPatient.patient_name}
               </DialogTitle>
+              <DialogDescription>
+                Hasta sonuçlarını görüntüleyin ve yeni sonuç ekleyin.
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
+              {/* Sonuçlar için Filtreleme, Arama ve Sıralama */}
+              {!isLoadingResults && !resultsListError && patientResults.length > 0 && (
+                <div className="space-y-3 border-b pb-3">
+                  {/* Arama */}
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4" />
+                    <Input
+                      placeholder="Sonuçlarda ara..."
+                      value={resultSearchTerm}
+                      onChange={(e) => setResultSearchTerm(e.target.value)}
+                      className="pl-8 sm:pl-10 h-8 sm:h-9 text-xs sm:text-sm border border-gray-300"
+                    />
+                  </div>
+
+                  {/* Filtreleme ve Sıralama */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Select value={resultFilterType} onValueChange={setResultFilterType}>
+                      <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm border border-gray-300">
+                        <SelectValue placeholder="Tür Filtrele" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        <SelectItem value="Kan Tahlili">Kan Tahlili</SelectItem>
+                        <SelectItem value="Radyoloji">Radyoloji</SelectItem>
+                        <SelectItem value="Patoloji">Patoloji</SelectItem>
+                        <SelectItem value="Biyokimya">Biyokimya</SelectItem>
+                        <SelectItem value="Mikrobiyoloji">Mikrobiyoloji</SelectItem>
+                        <SelectItem value="Hematoloji">Hematoloji</SelectItem>
+                        <SelectItem value="İmmünoloji">İmmünoloji</SelectItem>
+                        <SelectItem value="Genetik">Genetik</SelectItem>
+                        <SelectItem value="Endokrinoloji">Endokrinoloji</SelectItem>
+                        <SelectItem value="Diğer">Diğer</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <div className="flex gap-2">
+                      <Select value={resultSortBy} onValueChange={(val) => setResultSortBy(val as 'date' | 'title' | 'type')}>
+                        <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm flex-1 border border-gray-300">
+                          <SelectValue placeholder="Sırala" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="date">Tarih</SelectItem>
+                          <SelectItem value="title">Başlık</SelectItem>
+                          <SelectItem value="type">Tür</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 sm:h-9 text-xs sm:text-sm px-2 border border-gray-300"
+                        onClick={() => setResultSortOrder(resultSortOrder === 'asc' ? 'desc' : 'asc')}
+                      >
+                        {resultSortOrder === 'asc' ? '↑' : '↓'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Mevcut sonuçlar listesi */}
               <div className="space-y-2">
                 <Label className="text-xs sm:text-sm font-semibold">Önceki Sonuçlar</Label>
@@ -628,9 +838,15 @@ const PatientManagement: React.FC = () => {
                   </p>
                 )}
 
-                {!isLoadingResults && !resultsListError && patientResults.length > 0 && (
+                {!isLoadingResults && !resultsListError && filteredAndSortedResults.length === 0 && patientResults.length > 0 && (
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Arama kriterlerinize uygun sonuç bulunamadı.
+                  </p>
+                )}
+
+                {!isLoadingResults && !resultsListError && filteredAndSortedResults.length > 0 && (
                   <ul className="space-y-2 text-xs sm:text-sm">
-                    {patientResults.map((r: any) => (
+                    {filteredAndSortedResults.map((r: any) => (
                       <li
                         key={r.result_id}
                         className="border rounded-md px-3 py-2 flex flex-col gap-1"
@@ -638,6 +854,11 @@ const PatientManagement: React.FC = () => {
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex flex-col">
                             <span className="font-medium">{r.title}</span>
+                            {r.record_type && (
+                              <span className="text-[11px] sm:text-xs text-blue-600 font-medium">
+                                {r.record_type}
+                              </span>
+                            )}
               <span className="text-[11px] sm:text-xs text-gray-500">
                               {r.created_at
                                 ? new Date(r.created_at).toLocaleString('tr-TR', {
@@ -763,6 +984,29 @@ const PatientManagement: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
+                      <Label htmlFor="resultRecordType" className="text-xs sm:text-sm">
+                        Tıbbi Kayıt Türü
+                      </Label>
+                      <Select value={resultRecordType} onValueChange={setResultRecordType}>
+                        <SelectTrigger className="!border !border-gray-300 text-xs sm:text-sm h-9 sm:h-10">
+                          <SelectValue placeholder="Tıbbi kayıt türünü seçin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Kan Tahlili">Kan Tahlili</SelectItem>
+                          <SelectItem value="Radyoloji">Radyoloji</SelectItem>
+                          <SelectItem value="Patoloji">Patoloji</SelectItem>
+                          <SelectItem value="Biyokimya">Biyokimya</SelectItem>
+                          <SelectItem value="Mikrobiyoloji">Mikrobiyoloji</SelectItem>
+                          <SelectItem value="Hematoloji">Hematoloji</SelectItem>
+                          <SelectItem value="İmmünoloji">İmmünoloji</SelectItem>
+                          <SelectItem value="Genetik">Genetik</SelectItem>
+                          <SelectItem value="Endokrinoloji">Endokrinoloji</SelectItem>
+                          <SelectItem value="Diğer">Diğer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="resultDetails" className="text-xs sm:text-sm">
                         Sonuç Detayları
                       </Label>
@@ -851,6 +1095,10 @@ const PatientManagement: React.FC = () => {
                         className="text-xs sm:text-sm"
                         onClick={() => {
                           setIsAddingResult(false);
+                          setResultTitle('');
+                          setResultDetails('');
+                          setResultRecordType('');
+                          setResultFiles([]);
                           setResultError(null);
                           setResultSuccess(null);
                         }}
@@ -887,6 +1135,7 @@ const AddPatientForm: React.FC<{
     address: string;
     blood_type: string;
     medical_history: string;
+    password: string;
   }) => void;
   onFormChange: (hasChanges: boolean) => void;
 }> = ({ onSubmit, onFormChange }) => {
@@ -902,7 +1151,9 @@ const AddPatientForm: React.FC<{
     bloodType: '',
     medicalHistory: '',
     allergies: '',
-    medications: ''
+    medications: '',
+    password: '',
+    confirmPassword: ''
   };
   
   const [formData, setFormData] = useState(initialFormData);
@@ -981,6 +1232,34 @@ const AddPatientForm: React.FC<{
     if (!formData.address.trim()) {
       newErrors.address = 'Adres alanı zorunludur';
     }
+
+    if (!formData.password.trim()) {
+      newErrors.password = 'Şifre alanı zorunludur';
+    } else {
+      const password = formData.password;
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+      
+      if (password.length < 6) {
+        newErrors.password = 'Şifre en az 6 karakter olmalıdır';
+      } else if (!hasUpperCase) {
+        newErrors.password = 'Şifre en az 1 büyük harf içermelidir';
+      } else if (!hasLowerCase) {
+        newErrors.password = 'Şifre en az 1 küçük harf içermelidir';
+      } else if (!hasNumber) {
+        newErrors.password = 'Şifre en az 1 sayı içermelidir';
+      } else if (!hasSpecialChar) {
+        newErrors.password = 'Şifre en az 1 noktalama işareti içermelidir';
+      }
+    }
+
+    if (!formData.confirmPassword.trim()) {
+      newErrors.confirmPassword = 'Şifre tekrarı zorunludur';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Şifreler eşleşmiyor';
+    }
     
     // Hata varsa formu gönderme
     if (Object.keys(newErrors).length > 0) {
@@ -1000,12 +1279,14 @@ const AddPatientForm: React.FC<{
         formData.medicalHistory && formData.medicalHistory.trim() ? `Geçmiş: ${formData.medicalHistory}` : '',
         formData.allergies && formData.allergies.trim() ? `Alerjiler: ${formData.allergies}` : '',
         formData.medications && formData.medications.trim() ? `İlaçlar: ${formData.medications}` : ''
-      ].filter(Boolean).join(', ')
+      ].filter(Boolean).join(', '),
+      password: formData.password
     });
     
     // Formu temizle
     setFormData(initialFormData);
     setErrors({});
+    onFormChange(false);
   };
 
   return (
@@ -1120,8 +1401,8 @@ const AddPatientForm: React.FC<{
               <SelectItem value="B-">B-</SelectItem>
               <SelectItem value="AB+">AB+</SelectItem>
               <SelectItem value="AB-">AB-</SelectItem>
-              <SelectItem value="O+">O+</SelectItem>
-              <SelectItem value="O-">O-</SelectItem>
+              <SelectItem value="0+">0+</SelectItem>
+              <SelectItem value="0-">0-</SelectItem>
             </SelectContent>
           </Select>
           {errors.bloodType && (
@@ -1240,6 +1521,45 @@ const AddPatientForm: React.FC<{
           <div className="text-xs text-gray-500 mt-1 text-right">
            {formData.medications.length}/100 karakter
          </div>
+        </div>
+      </div>
+
+      {/* Şifre Alanları */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div>
+          <Label htmlFor="password" className="mb-2 block text-xs sm:text-sm">Şifre</Label>
+          <Input
+            id="password"
+            className={`border ${errors.password ? 'border-red-500' : 'border-border'} text-xs sm:text-sm h-9 sm:h-10`}
+            type="password"
+            placeholder="En az 6 karakter"
+            value={formData.password}
+            onChange={(e) => setFormData({...formData, password: e.target.value})}
+            required
+          />
+          {!errors.password && formData.password && (
+            <p className="text-xs text-gray-500 mt-1">
+              En az: 1 büyük harf, 1 küçük harf, 1 sayı, 1 noktalama işareti
+            </p>
+          )}
+          {errors.password && (
+            <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.password}</p>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="confirmPassword" className="mb-2 block text-xs sm:text-sm">Şifre Tekrar</Label>
+          <Input
+            id="confirmPassword"
+            className={`border ${errors.confirmPassword ? 'border-red-500' : 'border-border'} text-xs sm:text-sm h-9 sm:h-10`}
+            type="password"
+            placeholder="Şifreyi tekrar girin"
+            value={formData.confirmPassword}
+            onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+            required
+          />
+          {errors.confirmPassword && (
+            <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.confirmPassword}</p>
+          )}
         </div>
       </div>
 

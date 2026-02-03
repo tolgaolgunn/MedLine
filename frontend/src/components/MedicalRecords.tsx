@@ -2,13 +2,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "./ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Search } from "lucide-react";
 
 interface MedicalResult {
   result_id: number;
   title: string;
   details: string;
+  record_type?: string;
   created_at: string;
   updated_at?: string;
   doctor_name: string;
@@ -38,6 +42,11 @@ export function MedicalRecords() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedResult, setSelectedResult] = useState<MedicalResult | null>(null);
+  // Arama, filtreleme ve sıralama state'leri
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'title' | 'type' | 'doctor'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const currentPatientId = useMemo(() => {
     try {
@@ -85,6 +94,50 @@ export function MedicalRecords() {
     fetchResults();
   }, [currentPatientId]);
 
+  // Filtrelenmiş ve sıralanmış sonuçlar
+  const filteredAndSortedResults = useMemo(() => {
+    if (!results || results.length === 0) return [];
+
+    let filtered = [...results];
+
+    // Arama filtresi
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter((r) => 
+        r.title?.toLowerCase().includes(searchLower) ||
+        r.details?.toLowerCase().includes(searchLower) ||
+        r.record_type?.toLowerCase().includes(searchLower) ||
+        r.doctor_name?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Tür filtresi
+    if (filterType !== 'all') {
+      filtered = filtered.filter((r) => r.record_type === filterType);
+    }
+
+    // Sıralama
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy === 'date') {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        comparison = dateA - dateB;
+      } else if (sortBy === 'title') {
+        comparison = (a.title || '').localeCompare(b.title || '', 'tr');
+      } else if (sortBy === 'type') {
+        comparison = (a.record_type || '').localeCompare(b.record_type || '', 'tr');
+      } else if (sortBy === 'doctor') {
+        comparison = (a.doctor_name || '').localeCompare(b.doctor_name || '', 'tr');
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [results, searchTerm, filterType, sortBy, sortOrder]);
+
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <PageHeader
@@ -121,7 +174,86 @@ export function MedicalRecords() {
 
       {!isLoading && !error && results.length > 0 && (
         <div className="space-y-4">
-          {results.map((result) => (
+          {/* Arama, Filtreleme ve Sıralama */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              {/* Arama */}
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Sonuçlarda ara (başlık, detay, tür, doktor)..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-10 border border-gray-300"
+                />
+              </div>
+
+              {/* Filtreleme ve Sıralama */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="h-10 border border-gray-300">
+                    <SelectValue placeholder="Tür Filtrele" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tümü</SelectItem>
+                    <SelectItem value="Kan Tahlili">Kan Tahlili</SelectItem>
+                    <SelectItem value="Radyoloji">Radyoloji</SelectItem>
+                    <SelectItem value="Patoloji">Patoloji</SelectItem>
+                    <SelectItem value="Biyokimya">Biyokimya</SelectItem>
+                    <SelectItem value="Mikrobiyoloji">Mikrobiyoloji</SelectItem>
+                    <SelectItem value="Hematoloji">Hematoloji</SelectItem>
+                    <SelectItem value="İmmünoloji">İmmünoloji</SelectItem>
+                    <SelectItem value="Genetik">Genetik</SelectItem>
+                    <SelectItem value="Endokrinoloji">Endokrinoloji</SelectItem>
+                    <SelectItem value="Diğer">Diğer</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="flex gap-2">
+                  <Select value={sortBy} onValueChange={(val) => setSortBy(val as 'date' | 'title' | 'type' | 'doctor')}>
+                    <SelectTrigger className="h-10 flex-1 border border-gray-300">
+                      <SelectValue placeholder="Sırala" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date">Tarih</SelectItem>
+                      <SelectItem value="title">Başlık</SelectItem>
+                      <SelectItem value="type">Tür</SelectItem>
+                      <SelectItem value="doctor">Doktor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-10 px-3 border border-gray-300"
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    {sortOrder === 'asc' ? '↑' : '↓'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Sonuç sayısı */}
+              {filteredAndSortedResults.length !== results.length && (
+                <p className="text-sm text-gray-600">
+                  {filteredAndSortedResults.length} sonuç bulundu ({results.length} toplam)
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Sonuçlar Listesi */}
+          {filteredAndSortedResults.length === 0 ? (
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-gray-600">
+                  Arama kriterlerinize uygun sonuç bulunamadı.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {filteredAndSortedResults.map((result) => (
             <Card key={result.result_id} className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 sm:p-5">
                 <div className="space-y-1">
@@ -129,6 +261,9 @@ export function MedicalRecords() {
                     {result.title}
                   </CardTitle>
                   <p className="text-xs sm:text-sm text-gray-500">
+                    {result.record_type && (
+                      <span className="font-medium text-blue-600">{result.record_type} • </span>
+                    )}
                     Doktor: {result.doctor_name} • Tarih: {formatDate(result.created_at)}
                   </p>
                 </div>
@@ -141,7 +276,9 @@ export function MedicalRecords() {
                 </Button>
               </CardHeader>
             </Card>
-          ))}
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -156,9 +293,19 @@ export function MedicalRecords() {
               <DialogTitle className="text-base sm:text-lg">
                 {selectedResult.title}
               </DialogTitle>
+              <DialogDescription>
+                Tıbbi kayıt detaylarını görüntüleyin.
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 sm:space-y-4 text-sm">
+              {selectedResult.record_type && (
+                <div className="space-y-1">
+                  <Label className="text-xs sm:text-sm text-gray-500">Tıbbi Kayıt Türü</Label>
+                  <p className="text-sm font-medium text-blue-600">{selectedResult.record_type}</p>
+                </div>
+              )}
+
               <div className="space-y-1">
                 <Label className="text-xs sm:text-sm text-gray-500">Doktor</Label>
                 <p className="text-sm">{selectedResult.doctor_name}</p>

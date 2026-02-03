@@ -19,6 +19,7 @@ router.patch('/appointments/:appointmentId/status', doctorController.updateAppoi
 
 // Hasta bilgileri
 router.get('/patients/:doctorId', doctorController.getPatientsByDoctor);
+router.post('/patients/add', doctorController.addPatient);
 
 // Reçete işlemleri
 router.post('/prescriptions', doctorController.addPrescription);

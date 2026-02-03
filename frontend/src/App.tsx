@@ -13,6 +13,7 @@ import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // Toast için stil
+import { Toaster } from "react-hot-toast"; // react-hot-toast için
 import MedLineChatbot from "./components/MedLineChatbot";
 
 
@@ -113,6 +114,7 @@ function App(): React.ReactElement {
           </Routes>
 
           <ToastContainer position="top-right" autoClose={3000} />
+          <Toaster position="top-right" />
 
           {/* Chatbot Bileşeni */}
           <MedLineChatbot />

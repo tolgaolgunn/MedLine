@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Calendar } from '../ui/calendar';
@@ -52,7 +52,6 @@ interface Patient {
 const DoctorDashboard = () => {
   const navigate = useNavigate();
   const [totalPatients, setTotalPatients] = useState<number>(0);
-  const [pendingAppointments, setPendingAppointments] = useState<number>(0);
   const [todayAppointmentCount, setTodayAppointmentCount] = useState<number>(0);
   const [prescriptionCount, setPrescriptionCount] = useState<number>(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -234,6 +233,11 @@ const DoctorDashboard = () => {
   };
 
   const isCurrentAppointment = (appointment: Appointment) => {
+    // Completed durumundaki randevular için buton gösterilmez
+    if (appointment.status === 'completed') {
+      return false;
+    }
+    
     // appointment.date: 'DD.MM.YYYY'
     // appointment.time: 'HH:mm'
     const [day, month, year] = appointment.date.split('.');
@@ -267,79 +271,62 @@ const DoctorDashboard = () => {
     }
   }, []);
 
-  // Toplam hasta sayısını veritabanından çek
-  useEffect(() => {
-    if (doctorId) {
-      const fetchTotalPatients = async () => {
-        try {
-          const response = await axios.get(`http://localhost:3005/api/doctor/patients/count/${doctorId}`);
-          if (response.data && typeof response.data.count === 'number') {
-            setTotalPatients(response.data.count);
-          }
-        } catch (error) {
-          console.error('Hasta sayısı çekilirken hata oluştu:', error);
-        }
-      };
+  // Tüm istatistikleri yeniden çek
+  const refreshStatistics = useCallback(async () => {
+    if (!doctorId) return;
+    
+    try {
+      // Tüm istatistikleri paralel olarak çek
+      const [patientsRes, todayRes, prescriptionsRes] = await Promise.all([
+        axios.get(`http://localhost:3005/api/doctor/patients/count/${doctorId}`),
+        axios.get(`http://localhost:3005/api/doctor/appointments/today/count/${doctorId}`),
+        axios.get(`http://localhost:3005/api/doctor/prescriptions/count/${doctorId}`)
+      ]);
 
-      fetchTotalPatients();
+      if (patientsRes.data && typeof patientsRes.data.count === 'number') {
+        setTotalPatients(patientsRes.data.count);
+      }
+      if (todayRes.data && typeof todayRes.data.count === 'number') {
+        setTodayAppointmentCount(todayRes.data.count);
+      }
+      if (prescriptionsRes.data && typeof prescriptionsRes.data.count === 'number') {
+        setPrescriptionCount(prescriptionsRes.data.count);
+      }
+    } catch (error) {
+      console.error('İstatistikler güncellenirken hata oluştu:', error);
     }
   }, [doctorId]);
 
-  // Bekleyen randevu sayısını veritabanından çek
+  // İstatistikleri ilk yüklemede ve doctorId değiştiğinde çek
   useEffect(() => {
     if (doctorId) {
-      const fetchPendingAppointments = async () => {
-        try {
-          const response = await axios.get(`http://localhost:3005/api/doctor/appointments/pending/count/${doctorId}`);
-          if (response.data && typeof response.data.count === 'number') {
-            setPendingAppointments(response.data.count);
-          }
-        } catch (error) {
-          console.error('Bekleyen randevu sayısı çekilirken hata oluştu:', error);
-        }
-      };
-
-      fetchPendingAppointments();
+      refreshStatistics();
     }
-  }, [doctorId]);
+  }, [doctorId, refreshStatistics]);
 
-  // Bugünkü randevu sayısını veritabanından çek
+  // Sayfa odağa geldiğinde istatistikleri yenile
   useEffect(() => {
-    if (doctorId) {
-      const fetchTodayAppointments = async () => {
-        try {
-          const response = await axios.get(`http://localhost:3005/api/doctor/appointments/today/count/${doctorId}`);
-          if (response.data && typeof response.data.count === 'number') {
-            setTodayAppointmentCount(response.data.count);
-          }
-        } catch (error) {
-          console.error('Bugünkü randevu sayısı çekilirken hata oluştu:', error);
-        }
-      };
+    const handleFocus = () => {
+      if (doctorId) {
+        refreshStatistics();
+      }
+    };
 
-      fetchTodayAppointments();
-    }
-  }, [doctorId]);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [doctorId, refreshStatistics]);
 
-  // Reçete sayısını veritabanından çek
+  // Her 30 saniyede bir istatistikleri otomatik yenile
   useEffect(() => {
-    if (doctorId) {
-      const fetchPrescriptionCount = async () => {
-        try {
-          const response = await axios.get(`http://localhost:3005/api/doctor/prescriptions/count/${doctorId}`);
-          if (response.data && typeof response.data.count === 'number') {
-            setPrescriptionCount(response.data.count);
-          }
-        } catch (error) {
-          console.error('Reçete sayısı çekilirken hata oluştu:', error);
-        }
-      };
+    if (!doctorId) return;
 
-      fetchPrescriptionCount();
-    }
-  }, [doctorId]);
+    const interval = setInterval(() => {
+      refreshStatistics();
+    }, 30000); // 30 saniye
 
-  // Doktora ait randevuları backend'den çek
+    return () => clearInterval(interval);
+  }, [doctorId, refreshStatistics]);
+
   // Doktora ait randevuları backend'den çek
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -372,13 +359,15 @@ const DoctorDashboard = () => {
 
         console.log('Mapped appointments:', mapped);
         setAppointments(mapped);
+        // Randevular güncellendiğinde istatistikleri de güncelle
+        await refreshStatistics();
       } catch (error) {
         console.error('Randevular çekilirken hata oluştu:', error);
       }
     };
 
     fetchAppointments();
-  }, [doctorId]);
+  }, [doctorId, refreshStatistics]);
 
   const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
     try {
@@ -389,6 +378,8 @@ const DoctorDashboard = () => {
           app.id === appointmentId ? { ...app, status: newStatus } : app
         )
       );
+      // İstatistikleri güncelle
+      await refreshStatistics();
       toast.success('Randevu durumu güncellendi!');
     } catch (e) {
       toast.error('Durum güncellenemedi!');
@@ -456,7 +447,7 @@ const DoctorDashboard = () => {
         showBackButton={false}
       />
       {/* İstatistikler */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4">
         <Card>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
@@ -484,22 +475,6 @@ const DoctorDashboard = () => {
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm text-gray-600 truncate">Bugünkü Randevular</p>
                 <p className="text-xl sm:text-2xl font-bold">{todayAppointmentCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center space-x-2">
-              <div className="p-1.5 sm:p-2 bg-yellow-100 rounded-lg flex-shrink-0">
-                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm text-gray-600 truncate">Bekleyen</p>
-                <p className="text-xl sm:text-2xl font-bold">{pendingAppointments}</p>
               </div>
             </div>
           </CardContent>
