@@ -147,6 +147,19 @@ async function initializeDatabase() {
             )
         `);
 
+        // NOTIFICATIONS TABLOSU
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS notifications (
+                notification_id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                type VARCHAR(50) NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Admin kullanıcı ekleme
         const email = 'admin1@healthcare.com';
         const password = 'Admin1234';
@@ -170,7 +183,7 @@ async function initializeDatabase() {
         }
 
         client.release();
-        console.log('All tables ensured: users, patient_profiles, doctor_profiles, prescriptions, prescription_items, appointments, feedbacks, medical_results, medical_result_files');
+        console.log('All tables ensured: users, patient_profiles, doctor_profiles, prescriptions, prescription_items, appointments, feedbacks, medical_results, medical_result_files, notifications');
     } catch (error) {
         console.error('Database initialization error:', error);
         process.exit(1);

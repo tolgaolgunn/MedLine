@@ -10,6 +10,7 @@ router.use(authenticateToken, isDoctor);
 router.get('/patients/count/:doctorId', doctorController.getPatientCount);
 router.get('/appointments/pending/count/:doctorId', doctorController.getPendingAppointmentCount);
 router.get('/appointments/today/count/:doctorId', doctorController.getTodayAppointmentCount);
+router.get('/prescriptions/count/:doctorId', doctorController.getPrescriptionCount);
 
 // Randevu işlemleri
 router.get('/appointments/active/:doctorId', doctorController.getActiveAppointments);

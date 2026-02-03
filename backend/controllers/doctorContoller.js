@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const { sendAppointmentConfirmation } = require('../services/mailService');
 const MedicalResultModel = require('../models/medicalResultModel');
+const NotificationModel = require('../models/notificationModel');
 
 // Helper function for database queries
 const query = async (sql, params) => {
@@ -84,6 +85,26 @@ exports.getTodayAppointmentCount = async (req, res) => {
   } catch (err) {
     console.error('Error getting today appointments:', err);
     res.status(500).json({ message: 'Failed to get today appointments' });
+  }
+};
+
+exports.getPrescriptionCount = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    console.log('Getting prescription count for doctorId:', doctorId);
+
+    const result = await query(
+      `SELECT COUNT(*) as count
+       FROM prescriptions
+       WHERE doctor_id = $1`,
+      [doctorId]
+    );
+
+    console.log('Prescription count result:', result.rows[0]);
+    res.json({ count: parseInt(result.rows[0].count) || 0 });
+  } catch (err) {
+    console.error('Error getting prescription count:', err);
+    res.status(500).json({ message: 'Reçete sayısı alınırken hata oluştu' });
   }
 };
 
@@ -434,6 +455,35 @@ exports.addMedicalResult = async (req, res) => {
       details: details.trim(),
     });
 
+    // Create notification message
+    const notificationData = {
+      userId: patientId,
+      title: 'Yeni Tahlil Sonucu',
+      message: `Doktorunuz yeni bir sonuç ekledi: ${title}`,
+      type: 'result'
+    };
+
+    // Save notification to database
+    let savedNotification;
+    try {
+      savedNotification = await NotificationModel.createNotification(notificationData);
+    } catch (notifError) {
+      console.error('Error saving notification:', notifError);
+    }
+
+    // Send real-time notification to the patient
+    if (req.io) {
+      console.log(`Emitting result notification to patient room: ${patientId}`);
+      req.io.to(String(patientId)).emit('notification', {
+        id: savedNotification ? savedNotification.notification_id : Date.now(),
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        read: false,
+        timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
+      });
+    }
+
     return res.status(201).json({
       success: true,
       data: createdResult,
@@ -498,6 +548,38 @@ exports.addMedicalResultWithFiles = async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    await client.query('COMMIT');
+
+    // Create notification message
+    const notificationData = {
+      userId: patientId,
+      title: 'Yeni Tahlil Sonucu',
+      message: `Doktorunuz yeni bir sonuç dosyası ekledi: ${title}`,
+      type: 'result'
+    };
+
+    // Save notification to database (we need to do this OUTSIDE the transaction or use a separate connection if we want it to persist even if the main transaction fails - but here we only want it if success, so it's fine. Wait, NotificationModel uses 'pool' directly, so it's outside this client's transaction. That's actually good here since we committed already.)
+    
+    let savedNotification;
+    try {
+      savedNotification = await NotificationModel.createNotification(notificationData);
+    } catch (notifError) {
+      console.error('Error saving notification:', notifError);
+    }
+
+    // Send real-time notification to the patient
+    if (req.io) {
+      console.log(`Emitting result notification to patient room: ${patientId}`);
+      req.io.to(String(patientId)).emit('notification', {
+        id: savedNotification ? savedNotification.notification_id : Date.now(),
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        read: false,
+        timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -686,6 +768,36 @@ exports.addPrescription = async (req, res) => {
       status: prescription.rows[0].status || 'active',
       nextVisit: formatDate(prescription.rows[0].next_visit_date)
     };
+
+    // Create notification message
+    const notificationData = {
+      userId: patientId,
+      title: 'Yeni Reçete',
+      message: `Dr. ${doctorName || 'Doktorunuz'} size yeni bir reçete yazdı.`,
+      type: 'prescription'
+    };
+
+    // Save notification to database
+    let savedNotification;
+    try {
+      savedNotification = await NotificationModel.createNotification(notificationData);
+    } catch (notifError) {
+      console.error('Error saving notification:', notifError);
+      // Don't fail the request if notification fails to save, just log it
+    }
+
+    // Send real-time notification to the patient
+    if (req.io) {
+      console.log(`Emitting prescription notification to patient room: ${patientId}`);
+      req.io.to(String(patientId)).emit('notification', {
+        id: savedNotification ? savedNotification.notification_id : Date.now(),
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        read: false,
+        timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
+      });
+    }
 
     res.status(201).json(responseData);
 

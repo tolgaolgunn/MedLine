@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Badge } from "./ui/badge";
-import { Bell, LogOut, User, Search, Calendar, Pill, Users, FileText, Settings, HelpCircle, X, Clock, Trash2 } from "lucide-react";
+
+import { LogOut, User, Search, Calendar, Pill, Users, FileText, Settings, HelpCircle, X, Clock, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
+import { NotificationBell } from "./notifications/NotificationBell";
 
 interface TopbarProps {
   onLogout: () => void;
@@ -21,7 +22,7 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
   const [userRole, setUserRole] = useState<string>('patient');
   const [searchValue, setSearchValue] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<Array<{text: string, timestamp: number}>>([]);
+  const [recentSearches, setRecentSearches] = useState<Array<{ text: string, timestamp: number }>>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -87,7 +88,7 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
     setActiveSection(action.id);
     setSearchValue('');
     setShowSearchResults(false);
-    
+
     // Aramayı geçmişe ekle - seçilen seçeneğin tam adını kullan
     const newSearch = { text: action.label, timestamp: Date.now() };
     const newSearches = [newSearch, ...recentSearches.filter(s => s.text !== action.label)].slice(0, 10);
@@ -117,14 +118,14 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInMs = now.getTime() - date.getTime();
-    
+
     // Geçersiz tarih kontrolü
     if (isNaN(diffInMs) || diffInMs < 0) {
       return 'Az önce';
     }
-    
+
     const diffInHours = diffInMs / (1000 * 60 * 60);
-    
+
     if (diffInHours < 1) {
       const diffInMinutes = Math.floor(diffInHours * 60);
       return `${diffInMinutes} dakika önce`;
@@ -170,9 +171,9 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
       <div className="flex-1 max-w-md relative" ref={searchRef}>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input 
-            type="text" 
-            placeholder={userRole === 'doctor' ? "Doktor işlemleri ara..." : "Hasta işlemleri ara..."} 
+          <Input
+            type="text"
+            placeholder={userRole === 'doctor' ? "Doktor işlemleri ara..." : "Hasta işlemleri ara..."}
             className="w-full pl-10 pr-4 border border-border"
             value={searchValue}
             onChange={(e) => handleSearchInput(e.target.value)}
@@ -227,55 +228,55 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
             ) : (
               // Eski aramalar
               <div className="p-2">
-                                 <div className="flex items-center justify-between mb-2">
-                   <h3 className="text-sm font-medium text-gray-900">Son Aramalar</h3>
-                   <Button
-                     variant="outline"
-                     size="sm"
-                     onClick={clearRecentSearches}
-                     disabled={recentSearches.length === 0}
-                     className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                   >
-                     <Trash2 className="w-3 h-3 mr-1" />
-                     Tümünü Temizle
-                   </Button>
-                 </div>
-                                 {recentSearches.length > 0 ? (
-                   <div className="space-y-1">
-                     {recentSearches.map((search, index) => (
-                       <div
-                         key={index}
-                         className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
-                       >
-                         <div
-                           className="flex items-center gap-2 flex-1"
-                           onClick={() => {
-                             setSearchValue(search.text);
-                             setShowSearchResults(false);
-                           }}
-                         >
-                           <Clock className="w-4 h-4 text-gray-400" />
-                           <div className="flex-1">
-                             <span className="text-sm text-gray-700">{search.text}</span>
-                             <div className="text-xs text-gray-400">{formatDate(search.timestamp)}</div>
-                           </div>
-                         </div>
-                         <Button
-                           variant="ghost"
-                           size="sm"
-                           onClick={() => removeSearchItem(search.text)}
-                           className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                         >
-                           <X className="w-3 h-3" />
-                         </Button>
-                       </div>
-                     ))}
-                   </div>
-                 ) : (
-                   <div className="p-3 text-gray-500 text-center text-sm">
-                     Henüz arama geçmişi yok
-                   </div>
-                 )}
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-gray-900">Son Aramalar</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearRecentSearches}
+                    disabled={recentSearches.length === 0}
+                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Tümünü Temizle
+                  </Button>
+                </div>
+                {recentSearches.length > 0 ? (
+                  <div className="space-y-1">
+                    {recentSearches.map((search, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                      >
+                        <div
+                          className="flex items-center gap-2 flex-1"
+                          onClick={() => {
+                            setSearchValue(search.text);
+                            setShowSearchResults(false);
+                          }}
+                        >
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <div className="flex-1">
+                            <span className="text-sm text-gray-700">{search.text}</span>
+                            <div className="text-xs text-gray-400">{formatDate(search.timestamp)}</div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeSearchItem(search.text)}
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 text-gray-500 text-center text-sm">
+                    Henüz arama geçmişi yok
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -283,10 +284,7 @@ export function Topbar({ onLogout, setActiveSection }: TopbarProps) {
       </div>
       <div className="flex items-center gap-4 ml-4">
         {/* Notification Bell */}
-        <Button variant="ghost" size="icon" className="relative" onClick={() => setActiveSection('notifications')}  >
-          <Bell className="w-5 h-5" />
-          <Badge className="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs" variant="destructive">3</Badge>
-        </Button>
+        <NotificationBell />
 
         {/* Profile Avatar */}
         <Button variant="ghost" size="icon" className="text-black" onClick={() => setActiveSection('profile')}>
