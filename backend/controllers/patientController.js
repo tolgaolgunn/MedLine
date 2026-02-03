@@ -629,6 +629,45 @@ exports.getMyMedicalResults = async (req, res) => {
 };
 
 // Medical Results - Belirli bir sonucu detaylı getir
+// Hasta istatistikleri
+exports.getActivePrescriptionCount = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    const result = await db.query(
+      `SELECT COUNT(*) as count
+       FROM prescriptions
+       WHERE patient_id = $1 
+       AND (status IS NULL OR status != 'cancelled' AND status != 'expired')`,
+      [patientId]
+    );
+
+    res.json({ count: parseInt(result.rows[0].count) || 0 });
+  } catch (err) {
+    console.error('Error getting active prescription count:', err);
+    res.status(500).json({ message: 'Aktif reçete sayısı alınırken hata oluştu' });
+  }
+};
+
+exports.getCompletedAppointmentCount = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    const result = await db.query(
+      `SELECT COUNT(*) as count
+       FROM appointments
+       WHERE patient_id = $1 
+       AND status = 'completed'`,
+      [patientId]
+    );
+
+    res.json({ count: parseInt(result.rows[0].count) || 0 });
+  } catch (err) {
+    console.error('Error getting completed appointment count:', err);
+    res.status(500).json({ message: 'Tamamlanan randevu sayısı alınırken hata oluştu' });
+  }
+};
+
 exports.getMedicalResultDetail = async (req, res) => {
   try {
     const { patientId, resultId } = req.params;

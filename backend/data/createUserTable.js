@@ -130,9 +130,16 @@ async function initializeDatabase() {
                 doctor_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
                 title VARCHAR(255) NOT NULL,
                 details TEXT NOT NULL,
+                record_type VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+        
+        // Eğer record_type kolonu yoksa ekle (mevcut tablolar için)
+        await client.query(`
+            ALTER TABLE medical_results 
+            ADD COLUMN IF NOT EXISTS record_type VARCHAR(50)
         `);
 
         // MEDICAL_RESULT_FILES TABLOSU - Sonuçlara eklenen dosyalar

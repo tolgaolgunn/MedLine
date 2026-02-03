@@ -5,14 +5,14 @@ const db = require('../config/db');
  * Doktorların hastalar için girdiği sonuç kayıtlarını yönetir.
  */
 
-const createMedicalResult = async ({ doctorId, patientId, title, details }) => {
+const createMedicalResult = async ({ doctorId, patientId, title, details, recordType }) => {
   const result = await db.query(
     `
-      INSERT INTO medical_results (doctor_id, patient_id, title, details)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO medical_results (doctor_id, patient_id, title, details, record_type)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `,
-    [doctorId, patientId, title, details]
+    [doctorId, patientId, title, details, recordType || 'Diğer']
   );
 
   return result.rows[0];
@@ -25,6 +25,7 @@ const getResultsByPatientId = async (patientId) => {
         mr.result_id,
         mr.title,
         mr.details,
+        mr.record_type,
         mr.created_at + INTERVAL '3 hours' AS created_at,
         mr.updated_at,
         u.full_name AS doctor_name,
@@ -44,7 +45,7 @@ const getResultsByPatientId = async (patientId) => {
       JOIN users u ON mr.doctor_id = u.user_id
       LEFT JOIN medical_result_files mrf ON mr.result_id = mrf.result_id
       WHERE mr.patient_id = $1
-      GROUP BY mr.result_id, mr.title, mr.details, mr.created_at, mr.updated_at, u.full_name
+      GROUP BY mr.result_id, mr.title, mr.details, mr.record_type, mr.created_at, mr.updated_at, u.full_name
       ORDER BY mr.created_at DESC
     `,
     [patientId]
@@ -60,6 +61,7 @@ const getResultDetailForPatient = async (patientId, resultId) => {
         mr.result_id,
         mr.title,
         mr.details,
+        mr.record_type,
         mr.created_at + INTERVAL '3 hours' AS created_at,
         mr.updated_at,
         u.full_name AS doctor_name,
@@ -79,7 +81,7 @@ const getResultDetailForPatient = async (patientId, resultId) => {
       JOIN users u ON mr.doctor_id = u.user_id
       LEFT JOIN medical_result_files mrf ON mr.result_id = mrf.result_id
       WHERE mr.patient_id = $1 AND mr.result_id = $2
-      GROUP BY mr.result_id, mr.title, mr.details, mr.created_at, mr.updated_at, u.full_name
+      GROUP BY mr.result_id, mr.title, mr.details, mr.record_type, mr.created_at, mr.updated_at, u.full_name
       LIMIT 1
     `,
     [patientId, resultId]

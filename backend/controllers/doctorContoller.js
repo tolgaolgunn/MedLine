@@ -1,8 +1,11 @@
 const db = require('../config/db');
+const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { sendAppointmentConfirmation } = require('../services/mailService');
 const MedicalResultModel = require('../models/medicalResultModel');
 const NotificationModel = require('../models/notificationModel');
+const { getUserByEmail, getUserByNationalId, createUser } = require('../models/userModel');
+const { createPatientProfile } = require('../models/patientProfileModel');
 
 // Helper function for database queries
 const query = async (sql, params) => {
@@ -93,15 +96,19 @@ exports.getPrescriptionCount = async (req, res) => {
     const { doctorId } = req.params;
     console.log('Getting prescription count for doctorId:', doctorId);
 
+    // Sadece aktif reçeteleri say (cancelled olmayanları)
     const result = await query(
       `SELECT COUNT(*) as count
        FROM prescriptions
-       WHERE doctor_id = $1`,
+       WHERE doctor_id = $1 
+       AND (status IS NULL OR status != 'cancelled')`,
       [doctorId]
     );
 
     console.log('Prescription count result:', result.rows[0]);
-    res.json({ count: parseInt(result.rows[0].count) || 0 });
+    const count = parseInt(result.rows[0].count) || 0;
+    console.log('Final prescription count:', count);
+    res.json({ count });
   } catch (err) {
     console.error('Error getting prescription count:', err);
     res.status(500).json({ message: 'Reçete sayısı alınırken hata oluştu' });
@@ -342,6 +349,8 @@ exports.getAppointmentsByDoctor = async (req, res) => {
 exports.getPatientsByDoctor = async (req, res) => {
   try {
     const { doctorId } = req.params;
+    console.log('Getting patients for doctor ID:', doctorId);
+    
     const result = await query(
       `SELECT DISTINCT
               u.user_id AS patient_id,
@@ -362,9 +371,12 @@ exports.getPatientsByDoctor = async (req, res) => {
        LEFT JOIN patient_profiles p ON u.user_id = p.user_id
        WHERE a.doctor_id = $1
        GROUP BY u.user_id, u.full_name, u.email, u.phone_number, 
-                p.birth_date, p.gender, p.address, p.medical_history, p.blood_type, a.doctor_id`,
+                p.birth_date, p.gender, p.address, p.medical_history, p.blood_type, a.doctor_id
+       ORDER BY MAX(a.datetime) DESC`,
       [doctorId]
     );
+    
+    console.log(`Found ${result.rows.length} patients for doctor ${doctorId}`);
     res.json(result.rows);
   } catch (err) {
     console.error('Error getting patients:', err);
@@ -432,7 +444,7 @@ exports.getDoctorPatients = async (req, res) => {
 exports.addMedicalResult = async (req, res) => {
   try {
     const doctorId = req.user?.user_id;
-    const { patientId, title, details } = req.body;
+    const { patientId, title, details, recordType } = req.body;
 
     if (!doctorId) {
       return res.status(401).json({
@@ -453,6 +465,7 @@ exports.addMedicalResult = async (req, res) => {
       patientId,
       title: title.trim(),
       details: details.trim(),
+      recordType: recordType || 'Diğer',
     });
 
     // Create notification message
@@ -505,7 +518,7 @@ exports.addMedicalResultWithFiles = async (req, res) => {
     await client.query('BEGIN');
 
     const doctorId = req.user?.user_id;
-    const { patientId, title, details } = req.body;
+    const { patientId, title, details, recordType } = req.body;
     const files = req.files || [];
 
     if (!doctorId) {
@@ -526,10 +539,10 @@ exports.addMedicalResultWithFiles = async (req, res) => {
 
     // Önce medical_results tablosuna kaydet
     const resultInsert = await client.query(
-      `INSERT INTO medical_results (doctor_id, patient_id, title, details)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO medical_results (doctor_id, patient_id, title, details, record_type)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [doctorId, patientId, title.trim(), details.trim()]
+      [doctorId, patientId, title.trim(), details.trim(), recordType || 'Diğer']
     );
 
     const createdResult = resultInsert.rows[0];
@@ -594,6 +607,298 @@ exports.addMedicalResultWithFiles = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Sonuç ve ekleri kaydedilirken bir hata oluştu',
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Doktor için hasta ekleme
+exports.addPatient = async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const doctorId = req.user?.user_id;
+    const { 
+      full_name, 
+      email, 
+      password, 
+      phone_number, 
+      birth_date, 
+      gender, 
+      address, 
+      national_id, 
+      blood_type,
+      medical_history 
+    } = req.body;
+
+    if (!doctorId) {
+      await client.query('ROLLBACK');
+      return res.status(401).json({ 
+        success: false,
+        message: "Doktor bilgisi bulunamadı" 
+      });
+    }
+
+    // E-posta kontrolü
+    const existingUser = await getUserByEmail(email);
+    if (existingUser) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        success: false,
+        message: "Bu e-posta ile kayıtlı kullanıcı zaten var." 
+      });
+    }
+
+    // TC Kimlik kontrolü
+    if (national_id) {
+      const existingNationalId = await getUserByNationalId(national_id);
+      if (existingNationalId) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ 
+          success: false,
+          message: "Bu TC Kimlik numarası ile kayıtlı kullanıcı zaten var." 
+        });
+      }
+    }
+
+    // Zorunlu alanların kontrolü
+    if (!full_name || !email || !password) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        success: false,
+        message: "Ad-soyad, e-posta ve şifre alanları zorunludur." 
+      });
+    }
+
+    // Şifre hash'leme
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    // Telefon numarasını temizle (varsa +90 gibi prefix'leri kaldır)
+    let cleanPhoneNumber = phone_number;
+    if (phone_number && phone_number.startsWith('+90')) {
+      cleanPhoneNumber = phone_number.replace('+90', '').trim();
+    }
+
+    // Kullanıcı oluşturma (transaction içinde)
+    const turkeyTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+    const userResult = await client.query(
+      `INSERT INTO users (full_name, email, password_hash, phone_number, role, is_approved, national_id, created_at, updated_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8) 
+       RETURNING *`,
+      [full_name, email, password_hash, cleanPhoneNumber || phone_number, "patient", true, national_id, turkeyTime]
+    );
+    
+    const user = userResult.rows[0];
+    
+    if (!user || !user.user_id) {
+      await client.query('ROLLBACK');
+      return res.status(500).json({ 
+        success: false,
+        message: "Kullanıcı oluşturulamadı" 
+      });
+    }
+    
+    // Hasta profili oluşturma (transaction içinde)
+    try {
+      // Tarih formatını düzelt
+      let dbBirthDate = birth_date ? new Date(birth_date).toISOString().split('T')[0] : null;
+      
+      // Gender değerini veritabanı formatına çevir
+      let dbGender = null;
+      if (gender) {
+        const genderTrimmed = gender.trim();
+        const genderLower = genderTrimmed.toLowerCase();
+        console.log('Original gender value:', JSON.stringify(gender), 'Trimmed:', JSON.stringify(genderTrimmed), 'Lowercase:', genderLower);
+        
+        // Türkçe değerleri kontrol et
+        if (genderTrimmed === 'Erkek' || genderLower === 'erkek' || genderLower === 'male' || genderLower === 'm') {
+          dbGender = 'male';
+        } else if (genderTrimmed === 'Kadın' || genderLower === 'kadın' || genderLower === 'kadin' || genderLower === 'female' || genderLower === 'f') {
+          dbGender = 'female';
+        } else if (genderTrimmed === 'Belirtmek istemiyorum' || genderLower === 'belirtmek istemiyorum' || genderLower === 'other' || genderLower === 'diğer' || genderLower === 'belirtmemek') {
+          dbGender = 'other';
+        } else {
+          // Eğer tanınmayan bir değer gelirse, null bırak (CHECK constraint hatası vermemesi için)
+          console.warn('Unknown gender value:', JSON.stringify(gender), '- setting to null');
+          dbGender = null;
+        }
+      }
+      
+      console.log('Converted gender value:', dbGender);
+      
+      // Blood type kontrolü - geçersiz değerler için null yap
+      // Frontend'den "O+" veya "O-" gelebilir, bunları "0+" ve "0-" olarak düzelt
+      let dbBloodType = blood_type || null;
+      if (dbBloodType) {
+        // "O" harfini "0" (sıfır) ile değiştir
+        dbBloodType = dbBloodType.replace(/^O([+-])$/, '0$1');
+      }
+      const validBloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', '0+', '0-'];
+      if (dbBloodType && !validBloodTypes.includes(dbBloodType)) {
+        console.warn('Invalid blood type:', blood_type, '->', dbBloodType, '- setting to null');
+        dbBloodType = null;
+      }
+      
+      console.log('Inserting patient profile with values:', {
+        user_id: user.user_id,
+        birth_date: dbBirthDate,
+        gender: dbGender,
+        address: address || null,
+        medical_history: medical_history || null,
+        blood_type: dbBloodType
+      });
+      
+      const profileResult = await client.query(
+        `INSERT INTO patient_profiles (user_id, birth_date, gender, address, medical_history, blood_type)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [user.user_id, dbBirthDate, dbGender, address || null, medical_history || null, dbBloodType]
+      );
+      
+      console.log('Patient profile created successfully:', profileResult.rows[0] ? 'Yes' : 'No');
+      
+      if (!profileResult.rows[0]) {
+        await client.query('ROLLBACK');
+        return res.status(500).json({ 
+          success: false,
+          message: "Hasta profili oluşturulamadı" 
+        });
+      }
+    } catch (profileError) {
+      await client.query('ROLLBACK');
+      console.error('Error creating patient profile:', profileError);
+      console.error('Profile error details:', {
+        code: profileError.code,
+        detail: profileError.detail,
+        constraint: profileError.constraint,
+        message: profileError.message,
+        stack: profileError.stack
+      });
+      console.error('Values that caused error:', {
+        user_id: user.user_id,
+        birth_date: dbBirthDate,
+        gender: dbGender,
+        address: address || null,
+        medical_history: medical_history || null,
+        blood_type: blood_type || null
+      });
+      return res.status(500).json({ 
+        success: false,
+        message: "Hasta profili oluşturulurken bir hata oluştu",
+        error: profileError.message,
+        code: profileError.code,
+        detail: profileError.detail,
+        constraint: profileError.constraint,
+        debug: {
+          gender_received: gender,
+          gender_converted: dbGender,
+          blood_type: blood_type
+        }
+      });
+    }
+
+    // Doktor ile hasta arasında ilk randevu oluştur (ilişki kurmak için)
+    // Bu randevu hasta listesinde görünmesi için gerekli - KRİTİK!
+    try {
+      const appointmentDate = new Date();
+      // Türkiye saatine göre ayarla
+      const turkeyAppointmentDate = new Date(appointmentDate.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+      
+      const appointmentResult = await client.query(
+        `INSERT INTO appointments (doctor_id, patient_id, datetime, type, status)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING appointment_id`,
+        [
+          doctorId,
+          user.user_id,
+          turkeyAppointmentDate,
+          'face_to_face', // İlk kayıt için yüz yüze
+          'completed' // İlk kayıt için completed
+        ]
+      );
+      
+      if (!appointmentResult.rows[0] || !appointmentResult.rows[0].appointment_id) {
+        await client.query('ROLLBACK');
+        console.error('Error: Appointment created but no ID returned');
+        return res.status(500).json({ 
+          success: false,
+          message: "Hasta oluşturuldu ancak randevu kaydı oluşturulamadı. Hasta listede görünmeyebilir." 
+        });
+      }
+      
+      console.log('Appointment created successfully:', appointmentResult.rows[0].appointment_id);
+      console.log('Appointment details:', {
+        appointment_id: appointmentResult.rows[0].appointment_id,
+        doctor_id: doctorId,
+        patient_id: user.user_id,
+        datetime: turkeyAppointmentDate,
+        type: 'face_to_face',
+        status: 'completed'
+      });
+    } catch (appointmentError) {
+      // Randevu oluşturma hatası - KRİTİK! Rollback yap
+      await client.query('ROLLBACK');
+      console.error('Error creating initial appointment:', appointmentError);
+      console.error('Appointment error details:', {
+        code: appointmentError.code,
+        detail: appointmentError.detail,
+        constraint: appointmentError.constraint,
+        message: appointmentError.message,
+        stack: appointmentError.stack
+      });
+      return res.status(500).json({ 
+        success: false,
+        message: "Hasta oluşturulurken randevu kaydı oluşturulamadı",
+        error: appointmentError.message,
+        code: appointmentError.code,
+        detail: appointmentError.detail
+      });
+    }
+
+    await client.query('COMMIT');
+    console.log('Transaction committed successfully. Patient ID:', user.user_id, 'Doctor ID:', doctorId);
+    
+    // Commit sonrası appointment'ın gerçekten oluşturulduğunu doğrula (yeni connection ile)
+    const verifyClient = await db.connect();
+    try {
+      const verifyAppointment = await verifyClient.query(
+        `SELECT appointment_id, doctor_id, patient_id, datetime, type, status 
+         FROM appointments 
+         WHERE doctor_id = $1 AND patient_id = $2 
+         ORDER BY created_at DESC LIMIT 1`,
+        [doctorId, user.user_id]
+      );
+      if (verifyAppointment.rows.length > 0) {
+        console.log('✅ Appointment verified after commit:', verifyAppointment.rows[0]);
+      } else {
+        console.error('❌ WARNING: Appointment not found after commit!');
+        console.error('Doctor ID:', doctorId, 'Patient ID:', user.user_id);
+      }
+    } catch (verifyError) {
+      console.error('Error verifying appointment:', verifyError);
+    } finally {
+      verifyClient.release();
+    }
+    
+    // Hassas bilgileri kaldır
+    delete user.password_hash;
+
+    res.status(201).json({ 
+      success: true,
+      message: "Hasta başarıyla oluşturuldu", 
+      data: user,
+      appointmentCreated: true
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Create patient error:', err);
+    res.status(500).json({ 
+      success: false,
+      error: "Hasta oluşturulurken bir hata oluştu.",
+      message: err.message 
     });
   } finally {
     client.release();
@@ -818,7 +1123,8 @@ exports.addPrescription = async (req, res) => {
 
 exports.getAllPrescriptions = async (req, res) => {
   try {
-    const query = `
+    const doctorId = req.query.doctorId;
+    let queryText = `
       SELECT 
         p.*,
         COALESCE(pat.full_name, 'Bilinmeyen Hasta') as patient_name,
@@ -826,10 +1132,21 @@ exports.getAllPrescriptions = async (req, res) => {
       FROM prescriptions p
       LEFT JOIN users pat ON p.patient_id = pat.user_id AND pat.role = 'patient'
       LEFT JOIN users doc ON p.doctor_id = doc.user_id AND doc.role = 'doctor'
-      ORDER BY p.created_at DESC
+      WHERE 1=1
     `;
+    const queryParams = [];
     
-    const result = await db.query(query);
+    // Doktor ID filtresi
+    if (doctorId) {
+      queryText += ` AND p.doctor_id = $${queryParams.length + 1}`;
+      queryParams.push(doctorId);
+    }
+    
+    // Cancelled reçeteleri hariç tut
+    queryText += ` AND (p.status IS NULL OR p.status != 'cancelled')`;
+    queryText += ` ORDER BY p.created_at DESC`;
+    
+    const result = await db.query(queryText, queryParams);
     const prescriptions = result.rows;
 
     // Tarih formatlama fonksiyonu

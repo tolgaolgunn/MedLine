@@ -116,6 +116,8 @@ export function Dashboard() {
   // Hasta randevu verilerini al
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [activePrescriptionCount, setActivePrescriptionCount] = useState<number>(0);
+  const [completedAppointmentCount, setCompletedAppointmentCount] = useState<number>(0);
 
   const fetchAppointments = async () => {
     setLoadingAppointments(true);
@@ -148,14 +150,43 @@ export function Dashboard() {
     }
   };
 
+  // Hasta istatistiklerini çek
+  const fetchPatientStatistics = async () => {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return;
+      const user = JSON.parse(userStr);
+      const userId = user.user_id;
+
+      const [prescriptionsRes, appointmentsRes] = await Promise.all([
+        fetch(`http://localhost:3005/api/patient/patient/prescriptions/active/count/${userId}`),
+        fetch(`http://localhost:3005/api/patient/patient/appointments/completed/count/${userId}`)
+      ]);
+
+      if (prescriptionsRes.ok) {
+        const prescriptionsData = await prescriptionsRes.json();
+        setActivePrescriptionCount(prescriptionsData.count || 0);
+      }
+
+      if (appointmentsRes.ok) {
+        const appointmentsData = await appointmentsRes.json();
+        setCompletedAppointmentCount(appointmentsData.count || 0);
+      }
+    } catch (error) {
+      console.error("İstatistikler yüklenirken hata:", error);
+    }
+  };
+
   useEffect(() => {
     fetchAppointments();
+    fetchPatientStatistics();
   }, []);
 
   // Randevu oluşturulduğunda dashboard'ı yenile
   useEffect(() => {
     const handleAppointmentCreated = () => {
       fetchAppointments();
+      fetchPatientStatistics();
     };
 
     window.addEventListener('appointmentCreated', handleAppointmentCreated);
@@ -190,6 +221,8 @@ export function Dashboard() {
             loadingAppointments={loadingAppointments}
             getGreetingTime={getGreetingTime}
             setActiveSection={setActiveSection}
+            activePrescriptionCount={activePrescriptionCount}
+            completedAppointmentCount={completedAppointmentCount}
           />
         );
       case "profile":
@@ -221,6 +254,8 @@ export function Dashboard() {
             loadingAppointments={loadingAppointments}
             getGreetingTime={getGreetingTime}
             setActiveSection={setActiveSection}
+            activePrescriptionCount={activePrescriptionCount}
+            completedAppointmentCount={completedAppointmentCount}
           />
         );
     }
@@ -250,7 +285,7 @@ export function Dashboard() {
 }
 
 // Hasta Dashboard Ana Sayfası
-function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healthMetrics, getGreetingTime, setActiveSection }: any) {
+function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healthMetrics, getGreetingTime, setActiveSection, activePrescriptionCount = 0, completedAppointmentCount = 0 }: any) {
   // Kullanıcı adını ve ID'sini localStorage'dan al
   let userName = 'Kullanıcı';
   let userId = '';
@@ -384,7 +419,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
       </div>
 
       {/* Hızlı İstatistikler */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 transition-colors duration-200">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg transition-colors duration-200">
@@ -402,7 +437,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
               <Pill className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">3</p>
+              <p className="text-2xl font-bold">{activePrescriptionCount}</p>
               <p className="text-sm text-muted-foreground">Aktif Reçete</p>
             </div>
           </div>
@@ -413,19 +448,8 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
               <Stethoscope className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">8</p>
+              <p className="text-2xl font-bold">{completedAppointmentCount}</p>
               <p className="text-sm text-muted-foreground">Toplam Muayene</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-6 transition-colors duration-200">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg transition-colors duration-200">
-              <MessageSquare className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">5</p>
-              <p className="text-sm text-muted-foreground">Yeni Mesaj</p>
             </div>
           </div>
         </Card>
