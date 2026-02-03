@@ -8,10 +8,10 @@ import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
 import { PageHeader } from '../ui/PageHeader';
-import { 
-  Calendar as CalendarIcon, 
-  Activity, 
-  Pill, 
+import {
+  Calendar as CalendarIcon,
+  Activity,
+  Pill,
   AlertCircle,
   User,
   Bell,
@@ -54,9 +54,10 @@ const DoctorDashboard = () => {
   const [totalPatients, setTotalPatients] = useState<number>(0);
   const [pendingAppointments, setPendingAppointments] = useState<number>(0);
   const [todayAppointmentCount, setTodayAppointmentCount] = useState<number>(0);
+  const [prescriptionCount, setPrescriptionCount] = useState<number>(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<Array<{text: string, timestamp: number}>>([]);
+  const [recentSearches, setRecentSearches] = useState<Array<{ text: string, timestamp: number }>>([]);
   const [searchFilter, setSearchFilter] = useState<string>('all');
 
   const [patients, setPatients] = useState<Patient[]>([
@@ -114,47 +115,47 @@ const DoctorDashboard = () => {
     }
   }, []);
 
-// Doktora ait randevuları backend'den çek
-// Remove the duplicate useEffect hook and keep only one:
+  // Doktora ait randevuları backend'den çek
+  // Remove the duplicate useEffect hook and keep only one:
 
-useEffect(() => {
-  const fetchAppointments = async () => {
-    if (!doctorId) return;
-    
-    try {
-      const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
-      
-      // API yanıtını konsola yazdır
-      console.log('API Response:', response.data);
-      
-      const mapped = response.data.map((item: any) => {
-        const dateObj = new Date(item.datetime);
-        
-        // Debug için item objesini konsola yazdır
-        console.log('Appointment item:', item);
-        
-        return {
-          id: item.appointment_id || item.id,
-          patientName: item.patientName || item.patientname || 'İsimsiz Hasta',
-          patientAge: item.patientAge || item.patientage || 0,
-          specialty: item.specialty || '',
-          date: dateObj.toLocaleDateString('tr-TR'),
-          time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-          type: (item.type === 'face_to_face' ? 'face_to_face' : 'online') as AppointmentType,
-          status: (item.status || 'pending') as AppointmentStatus,
-          symptoms: item.symptoms || '',
-        };
-      });
-      
-      console.log('Mapped appointments:', mapped);
-      setAppointments(mapped);
-    } catch (error) {
-      console.error('Randevular çekilirken hata oluştu:', error);
-    }
-  };
-  
-  fetchAppointments();
-}, [doctorId]);
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!doctorId) return;
+
+      try {
+        const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
+
+        // API yanıtını konsola yazdır
+        console.log('API Response:', response.data);
+
+        const mapped = response.data.map((item: any) => {
+          const dateObj = new Date(item.datetime);
+
+          // Debug için item objesini konsola yazdır
+          console.log('Appointment item:', item);
+
+          return {
+            id: item.appointment_id || item.id,
+            patientName: item.patientName || item.patientname || 'İsimsiz Hasta',
+            patientAge: item.patientAge || item.patientage || 0,
+            specialty: item.specialty || '',
+            date: dateObj.toLocaleDateString('tr-TR'),
+            time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+            type: (item.type === 'face_to_face' ? 'face_to_face' : 'online') as AppointmentType,
+            status: (item.status || 'pending') as AppointmentStatus,
+            symptoms: item.symptoms || '',
+          };
+        });
+
+        console.log('Mapped appointments:', mapped);
+        setAppointments(mapped);
+      } catch (error) {
+        console.error('Randevular çekilirken hata oluştu:', error);
+      }
+    };
+
+    fetchAppointments();
+  }, [doctorId]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -165,7 +166,7 @@ useEffect(() => {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'cancelled':
-        return 'bg-red-100 text-red-800'; 
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -181,15 +182,15 @@ useEffect(() => {
         if (filterStatus === 'cancelled' && appointment.status !== 'cancelled') return false;
         if (filterStatus === 'pending' && appointment.status !== 'pending') return false;
       }
-     
-     // Tip filtresi
-     if (filterType !== 'all' && appointment.type !== filterType) return false;
-     
-     // Uzmanlık filtresi
-     if (filterSpecialty !== 'all' && appointment.specialty !== filterSpecialty) return false;
-     
-     return true;
-   });
+
+      // Tip filtresi
+      if (filterType !== 'all' && appointment.type !== filterType) return false;
+
+      // Uzmanlık filtresi
+      if (filterSpecialty !== 'all' && appointment.specialty !== filterSpecialty) return false;
+
+      return true;
+    });
   };
 
   // Filtre değişikliklerini takip et
@@ -279,7 +280,7 @@ useEffect(() => {
           console.error('Hasta sayısı çekilirken hata oluştu:', error);
         }
       };
-      
+
       fetchTotalPatients();
     }
   }, [doctorId]);
@@ -297,7 +298,7 @@ useEffect(() => {
           console.error('Bekleyen randevu sayısı çekilirken hata oluştu:', error);
         }
       };
-      
+
       fetchPendingAppointments();
     }
   }, [doctorId]);
@@ -315,51 +316,69 @@ useEffect(() => {
           console.error('Bugünkü randevu sayısı çekilirken hata oluştu:', error);
         }
       };
-      
+
       fetchTodayAppointments();
+    }
+  }, [doctorId]);
+
+  // Reçete sayısını veritabanından çek
+  useEffect(() => {
+    if (doctorId) {
+      const fetchPrescriptionCount = async () => {
+        try {
+          const response = await axios.get(`http://localhost:3005/api/doctor/prescriptions/count/${doctorId}`);
+          if (response.data && typeof response.data.count === 'number') {
+            setPrescriptionCount(response.data.count);
+          }
+        } catch (error) {
+          console.error('Reçete sayısı çekilirken hata oluştu:', error);
+        }
+      };
+
+      fetchPrescriptionCount();
     }
   }, [doctorId]);
 
   // Doktora ait randevuları backend'den çek
   // Doktora ait randevuları backend'den çek
-useEffect(() => {
-  const fetchAppointments = async () => {
-    if (!doctorId) return;
-    
-    try {
-      const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
-      
-      // API yanıtını konsola yazdır
-      console.log('API Response:', response.data);
-      
-      const mapped = response.data.map((item: any) => {
-  const dateObj = new Date(item.datetime);
-  
-  // Debug için item objesini konsola yazdır
-  console.log('Appointment item:', item);
-  
-  return {
-    id: item.appointment_id || item.id,
-    patientName: item.patientName || item.patientname || 'İsimsiz Hasta', // Her iki varyasyonu da kontrol et
-    patientAge: item.patientAge || item.patientage || 0,
-    specialty: item.specialty || '',
-    date: dateObj.toLocaleDateString('tr-TR'),
-    time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-    type: (item.type === 'face_to_face' ? 'face_to_face' : 'online') as AppointmentType,
-    status: (item.status || 'pending') as AppointmentStatus,
-    symptoms: item.symptoms || '',
-  };
-});
-  
-      console.log('Mapped appointments:', mapped);
-      setAppointments(mapped);
-    } catch (error) {
-      console.error('Randevular çekilirken hata oluştu:', error);
-    }
-  };
-  
-  fetchAppointments();
-}, [doctorId]);
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!doctorId) return;
+
+      try {
+        const response = await axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`);
+
+        // API yanıtını konsola yazdır
+        console.log('API Response:', response.data);
+
+        const mapped = response.data.map((item: any) => {
+          const dateObj = new Date(item.datetime);
+
+          // Debug için item objesini konsola yazdır
+          console.log('Appointment item:', item);
+
+          return {
+            id: item.appointment_id || item.id,
+            patientName: item.patientName || item.patientname || 'İsimsiz Hasta', // Her iki varyasyonu da kontrol et
+            patientAge: item.patientAge || item.patientage || 0,
+            specialty: item.specialty || '',
+            date: dateObj.toLocaleDateString('tr-TR'),
+            time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+            type: (item.type === 'face_to_face' ? 'face_to_face' : 'online') as AppointmentType,
+            status: (item.status || 'pending') as AppointmentStatus,
+            symptoms: item.symptoms || '',
+          };
+        });
+
+        console.log('Mapped appointments:', mapped);
+        setAppointments(mapped);
+      } catch (error) {
+        console.error('Randevular çekilirken hata oluştu:', error);
+      }
+    };
+
+    fetchAppointments();
+  }, [doctorId]);
 
   const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
     try {
@@ -380,14 +399,14 @@ useEffect(() => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInMs = now.getTime() - date.getTime();
-    
+
     // Geçersiz tarih kontrolü
     if (isNaN(diffInMs) || diffInMs < 0) {
       return 'Az önce';
     }
-    
+
     const diffInHours = diffInMs / (1000 * 60 * 60);
-    
+
     if (diffInHours < 1) {
       const diffInMinutes = Math.floor(diffInHours * 60);
       return `${diffInMinutes} dakika önce`;
@@ -410,7 +429,7 @@ useEffect(() => {
 
     return recentSearches.filter(search => {
       const searchDate = new Date(search.timestamp);
-      
+
       switch (searchFilter) {
         case 'today':
           return searchDate >= today;
@@ -431,7 +450,7 @@ useEffect(() => {
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
       {/* Başlık */}
-      <PageHeader 
+      <PageHeader
         title="Doktor Paneli"
         subtitle={`Hoş geldiniz, ${userName}. Sağlıklı günler dileriz.`}
         showBackButton={false}
@@ -496,7 +515,7 @@ useEffect(() => {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm text-gray-600 truncate">Reçeteler</p>
-                <p className="text-xl sm:text-2xl font-bold">0</p>
+                <p className="text-xl sm:text-2xl font-bold">{prescriptionCount}</p>
               </div>
             </div>
           </CardContent>
@@ -514,15 +533,15 @@ useEffect(() => {
                   <SelectTrigger className="w-full sm:w-32 text-xs sm:text-sm">
                     <SelectValue placeholder="Durum" />
                   </SelectTrigger>
-                    <SelectContent>
-                     <SelectItem value="all">Durumlar</SelectItem>
-                     <SelectItem value="scheduled">Onaylandı</SelectItem>
-                     <SelectItem value="completed">Tamamlandı</SelectItem>
-                     <SelectItem value="cancelled">İptal Edildi</SelectItem>
-                     <SelectItem value="pending">Beklemede</SelectItem>
-                   </SelectContent>
+                  <SelectContent>
+                    <SelectItem value="all">Durumlar</SelectItem>
+                    <SelectItem value="scheduled">Onaylandı</SelectItem>
+                    <SelectItem value="completed">Tamamlandı</SelectItem>
+                    <SelectItem value="cancelled">İptal Edildi</SelectItem>
+                    <SelectItem value="pending">Beklemede</SelectItem>
+                  </SelectContent>
                 </Select>
-                
+
                 <Select value={filterType} onValueChange={(value) => handleFilterChange('type', value)}>
                   <SelectTrigger className="w-full sm:w-32 text-xs sm:text-sm">
                     <SelectValue placeholder="Randevu Tipi" />
@@ -534,7 +553,7 @@ useEffect(() => {
                   </SelectContent>
                 </Select>
 
-                
+
               </div>
             </div>
           </CardHeader>
@@ -556,58 +575,58 @@ useEffect(() => {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                    <Badge className={`${getStatusColor(appointment.status)} text-xs whitespace-nowrap`}>
-                       {appointment.status === 'confirmed' ? 'Onaylandı' :
-                       appointment.status === 'completed' ? 'Tamamlandı' : 
-                       appointment.status === 'cancelled' ? 'İptal Edildi' : 'Beklemede'}
-                    </Badge>
-                                             {appointment.status === 'pending' && (
-                         <>
+                      <Badge className={`${getStatusColor(appointment.status)} text-xs whitespace-nowrap`}>
+                        {appointment.status === 'confirmed' ? 'Onaylandı' :
+                          appointment.status === 'completed' ? 'Tamamlandı' :
+                            appointment.status === 'cancelled' ? 'İptal Edildi' : 'Beklemede'}
+                      </Badge>
+                      {appointment.status === 'pending' && (
+                        <>
                           <button
-                             className="bg-green-500 hover:bg-green-600 text-white font-semibold py-1.5 px-3 sm:px-4 rounded-md shadow-sm transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
-                             onClick={() => handleUpdateStatus(appointment.id, 'confirmed')}
-                             >
-                             Onayla
-                             </button>
-                             <button
-                             onClick={() => handleUpdateStatus(appointment.id, 'cancelled')}
-                             className="bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 px-3 sm:px-4 rounded-md shadow-sm transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
-                             >
-                             İptal Et
-                             </button>
-                         </>
-                       )}
-                       
-                       {appointment.status === 'confirmed' && (
-                         <button
-                           className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-3 sm:px-4 rounded-md shadow-sm transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
-                           onClick={() => handleUpdateStatus(appointment.id, 'completed')}
-                         >
-                           Tamamla
-                         </button>
-                       )}
-                         {isCurrentAppointment(appointment) && appointment.status !== 'cancelled' && (
-                          <Button
+                            className="bg-green-500 hover:bg-green-600 text-white font-semibold py-1.5 px-3 sm:px-4 rounded-md shadow-sm transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
+                            onClick={() => handleUpdateStatus(appointment.id, 'confirmed')}
+                          >
+                            Onayla
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(appointment.id, 'cancelled')}
+                            className="bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 px-3 sm:px-4 rounded-md shadow-sm transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
+                          >
+                            İptal Et
+                          </button>
+                        </>
+                      )}
+
+                      {appointment.status === 'confirmed' && (
+                        <button
+                          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-3 sm:px-4 rounded-md shadow-sm transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
+                          onClick={() => handleUpdateStatus(appointment.id, 'completed')}
+                        >
+                          Tamamla
+                        </button>
+                      )}
+                      {isCurrentAppointment(appointment) && appointment.status !== 'cancelled' && (
+                        <Button
                           size="sm"
                           variant="outline"
                           className="text-xs sm:text-sm whitespace-nowrap"
-                          onClick={() => {/* Randevuyu başlat işlemi */}}
+                          onClick={() => {/* Randevuyu başlat işlemi */ }}
                         >
                           <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                           <span className="hidden sm:inline">Randevuyu Başlat</span>
                           <span className="sm:hidden">Başlat</span>
                         </Button>
-                       )}
+                      )}
                       <button
-                            type="button"
-                            onClick={() => {
-                                setSelectedAppointment(appointment);
-                                setShowDetail(true);
-                            }}
-                            className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1.5 px-3 sm:px-4 rounded-md transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
-                            >
-                            Detay
-                            </button>
+                        type="button"
+                        onClick={() => {
+                          setSelectedAppointment(appointment);
+                          setShowDetail(true);
+                        }}
+                        className="border border-gray-400 text-gray-700 hover:border-blue-500 hover:text-blue-600 font-medium py-1.5 px-3 sm:px-4 rounded-md transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
+                      >
+                        Detay
+                      </button>
 
                     </div>
                   </div>
@@ -624,8 +643,8 @@ useEffect(() => {
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
             <div className="space-y-2 sm:space-y-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full h-10 sm:h-12 flex items-center justify-start space-x-2 sm:space-x-3 hover:bg-green-50 hover:border-green-300 transition-colors text-sm"
                 onClick={() => {
                   navigate('/doctor/patients', { state: { from: '/doctor/dashboard' } });
@@ -634,9 +653,9 @@ useEffect(() => {
                 <Users className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0" />
                 <span className="text-xs sm:text-sm font-medium">Hasta Yönetimi</span>
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="w-full h-10 sm:h-12 flex items-center justify-start space-x-2 sm:space-x-3 hover:bg-purple-50 hover:border-purple-300 transition-colors text-sm"
                 onClick={() => {
                   navigate('/doctor/prescriptions', { state: { from: '/doctor/dashboard' } });
@@ -646,8 +665,8 @@ useEffect(() => {
                 <span className="text-xs sm:text-sm font-medium">Reçete Yönetimi</span>
               </Button>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full h-10 sm:h-12 flex items-center justify-start space-x-2 sm:space-x-3 hover:bg-orange-50 hover:border-orange-300 transition-colors text-sm"
                 onClick={() => setShowHistoryModal(true)}
               >
@@ -673,11 +692,11 @@ useEffect(() => {
                 <div><b>Saat:</b> {selectedAppointment.time}</div>
                 <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
                 <div><b>Branş:</b> {selectedAppointment.specialty}</div>
-                <div className="col-span-2"><b>Durum:</b> 
+                <div className="col-span-2"><b>Durum:</b>
                   <Badge className={`ml-2 ${getStatusColor(selectedAppointment.status)}`}>
                     {selectedAppointment.status === 'confirmed' ? 'Onaylandı' :
-                     selectedAppointment.status === 'completed' ? 'Tamamlandı' :
-                     selectedAppointment.status === 'cancelled' ? 'İptal Edildi' : 'Beklemede'}
+                      selectedAppointment.status === 'completed' ? 'Tamamlandı' :
+                        selectedAppointment.status === 'cancelled' ? 'İptal Edildi' : 'Beklemede'}
                   </Badge>
                 </div>
                 {selectedAppointment.symptoms && (
@@ -686,104 +705,104 @@ useEffect(() => {
                   </div>
                 )}
               </div>
-              
-            {/* Status Değiştirme Butonları */}
-               <div className="border-t pt-4">
-                                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                    <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Durum Değiştir:</h4>
-                   <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                     {selectedAppointment.status === 'pending' && (
-                       <>
-                         <Button
-                           size="sm"
-                           className="bg-green-500 hover:bg-green-600 text-white"
-                           onClick={() => {
-                             handleUpdateStatus(selectedAppointment.id, 'confirmed');
-                             setShowDetail(false);
-                           }}
-                         >
-                           Onayla
-                         </Button>
-                         <Button
-                           size="sm"
-                           variant="destructive"
-                           onClick={() => {
-                             handleUpdateStatus(selectedAppointment.id, 'cancelled');
-                             setShowDetail(false);
-                           }}
-                         >
-                           İptal Et
-                         </Button>
-                       </>
-                     )}
-                     
-                     {selectedAppointment.status === 'confirmed' && (
-                       <>
-                         <Button
-                           size="sm"
-                           className="bg-blue-500 hover:bg-blue-600 text-white"
-                           onClick={() => {
-                             handleUpdateStatus(selectedAppointment.id, 'completed');
-                             setShowDetail(false);
-                           }}
-                         >
-                           Tamamlandı
-                         </Button>
-                         <Button
-                           size="sm"
-                           variant="destructive"
-                           onClick={() => {
-                             handleUpdateStatus(selectedAppointment.id, 'cancelled');
-                             setShowDetail(false);
-                           }}
-                         >
-                           İptal Et
-                         </Button>
-                       </>
-                     )}
-                     
-                     {selectedAppointment.status === 'cancelled' && (
-                       <>
-                         <Button
-                           size="sm"
-                           className="bg-green-500 hover:bg-green-600 text-white"
-                           onClick={() => {
-                             handleUpdateStatus(selectedAppointment.id, 'confirmed');
-                             setShowDetail(false);
-                           }}
-                         >
-                           Onayla
-                         </Button>
-                         <Button
-                           size="sm"
-                           className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                           onClick={() => {
-                             handleUpdateStatus(selectedAppointment.id, 'pending');
-                             setShowDetail(false);
-                           }}
-                         >
-                           Bekleniyor
-                         </Button>
-                       </>
-                     )}
-                     
-                                           {selectedAppointment.status === 'completed' && (
-                        <div className="text-sm text-gray-500 justify-center items-center mt-2">
-                          Bu randevu tamamlanmıştır ve durumu değiştirilemez.
-                        </div>
-                      )}
-                   </div>
-                 </div>
-               </div>
+
+              {/* Status Değiştirme Butonları */}
+              <div className="border-t pt-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                  <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Durum Değiştir:</h4>
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    {selectedAppointment.status === 'pending' && (
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600 text-white"
+                          onClick={() => {
+                            handleUpdateStatus(selectedAppointment.id, 'confirmed');
+                            setShowDetail(false);
+                          }}
+                        >
+                          Onayla
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            handleUpdateStatus(selectedAppointment.id, 'cancelled');
+                            setShowDetail(false);
+                          }}
+                        >
+                          İptal Et
+                        </Button>
+                      </>
+                    )}
+
+                    {selectedAppointment.status === 'confirmed' && (
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                          onClick={() => {
+                            handleUpdateStatus(selectedAppointment.id, 'completed');
+                            setShowDetail(false);
+                          }}
+                        >
+                          Tamamlandı
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            handleUpdateStatus(selectedAppointment.id, 'cancelled');
+                            setShowDetail(false);
+                          }}
+                        >
+                          İptal Et
+                        </Button>
+                      </>
+                    )}
+
+                    {selectedAppointment.status === 'cancelled' && (
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600 text-white"
+                          onClick={() => {
+                            handleUpdateStatus(selectedAppointment.id, 'confirmed');
+                            setShowDetail(false);
+                          }}
+                        >
+                          Onayla
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                          onClick={() => {
+                            handleUpdateStatus(selectedAppointment.id, 'pending');
+                            setShowDetail(false);
+                          }}
+                        >
+                          Bekleniyor
+                        </Button>
+                      </>
+                    )}
+
+                    {selectedAppointment.status === 'completed' && (
+                      <div className="text-sm text-gray-500 justify-center items-center mt-2">
+                        Bu randevu tamamlanmıştır ve durumu değiştirilemez.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-             <DialogFooter>
-               <Button 
-                 variant="outline" 
-                 onClick={handleCloseDetail}
-                 className="border-2 border-gray-300 hover:border-gray-400">
-                 Kapat
-               </Button>
-             </DialogFooter>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={handleCloseDetail}
+                className="border-2 border-gray-300 hover:border-gray-400">
+                Kapat
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
@@ -794,7 +813,7 @@ useEffect(() => {
           <DialogHeader>
             <DialogTitle>Geçmiş Aramalar</DialogTitle>
           </DialogHeader>
-          
+
           {/* Filtre Butonları */}
           <div className="flex flex-wrap gap-2 mb-4">
             <Button
@@ -861,8 +880,8 @@ useEffect(() => {
                       size="sm"
                       onClick={() => {
                         // Arama yapmak için topbar'daki search fonksiyonunu tetikle
-                        window.dispatchEvent(new CustomEvent('setSearchValue', { 
-                          detail: { value: search.text } 
+                        window.dispatchEvent(new CustomEvent('setSearchValue', {
+                          detail: { value: search.text }
                         }));
                         setShowHistoryModal(false);
                       }}
@@ -881,8 +900,8 @@ useEffect(() => {
             )}
           </div>
           <DialogFooter className="flex gap-2">
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={() => {
                 setRecentSearches([]);
                 localStorage.removeItem('recentSearches_doctor');
@@ -892,8 +911,8 @@ useEffect(() => {
             >
               Aramaları Temizle
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="!border-2 !border-gray-300 !rounded-md"
               onClick={() => setShowHistoryModal(false)}
             >
@@ -918,17 +937,17 @@ useEffect(() => {
               Filtreleriniz uygulanmamış. Çıkmak istediğinizden emin misiniz?
             </p>
           </div>
-                     <DialogFooter className="flex gap-2">
-             <Button variant="outline" onClick={() => setShowExitConfirm(false)}>
-               İptal
-             </Button>
-             <Button variant="destructive" onClick={() => {
-               setShowExitConfirm(false);
-               setShowDetail(false);
-             }}>
-               Çık
-             </Button>
-           </DialogFooter>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowExitConfirm(false)}>
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={() => {
+              setShowExitConfirm(false);
+              setShowDetail(false);
+            }}>
+              Çık
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

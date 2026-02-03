@@ -1,6 +1,5 @@
 import React from 'react';
 import { BackButton } from './BackButton';
-
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
@@ -8,11 +7,11 @@ interface PageHeaderProps {
   className?: string;
 }
 
-export function PageHeader({ 
-  title, 
-  subtitle, 
-  showBackButton = true, 
-  className = "" 
+export function PageHeader({
+  title,
+  subtitle,
+  showBackButton = true,
+  className = ""
 }: PageHeaderProps) {
   return (
     <div className={`flex items-center justify-between mb-6 ${className}`}>

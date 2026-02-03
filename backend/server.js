@@ -8,6 +8,7 @@
     const userRoutes = require('./routes/userRoutes');
     const patientRoutes = require('./routes/patientRoute');
     const doctorRoutes = require('./routes/doctorRoute');
+    const notificationRoutes = require('./routes/notificationRoute');
     const adminRoutes = require('./routes/adminRoute');
     const aiRoutes = require('./routes/aiRoute');
     const app = express();
@@ -22,9 +23,18 @@
     // Yüklenen dosyaları statik olarak servis et
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+
+    // Socket.io middleware to make io accessible in routes - MUST BE BEFORE ROUTES
+    let io;
+    app.use((req, res, next) => {
+        req.io = io;
+        next();
+    });
+
     app.use('/api', userRoutes);
     app.use('/api', patientRoutes);
     app.use('/api/doctor', doctorRoutes);
+    app.use('/api/notifications', notificationRoutes);
     app.use('/api/admin', adminRoutes);
     app.use('/api/ai', aiRoutes);
 
@@ -74,9 +84,10 @@
             console.log('http://localhost:' + PORT);
         });
 
-        
+    
         const { Server } = require('socket.io');
-        const io = new Server(server, {
+        // Assign to the outer 'io' variable
+        io = new Server(server, {
             cors: {
                 origin: 'http://localhost:5173',
                 methods: ['GET', 'POST'],

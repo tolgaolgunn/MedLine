@@ -11,7 +11,11 @@ const { getAllFeedbacks, getFeedbackById, respondToFeedback } = require("../mode
 const { getAllAppointmentsWithDetails, getAppointmentById } = require("../models/appointmentModel");
 const { getAllPrescriptionsWithDetails, getPrescriptionById } = require("../models/prescriptionAdminModel");
 const { getAllPatients, getPatientProfileByUserId, createPatientProfile, updatePatientProfile, deletePatient } = require("../models/patientProfileModel");
+const NotificationModel = require("../models/notificationModel");
 
+// ... imports ...
+
+// Geri bildirime cevap verme endpoint'i
 exports.createPatient = async (req, res) => {
   const { 
     full_name, 
@@ -562,6 +566,7 @@ exports.updateDoctor = async (req, res) => {
 };
 
 // Geri bildirime cevap verme endpoint'i
+// Geri bildirime cevap verme endpoint'i
 exports.respondToFeedback = async (req, res) => {
   try {
     const feedbackId = req.params.id;
@@ -574,13 +579,52 @@ exports.respondToFeedback = async (req, res) => {
       });
     }
 
+    // Get the feedback details to find the user_id
+    const feedback = await getFeedbackById(feedbackId);
+    if (!feedback) {
+        return res.status(404).json({
+            success: false,
+            message: "Geri bildirim bulunamadı"
+        });
+    }
+
     const updatedFeedback = await respondToFeedback(feedbackId, adminResponse);
 
     if (!updatedFeedback) {
       return res.status(404).json({
         success: false,
-        message: "Geri bildirim bulunamadı"
+        message: "Geri bildirim güncellenemedi"
       });
+    }
+
+    // Create notification for the user
+    const userId = feedback.user_id; 
+    if (userId) {
+        const notificationData = {
+            userId: userId,
+            title: 'Geri Bildirim Yanıtı',
+            message: 'Gönderdiğiniz geri bildirime admin tarafından cevap verildi.',
+            type: 'info'
+        };
+
+        try {
+            const savedNotification = await NotificationModel.createNotification(notificationData);
+            
+            // Send real-time notification
+            if (req.io) {
+                console.log(`Emitting feedback notification to user room: ${userId}`);
+                req.io.to(String(userId)).emit('notification', {
+                    id: savedNotification ? savedNotification.notification_id : Date.now(),
+                    title: notificationData.title,
+                    message: notificationData.message,
+                    type: notificationData.type,
+                    read: false,
+                    timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
+                });
+            }
+        } catch (notifError) {
+            console.error('Error creating notification for feedback:', notifError);
+        }
     }
 
     res.status(200).json({
