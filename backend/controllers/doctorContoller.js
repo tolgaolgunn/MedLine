@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const { sendAppointmentConfirmation } = require('../services/mailService');
+const MedicalResultModel = require('../models/medicalResultModel');
 
 // Helper function for database queries
 const query = async (sql, params) => {
@@ -403,6 +404,144 @@ exports.getDoctorPatients = async (req, res) => {
   } catch (err) {
     console.error('Error fetching doctor patients:', err);
     res.status(500).json({ message: 'Failed to get doctor patients' });
+  }
+};
+
+// Medical Results Management - Doktor için (sadece metin)
+exports.addMedicalResult = async (req, res) => {
+  try {
+    const doctorId = req.user?.user_id;
+    const { patientId, title, details } = req.body;
+
+    if (!doctorId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Doktor bilgisi bulunamadı',
+      });
+    }
+
+    if (!patientId || !title || !details) {
+      return res.status(400).json({
+        success: false,
+        message: 'patientId, title ve details alanları zorunludur',
+      });
+    }
+
+    const createdResult = await MedicalResultModel.createMedicalResult({
+      doctorId,
+      patientId,
+      title: title.trim(),
+      details: details.trim(),
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: createdResult,
+    });
+  } catch (err) {
+    console.error('Error adding medical result:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Sonuç kaydedilirken bir hata oluştu',
+    });
+  }
+};
+
+// Dosyalı tıbbi sonuç ekleme (PDF / görsel eklenmiş)
+exports.addMedicalResultWithFiles = async (req, res) => {
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const doctorId = req.user?.user_id;
+    const { patientId, title, details } = req.body;
+    const files = req.files || [];
+
+    if (!doctorId) {
+      await client.query('ROLLBACK');
+      return res.status(401).json({
+        success: false,
+        message: 'Doktor bilgisi bulunamadı',
+      });
+    }
+
+    if (!patientId || !title || !details) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'patientId, title ve details alanları zorunludur',
+      });
+    }
+
+    // Önce medical_results tablosuna kaydet
+    const resultInsert = await client.query(
+      `INSERT INTO medical_results (doctor_id, patient_id, title, details)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [doctorId, patientId, title.trim(), details.trim()]
+    );
+
+    const createdResult = resultInsert.rows[0];
+
+    // Dosyaları medical_result_files tablosuna kaydet
+    const savedFiles = [];
+    for (const file of files) {
+      const relativePath = `/uploads/${file.filename}`;
+      const fileInsert = await client.query(
+        `INSERT INTO medical_result_files (result_id, file_path, original_name, mime_type)
+         VALUES ($1, $2, $3, $4)
+         RETURNING file_id, file_path, original_name, mime_type, created_at`,
+        [createdResult.result_id, relativePath, file.originalname, file.mimetype]
+      );
+      savedFiles.push(fileInsert.rows[0]);
+    }
+
+    await client.query('COMMIT');
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        ...createdResult,
+        files: savedFiles,
+      },
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error adding medical result with files:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Sonuç ve ekleri kaydedilirken bir hata oluştu',
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Belirli bir hastaya ait tüm tıbbi sonuçları (doktor görünümü için) getir
+exports.getMedicalResultsByPatient = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    if (!patientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hasta ID gereklidir',
+      });
+    }
+
+    const results = await MedicalResultModel.getResultsByPatientId(patientId);
+
+    return res.status(200).json({
+      success: true,
+      data: results,
+    });
+  } catch (err) {
+    console.error('Error fetching medical results for doctor:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Tıbbi sonuçlar alınırken bir hata oluştu',
+    });
   }
 };
 

@@ -122,6 +122,31 @@ async function initializeDatabase() {
             )
         `);
 
+        // MEDICAL_RESULTS TABLOSU - Doktorun hasta sonuçlarını kaydettiği tablo
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS medical_results (
+                result_id SERIAL PRIMARY KEY,
+                patient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                doctor_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                title VARCHAR(255) NOT NULL,
+                details TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // MEDICAL_RESULT_FILES TABLOSU - Sonuçlara eklenen dosyalar
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS medical_result_files (
+                file_id SERIAL PRIMARY KEY,
+                result_id INTEGER NOT NULL REFERENCES medical_results(result_id) ON DELETE CASCADE,
+                file_path TEXT NOT NULL,
+                original_name VARCHAR(255) NOT NULL,
+                mime_type VARCHAR(100) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Admin kullanıcı ekleme
         const email = 'admin1@healthcare.com';
         const password = 'Admin1234';
@@ -145,7 +170,7 @@ async function initializeDatabase() {
         }
 
         client.release();
-        console.log('All tables ensured: users, patient_profiles, doctor_profiles, prescriptions, prescription_items, appointments, feedbacks');
+        console.log('All tables ensured: users, patient_profiles, doctor_profiles, prescriptions, prescription_items, appointments, feedbacks, medical_results, medical_result_files');
     } catch (error) {
         console.error('Database initialization error:', error);
         process.exit(1);

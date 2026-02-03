@@ -19,6 +19,8 @@
         credentials: true
     }));
     app.use(express.json()); 
+    // Yüklenen dosyaları statik olarak servis et
+    app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
     app.use('/api', userRoutes);
     app.use('/api', patientRoutes);

@@ -14,6 +14,10 @@ router.get('/patient/prescriptions/:patientId', patientController.getMyPrescript
 router.get('/patient/prescriptions/:patientId/:prescriptionId', patientController.getPrescriptionDetail);
 router.put('/patient/prescriptions/:prescriptionId/status', patientController.updatePrescriptionStatus);
 
+// Medical results routes
+router.get('/patient/results/:patientId', patientController.getMyMedicalResults);
+router.get('/patient/results/:patientId/:resultId', patientController.getMedicalResultDetail);
+
 // Feedback routes
 router.get('/feedback/:userId', patientController.getUserFeedbacks);
 router.post('/feedback', patientController.createFeedback);

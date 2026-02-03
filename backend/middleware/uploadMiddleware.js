@@ -17,14 +17,17 @@ const storage = multer.diskStorage({
     }
 });
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    // Resimler (jpg, jpeg, png, webp) ve PDF dosyalarına izin ver
+    const imageTypes = /jpeg|jpg|png|webp/;
+    const ext = path.extname(file.originalname).toLowerCase();
 
-    if (extname && mimetype) {
+    const isImage = imageTypes.test(ext) && imageTypes.test(file.mimetype);
+    const isPdf = ext === '.pdf' && file.mimetype === 'application/pdf';
+
+    if (isImage || isPdf) {
         return cb(null, true);
     } else {
-        cb(new Error('Hata: Sadece resim dosyaları (jpg, jpeg, png, webp) yüklenebilir!'));
+        cb(new Error('Hata: Sadece resim dosyaları (jpg, jpeg, png, webp) ve PDF yüklenebilir!'));
     }
 };
 

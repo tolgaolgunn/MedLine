@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -38,7 +38,13 @@ interface Patient {
 }
 
 // Hasta kartı içeriğini güncelle
-const PatientCard = ({ patient }: { patient: Patient }) => {
+const PatientCard = ({
+  patient,
+  onOpenResults,
+}: {
+  patient: Patient;
+  onOpenResults: (patient: Patient) => void;
+}) => {
   return (
     <Card key={patient.patient_id} className="hover:shadow-lg transition-shadow">
       <CardHeader className="pb-2 sm:pb-3 p-4 sm:p-6">
@@ -85,6 +91,16 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
             </p>
           </div>
         </div>
+
+        <div className="pt-3 flex justify-end">
+          <Button
+            size="sm"
+            className="text-xs sm:text-sm"
+            onClick={() => onOpenResults(patient)}
+          >
+            Sonuçlar
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -116,9 +132,23 @@ const PatientManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [resultsPatient, setResultsPatient] = useState<Patient | null>(null);
+  const [patientResults, setPatientResults] = useState<any[]>([]);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
+  const [resultsListError, setResultsListError] = useState<string | null>(null);
+  const [isAddingResult, setIsAddingResult] = useState(false);
+  const [expandedResultId, setExpandedResultId] = useState<number | null>(null);
+  const [resultTitle, setResultTitle] = useState('');
+  const [resultDetails, setResultDetails] = useState('');
+  const [resultFiles, setResultFiles] = useState<File[]>([]);
+  const [filePreviews, setFilePreviews] = useState<{ url: string; type: 'image' | 'pdf'; name: string }[]>([]);
+  const [isSavingResult, setIsSavingResult] = useState(false);
+  const [resultError, setResultError] = useState<string | null>(null);
+  const [resultSuccess, setResultSuccess] = useState<string | null>(null);
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [formHasChanges, setFormHasChanges] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // 2. Remove redundant state
   // Remove activeSearchTerm and activeFilterStatus states
@@ -136,6 +166,32 @@ const PatientManagement: React.FC = () => {
       return '';
     }
   }, []);
+
+  // Dosya önizlemeleri (image için thumbnail, pdf için etiket)
+  useEffect(() => {
+    // Eski URL'leri temizle
+    return () => {
+      filePreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Önceki URL'leri temizle
+    filePreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+
+    const previews = resultFiles.map((file) => {
+      const url = URL.createObjectURL(file);
+      const isImage = file.type.startsWith('image/');
+      return {
+        url,
+        type: isImage ? 'image' as const : 'pdf' as const,
+        name: file.name,
+      };
+    });
+
+    setFilePreviews(previews);
+  }, [resultFiles]);
 
   // 4. Data fetching effect
   useEffect(() => {
@@ -230,6 +286,119 @@ const PatientManagement: React.FC = () => {
 
   const cancelExit = () => {
     setShowExitConfirm(false);
+  };
+
+  const handleOpenResults = async (patient: Patient) => {
+    setResultsPatient(patient);
+    setPatientResults([]);
+    setIsLoadingResults(true);
+    setResultsListError(null);
+    setIsAddingResult(false);
+    setResultTitle('');
+    setResultDetails('');
+    setResultFiles([]);
+    setResultError(null);
+    setResultSuccess(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `http://localhost:3005/api/doctor/results/${patient.patient_id}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || `Sonuçlar alınırken hata oluştu (status: ${response.status})`);
+      }
+
+      const data = await response.json();
+      const list = data?.data || data || [];
+      setPatientResults(list);
+    } catch (err: any) {
+      console.error('Error fetching patient results:', err);
+      setResultsListError(err.message || 'Sonuçlar alınırken bir hata oluştu');
+      setPatientResults([]);
+    } finally {
+      setIsLoadingResults(false);
+    }
+  };
+
+  const handleSaveResult = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resultsPatient || !currentDoctorId) return;
+
+    if (!resultTitle.trim() || !resultDetails.trim()) {
+      setResultError('Sonuç başlığı ve detayları zorunludur.');
+      return;
+    }
+
+    try {
+      setIsSavingResult(true);
+      setResultError(null);
+      setResultSuccess(null);
+
+      const token = localStorage.getItem('token');
+
+      const hasFiles = resultFiles && resultFiles.length > 0;
+      let response: Response;
+
+      if (hasFiles) {
+        const formData = new FormData();
+        formData.append('patientId', resultsPatient.patient_id);
+        formData.append('title', resultTitle);
+        formData.append('details', resultDetails);
+        resultFiles.forEach((file) => {
+          formData.append('files', file);
+        });
+
+        response = await fetch('http://localhost:3005/api/doctor/results-with-files', {
+          method: 'POST',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: formData,
+        });
+      } else {
+        response = await fetch('http://localhost:3005/api/doctor/results', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            patientId: resultsPatient.patient_id,
+            title: resultTitle,
+            details: resultDetails,
+          }),
+        });
+      }
+
+      const json = await response.json().catch(() => ({}));
+
+      if (!response.ok || json?.success === false) {
+        throw new Error(json.message || 'Sonuç kaydedilirken bir hata oluştu');
+      }
+
+      const created = json?.data || json;
+
+      setResultSuccess('Sonuç başarıyla kaydedildi.');
+      setResultTitle('');
+      setResultDetails('');
+      setResultFiles([]);
+      // Yeni eklenen sonucu liste başına ekle
+      setPatientResults(prev => (created ? [created, ...prev] : prev));
+    } catch (err: any) {
+      setResultError(err.message || 'Sonuç kaydedilirken bir hata oluştu');
+    } finally {
+      setIsSavingResult(false);
+    }
   };
 
   // Yükleme durumu
@@ -341,7 +510,11 @@ const PatientManagement: React.FC = () => {
       {/* Patients Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredPatients.map((patient) => (
-          <PatientCard key={patient.patient_id} patient={patient} />
+          <PatientCard
+            key={patient.patient_id}
+            patient={patient}
+            onOpenResults={handleOpenResults}
+          />
         ))}
       </div>
 
@@ -423,6 +596,282 @@ const PatientManagement: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Sonuçlar Dialogu (liste + Sonuç ekle formu) */}
+      {resultsPatient && (
+        <Dialog open={!!resultsPatient} onOpenChange={(open) => !open && setResultsPatient(null)}>
+          <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-base sm:text-lg">
+                Sonuçlar - {resultsPatient.patient_name}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {/* Mevcut sonuçlar listesi */}
+              <div className="space-y-2">
+                <Label className="text-xs sm:text-sm font-semibold">Önceki Sonuçlar</Label>
+
+                {isLoadingResults && (
+                  <p className="text-xs sm:text-sm text-gray-500">Sonuçlar yükleniyor...</p>
+                )}
+
+                {!isLoadingResults && resultsListError && (
+                  <p className="text-xs sm:text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                    {resultsListError}
+                  </p>
+                )}
+
+                {!isLoadingResults && !resultsListError && patientResults.length === 0 && (
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Bu hasta için henüz kayıtlı bir sonuç bulunmamaktadır.
+                  </p>
+                )}
+
+                {!isLoadingResults && !resultsListError && patientResults.length > 0 && (
+                  <ul className="space-y-2 text-xs sm:text-sm">
+                    {patientResults.map((r: any) => (
+                      <li
+                        key={r.result_id}
+                        className="border rounded-md px-3 py-2 flex flex-col gap-1"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{r.title}</span>
+              <span className="text-[11px] sm:text-xs text-gray-500">
+                              {r.created_at
+                                ? new Date(r.created_at).toLocaleString('tr-TR', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    timeZone: 'Europe/Istanbul',
+                                  })
+                                : ''}
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="!border !border-gray-300 text-[11px] sm:text-xs px-2 py-1"
+                            onClick={() =>
+                              setExpandedResultId(
+                                expandedResultId === r.result_id ? null : r.result_id
+                              )
+                            }
+                          >
+                            {expandedResultId === r.result_id
+                              ? 'Detayı gizle'
+                              : 'Detayı gör'}
+                          </Button>
+                        </div>
+
+                        {expandedResultId === r.result_id && r.details && (
+                          <div className="mt-1 space-y-1">
+                            <p className="text-[11px] sm:text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+                              {r.details}
+                            </p>
+
+                            {r.files && r.files.length > 0 && (
+                              <div className="pt-1 space-y-1">
+                                <span className="text-[10px] sm:text-[11px] text-gray-500">
+                                  Ekli Belgeler:
+                                </span>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {r.files.map((file: any) => {
+                                    const isImage = file.mime_type?.startsWith('image/');
+                                    const url = `http://localhost:3005${file.file_path}`;
+                                    return (
+                                      <a
+                                        key={file.file_id}
+                                        href={url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="border rounded-md p-1 flex flex-col gap-1 hover:bg-gray-50"
+                                      >
+                                        {isImage ? (
+                                          <img
+                                            src={url}
+                                            alt={file.original_name}
+                                            className="w-full h-16 object-cover rounded"
+                                          />
+                                        ) : (
+                                          <div className="flex items-center justify-center h-16 bg-gray-50 text-[10px] sm:text-[11px] text-gray-600 rounded">
+                                            PDF Belgesi
+                                          </div>
+                                        )}
+                                        <span className="text-[9px] sm:text-[10px] text-gray-700 truncate">
+                                          {file.original_name}
+                                        </span>
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Sonuç ekleme alanı */}
+              <div className="border-t pt-3 space-y-3">
+                {!isAddingResult && (
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="text-xs sm:text-sm"
+                      onClick={() => setIsAddingResult(true)}
+                    >
+                      Sonuç ekle
+                    </Button>
+                  </div>
+                )}
+
+                {isAddingResult && (
+                  <form onSubmit={handleSaveResult} className="space-y-4">
+                    {resultError && (
+                      <p className="text-xs sm:text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                        {resultError}
+                      </p>
+                    )}
+                    {resultSuccess && (
+                      <p className="text-xs sm:text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+                        {resultSuccess}
+                      </p>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="resultTitle" className="text-xs sm:text-sm">
+                        Sonuç Başlığı
+                      </Label>
+                      <Input
+                        id="resultTitle"
+                        value={resultTitle}
+                        onChange={(e) => setResultTitle(e.target.value)}
+                        placeholder="Örn: Kan Tahlili Sonucu"
+                        className="!border !border-gray-300 text-xs sm:text-sm h-9 sm:h-10"
+                        maxLength={255}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="resultDetails" className="text-xs sm:text-sm">
+                        Sonuç Detayları
+                      </Label>
+                      <Textarea
+                        id="resultDetails"
+                        value={resultDetails}
+                        onChange={(e) => setResultDetails(e.target.value)}
+                        placeholder="Hastaya ait detaylı sonuç ve yorumlarınızı yazın..."
+                        className="!border !border-gray-300 min-h-[140px] text-xs sm:text-sm"
+                        required
+                      />
+                    </div>
+
+                    {/* Dosya yükleme alanı */}
+                    <div className="space-y-2">
+                      <Label htmlFor="resultFiles" className="text-xs sm:text-sm">
+                        Belgeler (PDF / Görsel)
+                      </Label>
+
+                      {/* Gizli native input, butonla tetikleniyor */}
+                      <input
+                        id="resultFiles"
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept=".pdf,image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = e.target.files ? Array.from(e.target.files) : [];
+                          setResultFiles(files);
+                        }}
+                      />
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="!border !border-gray-300 text-[11px] sm:text-xs px-2 py-1"
+                        onClick={() => {
+                          if (fileInputRef.current) {
+                            fileInputRef.current.click();
+                          }
+                        }}
+                      >
+                        Belge seç
+                      </Button>
+
+                      {filePreviews.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-[11px] sm:text-xs text-gray-500">Seçilen belgeler:</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {filePreviews.map((preview, index) => (
+                              <a
+                                key={index}
+                                href={preview.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="border rounded-md p-1 flex flex-col gap-1 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                                title="Açmak için tıklayın"
+                              >
+                                {preview.type === 'image' ? (
+                                  <img
+                                    src={preview.url}
+                                    alt={preview.name}
+                                    className="w-full h-20 object-cover rounded"
+                                  />
+                                ) : (
+                                  <div className="flex items-center justify-center h-20 bg-gray-50 text-[11px] sm:text-xs text-gray-600 rounded">
+                                    PDF
+                                  </div>
+                                )}
+                                <span className="text-[10px] sm:text-[11px] text-gray-700 truncate">
+                                  {preview.name}
+                                </span>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="text-xs sm:text-sm"
+                        onClick={() => {
+                          setIsAddingResult(false);
+                          setResultError(null);
+                          setResultSuccess(null);
+                        }}
+                      >
+                        İptal
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="text-xs sm:text-sm"
+                        disabled={isSavingResult}
+                      >
+                        {isSavingResult ? 'Kaydediliyor...' : 'Sonucu Kaydet'}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
