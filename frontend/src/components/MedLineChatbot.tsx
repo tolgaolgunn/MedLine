@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, User, Loader2, Mic, MicOff } from "lucide-react";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { MessageCircle, X, Send, Bot, User, Mic, MicOff } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -197,13 +198,18 @@ const MedLineChatbot: React.FC = () => {
                             </div>
                         ))}
                         {isLoading && (
-                            <div className="flex gap-3">
-                                <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-                                    <Bot className="w-5 h-5" />
+                            <div className="flex gap-3 items-center">
+                                <div className="w-8 h-8 rounded-xl bg-white border flex items-center justify-center shadow-sm">
+                                    <Bot size={18} className="text-blue-600" />
                                 </div>
-                                <div className="bg-white text-gray-500 border border-gray-100 rounded-2xl rounded-tl-none px-4 py-2 text-sm shadow-sm flex items-center gap-2">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span>MedLine düşünüyor...</span>
+                                <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-4 py-2 shadow-sm flex flex-col items-center">
+                                    <div style={{ width: '120px', height: '80px' }}>
+                                        <DotLottieReact
+                                            src="https://lottie.host/4b967155-20bf-4938-8141-3a4a4de207fb/Z81SC1ROX6.lottie"
+                                            loop
+                                            autoplay
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         )}
