@@ -737,6 +737,7 @@ const DoctorReports: React.FC = () => {
               value={formData.startDate}
               onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
               className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
+              min={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
@@ -748,6 +749,7 @@ const DoctorReports: React.FC = () => {
               value={formData.endDate}
               onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
               className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
+              min={formData.startDate || new Date().toISOString().split('T')[0]}
               required
             />
           </div>
@@ -1015,6 +1017,7 @@ const DoctorReports: React.FC = () => {
               value={formData.startDate}
               onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
               className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
+              min={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
@@ -1026,6 +1029,7 @@ const DoctorReports: React.FC = () => {
               value={formData.endDate}
               onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
               className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
+              min={formData.startDate || new Date().toISOString().split('T')[0]}
               required
             />
           </div>
