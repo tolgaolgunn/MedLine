@@ -250,29 +250,88 @@ exports.updateAppointmentStatus = async (req, res) => {
 
     // Randevu durumuna göre mail gönder
     const appointmentData = appointmentResult.rows[0];
-    const { patient_email, doctor_name, doctor_specialty, datetime, type } = appointmentData;
+    const { patient_id, patient_email, doctor_name, doctor_specialty, datetime, type } = appointmentData;
+    
+    const formattedDate = new Date(datetime).toLocaleDateString('tr-TR');
+    const formattedTime = new Date(datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
     
     if (status === 'confirmed') {
       const appointmentDetails = {
         doctorName: doctor_name,
         doctorSpecialty: doctor_specialty,
-        date: new Date(datetime).toLocaleDateString('tr-TR'),
-        time: new Date(datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        date: formattedDate,
+        time: formattedTime,
         location: 'MedLine Hastanesi',
         appointmentType: type
       };
       
       await sendAppointmentConfirmation(patient_email, appointmentDetails);
+      
+      // Uygulama içi bildirim oluştur
+      const notificationData = {
+        userId: patient_id,
+        title: 'Randevu Onaylandı',
+        message: `Dr. ${doctor_name} ile ${formattedDate} tarihinde saat ${formattedTime} için randevunuz onaylandı.`,
+        type: 'appointment'
+      };
+
+      try {
+        const savedNotification = await NotificationModel.createNotification(notificationData);
+        
+        // Gerçek zamanlı bildirim gönder
+        if (req.io) {
+          console.log(`Emitting appointment confirmation notification to patient room: ${patient_id}`);
+          req.io.to(String(patient_id)).emit('notification', {
+            id: savedNotification ? savedNotification.notification_id : Date.now(),
+            title: notificationData.title,
+            message: notificationData.message,
+            type: notificationData.type,
+            read: false,
+            timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
+          });
+        }
+      } catch (notifError) {
+        console.error('Error saving/sending appointment notification:', notifError);
+        // Bildirim hatası ana işlemi durdurmamalı
+      }
     } else if (status === 'cancelled') {
       const appointmentDetails = {
         doctorName: doctor_name,
         doctorSpecialty: doctor_specialty,
-        date: new Date(datetime).toLocaleDateString('tr-TR'),
-        time: new Date(datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        date: formattedDate,
+        time: formattedTime,
         reason: req.body.reason // Eğer red sebebi gönderilmişse
       };
       
       await sendAppointmentRejection(patient_email, appointmentDetails);
+      
+      // Uygulama içi bildirim oluştur
+      const notificationData = {
+        userId: patient_id,
+        title: 'Randevu İptal Edildi',
+        message: `Dr. ${doctor_name} ile ${formattedDate} tarihinde saat ${formattedTime} için randevunuz iptal edildi.${req.body.reason ? ' Sebep: ' + req.body.reason : ''}`,
+        type: 'appointment'
+      };
+
+      try {
+        const savedNotification = await NotificationModel.createNotification(notificationData);
+        
+        // Gerçek zamanlı bildirim gönder
+        if (req.io) {
+          console.log(`Emitting appointment cancellation notification to patient room: ${patient_id}`);
+          req.io.to(String(patient_id)).emit('notification', {
+            id: savedNotification ? savedNotification.notification_id : Date.now(),
+            title: notificationData.title,
+            message: notificationData.message,
+            type: notificationData.type,
+            read: false,
+            timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
+          });
+        }
+      } catch (notifError) {
+        console.error('Error saving/sending appointment notification:', notifError);
+        // Bildirim hatası ana işlemi durdurmamalı
+      }
     }
 
     res.json(result.rows[0]);
