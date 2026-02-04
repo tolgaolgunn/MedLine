@@ -37,4 +37,13 @@ router.post('/results', doctorController.addMedicalResult);
 // Dosya eklenebilen sonuç ekleme (PDF / görsel)
 router.post('/results-with-files', upload.array('files', 5), doctorController.addMedicalResultWithFiles);
 
+// Rapor işlemleri
+router.post('/reports', doctorController.addReport);
+router.get('/reports', doctorController.getAllReports);
+router.get('/reports/:id', doctorController.getReportById);
+router.put('/reports/:id', doctorController.updateReport);
+router.delete('/reports/:id', doctorController.deleteReport);
+router.patch('/reports/:id/status', doctorController.updateReportStatus);
+router.get('/patients/:patientId/reports', doctorController.getPatientReports);
+
 module.exports = router;
