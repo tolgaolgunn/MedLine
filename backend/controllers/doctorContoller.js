@@ -1534,3 +1534,684 @@ exports.updatePrescriptionStatus = async (req, res) => {
     });
   }
 };
+
+// ==================== RAPOR YÖNETİMİ ====================
+
+// Yeni rapor oluştur
+exports.addReport = async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    await client.query('BEGIN');
+
+    const {
+      patientId,
+      patientName,
+      patientGender,
+      patientAge,
+      doctorName,
+      startDate,
+      endDate,
+      diagnosis,
+      diagnosisDetails,
+      medications,
+      status,
+      doctorId
+    } = req.body;
+
+    // Zorunlu alanları kontrol et
+    if (!patientId || isNaN(parseInt(patientId))) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Geçersiz veya eksik patientId'
+      });
+    }
+
+    if (!diagnosis || !startDate || !endDate) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Eksik zorunlu alanlar: diagnosis, startDate ve endDate gereklidir'
+      });
+    }
+
+    // Tarih kontrolü
+    if (new Date(endDate) < new Date(startDate)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Bitiş tarihi başlangıç tarihinden önce olamaz'
+      });
+    }
+
+    // Rapor kodu oluştur
+    const reportCode = `RPT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+
+    // Raporu veritabanına ekle
+    const reportResult = await client.query(
+      `INSERT INTO medical_report (
+        doctor_id, patient_id, report_start_date, report_end_date,
+        diagnosis, diagnosis_details, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *`,
+      [
+        doctorId || req.user?.user_id || 1,
+        parseInt(patientId),
+        startDate,
+        endDate,
+        diagnosis.trim(),
+        diagnosisDetails?.trim() || null,
+        status || 'active'
+      ]
+    );
+
+    const createdReport = reportResult.rows[0];
+
+    // İlaçları ekle (varsa)
+    const createdMedications = [];
+    if (medications && medications.length > 0) {
+      const validMedications = medications.filter(med => med.name && med.name.trim());
+      
+      for (const med of validMedications) {
+        const medResult = await client.query(
+          `INSERT INTO report_medications (
+            report_id, medicine_name, dosage, frequency, duration, usage_instructions
+          ) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+          [
+            createdReport.report_id,
+            med.name.trim(),
+            med.dosage?.trim() || '',
+            med.frequency?.trim() || null,
+            med.duration?.trim() || null,
+            med.instructions?.trim() || null
+          ]
+        );
+        createdMedications.push(medResult.rows[0]);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    // Tarih formatlama fonksiyonu
+    const formatDate = (date) => {
+      if (!date) return null;
+      return new Date(date).toISOString().split('T')[0];
+    };
+
+    // Response formatı
+    const responseData = {
+      id: createdReport.report_id,
+      reportCode: reportCode,
+      patientId: createdReport.patient_id,
+      patientName: patientName,
+      patientGender: patientGender,
+      patientAge: patientAge,
+      doctorId: createdReport.doctor_id,
+      doctorName: doctorName || 'Dr. Bilinmiyor',
+      startDate: formatDate(createdReport.report_start_date),
+      endDate: formatDate(createdReport.report_end_date),
+      diagnosis: createdReport.diagnosis,
+      diagnosisDetails: createdReport.diagnosis_details || '',
+      medications: createdMedications.map(med => ({
+        name: med.medicine_name,
+        dosage: med.dosage,
+        frequency: med.frequency || '',
+        duration: med.duration || '',
+        instructions: med.usage_instructions || ''
+      })),
+      status: createdReport.status || 'active',
+      createdAt: createdReport.created_at
+    };
+
+    // Hastaya bildirim gönder
+    const notificationData = {
+      userId: patientId,
+      title: 'Yeni Rapor',
+      message: `Dr. ${doctorName || 'Doktorunuz'} size yeni bir rapor oluşturdu.`,
+      type: 'report'
+    };
+
+    try {
+      await NotificationModel.createNotification(notificationData);
+      
+      if (req.io) {
+        req.io.to(String(patientId)).emit('notification', {
+          id: Date.now(),
+          title: notificationData.title,
+          message: notificationData.message,
+          type: notificationData.type,
+          read: false,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (notifError) {
+      console.error('Bildirim gönderme hatası:', notifError);
+    }
+
+    res.status(201).json(responseData);
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Rapor oluşturma hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Rapor oluşturulurken hata oluştu',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Tüm raporları getir
+exports.getAllReports = async (req, res) => {
+  try {
+    const doctorId = req.query.doctorId;
+    
+    let queryText = `
+      SELECT 
+        r.*,
+        COALESCE(pat.full_name, 'Bilinmeyen Hasta') as patient_name,
+        COALESCE(pp.gender, 'Belirtilmemiş') as patient_gender,
+        CASE 
+          WHEN pp.birth_date IS NOT NULL THEN
+            FLOOR(EXTRACT(YEAR FROM age(current_date, pp.birth_date)))
+          ELSE 0
+        END as patient_age,
+        COALESCE(doc.full_name, 'Dr. Bilinmeyen') as doctor_name
+      FROM medical_report r
+      LEFT JOIN users pat ON r.patient_id = pat.user_id AND pat.role = 'patient'
+      LEFT JOIN patient_profiles pp ON r.patient_id = pp.user_id
+      LEFT JOIN users doc ON r.doctor_id = doc.user_id AND doc.role = 'doctor'
+      WHERE 1=1
+    `;
+    const queryParams = [];
+    
+    if (doctorId) {
+      queryText += ` AND r.doctor_id = $${queryParams.length + 1}`;
+      queryParams.push(doctorId);
+    }
+    
+    queryText += ` AND (r.status IS NULL OR r.status != 'cancelled')`;
+    queryText += ` ORDER BY r.created_at DESC`;
+    
+    const result = await db.query(queryText, queryParams);
+    const reports = result.rows;
+
+    // Tarih formatlama fonksiyonu
+    const formatDate = (date) => {
+      if (!date) return null;
+      try {
+        return new Date(date).toISOString().split('T')[0];
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // Cinsiyet dönüştürme
+    const formatGender = (gender) => {
+      if (!gender) return 'Belirtilmemiş';
+      switch(gender.toLowerCase()) {
+        case 'male': return 'Erkek';
+        case 'female': return 'Kadın';
+        case 'other': return 'Diğer';
+        default: return gender;
+      }
+    };
+
+    // Her rapor için ilaçları da getir
+    const formattedReports = [];
+    for (const report of reports) {
+      const medications = await db.query(
+        'SELECT * FROM report_medications WHERE report_id = $1',
+        [report.report_id]
+      );
+      
+      formattedReports.push({
+        id: report.report_id,
+        reportCode: `RPT-${report.report_id}`,
+        patientId: report.patient_id,
+        patientName: report.patient_name,
+        patientGender: formatGender(report.patient_gender),
+        patientAge: parseInt(report.patient_age) || 0,
+        doctorId: report.doctor_id,
+        doctorName: report.doctor_name,
+        startDate: formatDate(report.report_start_date),
+        endDate: formatDate(report.report_end_date),
+        diagnosis: report.diagnosis,
+        diagnosisDetails: report.diagnosis_details || '',
+        medications: medications.rows.map(med => ({
+          name: med.medicine_name,
+          dosage: med.dosage,
+          frequency: med.frequency || '',
+          duration: med.duration || '',
+          instructions: med.usage_instructions || ''
+        })),
+        status: report.status || 'active',
+        createdAt: report.created_at
+      });
+    }
+
+    res.status(200).json(formattedReports);
+  } catch (error) {
+    console.error('Raporlar getirme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Raporlar yüklenirken hata oluştu'
+    });
+  }
+};
+
+// Belirli bir raporu getir
+exports.getReportById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const queryText = `
+      SELECT 
+        r.*,
+        COALESCE(pat.full_name, 'Bilinmeyen Hasta') as patient_name,
+        COALESCE(pp.gender, 'Belirtilmemiş') as patient_gender,
+        CASE 
+          WHEN pp.birth_date IS NOT NULL THEN
+            FLOOR(EXTRACT(YEAR FROM age(current_date, pp.birth_date)))
+          ELSE 0
+        END as patient_age,
+        COALESCE(doc.full_name, 'Dr. Bilinmeyen') as doctor_name
+      FROM medical_report r
+      LEFT JOIN users pat ON r.patient_id = pat.user_id AND pat.role = 'patient'
+      LEFT JOIN patient_profiles pp ON r.patient_id = pp.user_id
+      LEFT JOIN users doc ON r.doctor_id = doc.user_id AND doc.role = 'doctor'
+      WHERE r.report_id = $1
+    `;
+    
+    const result = await db.query(queryText, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Rapor bulunamadı'
+      });
+    }
+
+    const report = result.rows[0];
+    const medications = await db.query(
+      'SELECT * FROM report_medications WHERE report_id = $1',
+      [id]
+    );
+
+    // Tarih formatlama fonksiyonu
+    const formatDate = (date) => {
+      if (!date) return null;
+      try {
+        return new Date(date).toISOString().split('T')[0];
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // Cinsiyet dönüştürme
+    const formatGender = (gender) => {
+      if (!gender) return 'Belirtilmemiş';
+      switch(gender.toLowerCase()) {
+        case 'male': return 'Erkek';
+        case 'female': return 'Kadın';
+        case 'other': return 'Diğer';
+        default: return gender;
+      }
+    };
+
+    const formattedReport = {
+      id: report.report_id,
+      reportCode: `RPT-${report.report_id}`,
+      patientId: report.patient_id,
+      patientName: report.patient_name,
+      patientGender: formatGender(report.patient_gender),
+      patientAge: parseInt(report.patient_age) || 0,
+      doctorId: report.doctor_id,
+      doctorName: report.doctor_name,
+      startDate: formatDate(report.report_start_date),
+      endDate: formatDate(report.report_end_date),
+      diagnosis: report.diagnosis,
+      diagnosisDetails: report.diagnosis_details || '',
+      medications: medications.rows.map(med => ({
+        name: med.medicine_name,
+        dosage: med.dosage,
+        frequency: med.frequency || '',
+        duration: med.duration || '',
+        instructions: med.usage_instructions || ''
+      })),
+      status: report.status || 'active',
+      createdAt: report.created_at
+    };
+
+    res.status(200).json(formattedReport);
+  } catch (error) {
+    console.error('Rapor getirme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Rapor yüklenirken hata oluştu'
+    });
+  }
+};
+
+// Rapor güncelle
+exports.updateReport = async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { id } = req.params;
+    const {
+      patientId,
+      patientName,
+      patientGender,
+      patientAge,
+      startDate,
+      endDate,
+      diagnosis,
+      diagnosisDetails,
+      medications,
+      status,
+      doctorName
+    } = req.body;
+
+    // Tarih kontrolü
+    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Bitiş tarihi başlangıç tarihinden önce olamaz'
+      });
+    }
+
+    // Raporu güncelle
+    const updateQuery = `
+      UPDATE medical_report 
+      SET patient_id = COALESCE($1, patient_id),
+          report_start_date = COALESCE($2, report_start_date),
+          report_end_date = COALESCE($3, report_end_date),
+          diagnosis = COALESCE($4, diagnosis),
+          diagnosis_details = COALESCE($5, diagnosis_details),
+          status = COALESCE($6, status),
+          updated_at = NOW()
+      WHERE report_id = $7 
+      RETURNING *
+    `;
+    
+    const reportResult = await client.query(updateQuery, [
+      patientId,
+      startDate,
+      endDate,
+      diagnosis,
+      diagnosisDetails,
+      status,
+      id
+    ]);
+
+    if (reportResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Rapor bulunamadı'
+      });
+    }
+
+    // Mevcut ilaçları sil ve yenilerini ekle
+    if (medications && medications.length > 0) {
+      await client.query('DELETE FROM report_medications WHERE report_id = $1', [id]);
+      
+      const validMedications = medications.filter(med => med.name && med.name.trim());
+      
+      for (const med of validMedications) {
+        await client.query(
+          `INSERT INTO report_medications (
+            report_id, medicine_name, dosage, frequency, duration, usage_instructions
+          ) VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            id,
+            med.name.trim(),
+            med.dosage?.trim() || '',
+            med.frequency?.trim() || null,
+            med.duration?.trim() || null,
+            med.instructions?.trim() || null
+          ]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+
+    // Güncellenmiş ilaçları getir
+    const updatedMedications = await db.query(
+      'SELECT * FROM report_medications WHERE report_id = $1',
+      [id]
+    );
+    
+    // Tarih formatlama fonksiyonu
+    const formatDate = (date) => {
+      if (!date) return null;
+      try {
+        if (typeof date === 'string') {
+          return date.split('T')[0];
+        } else if (date instanceof Date) {
+          return date.toISOString().split('T')[0];
+        }
+        return null;
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // Hasta bilgilerini al
+    let patientNameToUse = patientName;
+    let patientGenderToUse = patientGender;
+    let patientAgeToUse = patientAge;
+    
+    if (patientId) {
+      const patientInfo = await db.query(
+        `SELECT u.full_name, pp.gender, pp.birth_date
+         FROM users u
+         LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id
+         WHERE u.user_id = $1 AND u.role = 'patient'`,
+        [patientId]
+      );
+      if (patientInfo.rows.length > 0) {
+        patientNameToUse = patientInfo.rows[0].full_name;
+        const gender = patientInfo.rows[0].gender;
+        patientGenderToUse = gender === 'male' ? 'Erkek' : gender === 'female' ? 'Kadın' : 'Diğer';
+        if (patientInfo.rows[0].birth_date) {
+          const birthDate = new Date(patientInfo.rows[0].birth_date);
+          patientAgeToUse = Math.floor((new Date() - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
+        }
+      }
+    }
+
+    const updatedReport = reportResult.rows[0];
+    
+    const responseData = {
+      id: updatedReport.report_id,
+      reportCode: `RPT-${updatedReport.report_id}`,
+      patientId: updatedReport.patient_id,
+      patientName: patientNameToUse,
+      patientGender: patientGenderToUse,
+      patientAge: patientAgeToUse,
+      doctorId: updatedReport.doctor_id,
+      doctorName: doctorName || 'Dr. Bilinmiyor',
+      startDate: formatDate(updatedReport.report_start_date),
+      endDate: formatDate(updatedReport.report_end_date),
+      diagnosis: updatedReport.diagnosis,
+      diagnosisDetails: updatedReport.diagnosis_details || '',
+      medications: updatedMedications.rows.map(med => ({
+        name: med.medicine_name,
+        dosage: med.dosage,
+        frequency: med.frequency || '',
+        duration: med.duration || '',
+        instructions: med.usage_instructions || ''
+      })),
+      status: updatedReport.status,
+      createdAt: updatedReport.created_at
+    };
+
+    res.status(200).json(responseData);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Rapor güncelleme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Rapor güncellenirken hata oluştu'
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Rapor sil
+exports.deleteReport = async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { id } = req.params;
+
+    // Önce ilaçları sil
+    await client.query('DELETE FROM report_medications WHERE report_id = $1', [id]);
+    
+    // Sonra raporu sil
+    const result = await client.query(
+      'DELETE FROM medical_report WHERE report_id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Rapor bulunamadı'
+      });
+    }
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: 'Rapor başarıyla silindi'
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Rapor silme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Rapor silinirken hata oluştu'
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Rapor durumunu güncelle
+exports.updateReportStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['active', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçersiz durum değeri'
+      });
+    }
+
+    const updatedReport = await db.query(
+      'UPDATE medical_report SET status = $1, updated_at = NOW() WHERE report_id = $2 RETURNING *',
+      [status, id]
+    );
+
+    if (updatedReport.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Rapor bulunamadı'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Rapor durumu güncellendi',
+      data: updatedReport.rows[0]
+    });
+  } catch (error) {
+    console.error('Rapor durum güncelleme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Rapor durumu güncellenirken hata oluştu'
+    });
+  }
+};
+
+// Hastaya ait raporları getir
+exports.getPatientReports = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    const queryText = `
+      SELECT 
+        r.*,
+        COALESCE(doc.full_name, 'Dr. Bilinmeyen') as doctor_name
+      FROM medical_report r
+      LEFT JOIN users doc ON r.doctor_id = doc.user_id AND doc.role = 'doctor'
+      WHERE r.patient_id = $1
+      ORDER BY r.created_at DESC
+    `;
+    
+    const result = await db.query(queryText, [patientId]);
+    
+    // Tarih formatlama fonksiyonu
+    const formatDate = (date) => {
+      if (!date) return null;
+      try {
+        return new Date(date).toISOString().split('T')[0];
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // Her rapor için ilaçları da getir
+    const formattedReports = [];
+    for (const report of result.rows) {
+      const medications = await db.query(
+        'SELECT * FROM report_medications WHERE report_id = $1',
+        [report.report_id]
+      );
+      
+      formattedReports.push({
+        id: report.report_id,
+        reportCode: `RPT-${report.report_id}`,
+        doctorName: report.doctor_name,
+        startDate: formatDate(report.report_start_date),
+        endDate: formatDate(report.report_end_date),
+        diagnosis: report.diagnosis,
+        diagnosisDetails: report.diagnosis_details || '',
+        medications: medications.rows.map(med => ({
+          name: med.medicine_name,
+          dosage: med.dosage,
+          frequency: med.frequency || '',
+          duration: med.duration || '',
+          instructions: med.usage_instructions || ''
+        })),
+        status: report.status || 'active',
+        createdAt: report.created_at
+      });
+    }
+    
+    res.status(200).json(formattedReports);
+  } catch (error) {
+    console.error('Hasta raporları getirme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Hasta raporları yüklenirken hata oluştu'
+    });
+  }
+};
