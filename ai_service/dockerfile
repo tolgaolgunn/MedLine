@@ -1,30 +1,22 @@
-# 1. Python'un hafif ve stabil bir sürümünü kullan
+# Hafif sürüm kullan
 FROM python:3.10-slim
 
-# 2. Çalışma dizinini oluştur
 WORKDIR /app
 
-# 3. Sistem bağımlılıklarını yükle (Gereksiz ağırlıktan kaçınmak için)
+# Sistem araçlarını sadece kurulum anında kullan ve temizle
 RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# 4. Bağımlılıkları kopyala ve yükle
-# Not: requirements.txt dosyanın ai_service klasöründe olduğundan emin ol
+# Sadece bağımlılıkları kopyala ve yükle
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Projenin geri kalan tüm dosyalarını kopyala
+# Sadece ai_service içindeki gerekli dosyaları kopyala
 COPY . .
 
-# 6. Railway veya diğer platformlar için port değişkenini ayarla
-# Railway PORT değişkenini kendisi atar, bu yapı buna uyum sağlar
 ENV PORT=8080
 EXPOSE 8080
 
-# 7. Uygulamayı başlat
-# Flask için: gunicorn --bind 0.0.0.0:$PORT app:app
-# FastAPI için: uvicorn main:app --host 0.0.0.0 --port $PORT
-# Eğer sadece düz bir script ise: CMD ["python", "main.py"]
-# Aşağıdaki komut en yaygın olan Flask/Gunicorn yapısıdır:
+# Uygulamayı başlat (app.py kullandığını varsayıyorum)
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT app:app"]
