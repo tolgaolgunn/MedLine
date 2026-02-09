@@ -53,12 +53,12 @@ const FeedbackPage: React.FC = () => {
 
   // API instance
   const api = axios.create({
-  baseURL: 'http://localhost:3005/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000 // 10 seconds
-});
+    baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    timeout: 10000 // 10 seconds
+  });
 
   // Add request interceptor to include token
   api.interceptors.request.use((config) => {
@@ -73,40 +73,40 @@ const FeedbackPage: React.FC = () => {
   const MESSAGE_LIMIT = 500;
 
   // Fetch feedbacks
-const fetchFeedbacks = async () => {
-  try {
-    setLoading(true);
-    setError(null);
+  const fetchFeedbacks = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
-      throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+      }
+
+      const userData = JSON.parse(userStr);
+      if (!userData?.user_id) {
+        throw new Error('Kullanıcı bilgisi bulunamadı.');
+      }
+
+      // Updated endpoint to match backend route structure
+      const response = await api.get(`/feedback/${userData.user_id}`);
+
+      // Better response handling
+      if (response.data) {
+        setFeedbacks(Array.isArray(response.data) ? response.data : []);
+      } else {
+        throw new Error('Veri formatı geçersiz');
+      }
+
+    } catch (err: any) {
+      console.error('Feedback loading error:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Geri bildirimler yüklenemedi';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
-
-    const userData = JSON.parse(userStr);
-    if (!userData?.user_id) {
-      throw new Error('Kullanıcı bilgisi bulunamadı.');
-    }
-
-    // Updated endpoint to match backend route structure
-    const response = await api.get(`/feedback/${userData.user_id}`);
-    
-    // Better response handling
-    if (response.data) {
-      setFeedbacks(Array.isArray(response.data) ? response.data : []);
-    } else {
-      throw new Error('Veri formatı geçersiz');
-    }
-
-  } catch (err: any) {
-    console.error('Feedback loading error:', err);
-    const errorMessage = err.response?.data?.message || err.message || 'Geri bildirimler yüklenemedi';
-    setError(errorMessage);
-    toast.error(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 
   useEffect(() => {
@@ -114,56 +114,56 @@ const fetchFeedbacks = async () => {
   }, []);
 
   // Submit new feedback
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  try {
-    setSubmitting(true);
-    
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
-      throw new Error('Kullanıcı bilgisi bulunamadı');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      setSubmitting(true);
+
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        throw new Error('Kullanıcı bilgisi bulunamadı');
+      }
+
+      const userData = JSON.parse(userStr);
+
+      // Log the request payload for debugging
+      console.log('Sending feedback:', {
+        user_id: userData.user_id,
+        feedback_type: type,
+        title,
+        message
+      });
+
+      const response = await api.post('/feedback', {
+        user_id: userData.user_id,
+        feedback_type: type,
+        title: title.trim(),
+        message: message.trim()
+      });
+
+      // Log the response for debugging
+      console.log('Server response:', response.data);
+
+      if (response.data && response.data.success) {
+        toast.success('Geri bildirim başarıyla gönderildi.');
+        // Reset form
+        setTitle('');
+        setMessage('');
+        setType('ui_interface');
+        // Refresh feedback list
+        await fetchFeedbacks();
+      } else {
+        throw new Error(response.data?.message || 'Geri bildirim gönderilemedi.');
+      }
+    } catch (err: any) {
+      console.error('Error submitting feedback:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Geri bildirim gönderilemedi.';
+      toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
     }
-
-    const userData = JSON.parse(userStr);
-    
-    // Log the request payload for debugging
-    console.log('Sending feedback:', {
-      user_id: userData.user_id,
-      feedback_type: type,
-      title,
-      message
-    });
-
-    const response = await api.post('/feedback', {
-      user_id: userData.user_id,
-      feedback_type: type,
-      title: title.trim(),
-      message: message.trim()
-    });
-
-    // Log the response for debugging
-    console.log('Server response:', response.data);
-
-    if (response.data && response.data.success) {
-      toast.success('Geri bildirim başarıyla gönderildi.');
-      // Reset form
-      setTitle('');
-      setMessage('');
-      setType('ui_interface');
-      // Refresh feedback list
-      await fetchFeedbacks();
-    } else {
-      throw new Error(response.data?.message || 'Geri bildirim gönderilemedi.');
-    }
-  } catch (err: any) {
-    console.error('Error submitting feedback:', err);
-    const errorMessage = err.response?.data?.message || err.message || 'Geri bildirim gönderilemedi.';
-    toast.error(errorMessage);
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
 
   // Delete feedback
@@ -179,15 +179,15 @@ const handleSubmit = async (e: React.FormEvent) => {
       toast.error('Geri bildirim silinemedi.');
     }
   };
-  
+
   const handleError = (error: any) => {
-  if (axios.isAxiosError(error)) {
-    const message = error.response?.data?.message || 'An error occurred';
-    toast.error(message);
-  } else {
-    toast.error('Bir hata oluştu.');
-  }
-};
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.message || 'An error occurred';
+      toast.error(message);
+    } else {
+      toast.error('Bir hata oluştu.');
+    }
+  };
 
 
   // View feedback detail
@@ -275,7 +275,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <PageHeader 
+      <PageHeader
         title="Geri Bildirim"
         subtitle="Deneyimlerinizi paylaşın ve önerilerinizi iletin."
       />
@@ -346,8 +346,8 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={submitting || !title.trim() || !message.trim()}
                 className="w-full"
               >
@@ -382,10 +382,10 @@ const handleSubmit = async (e: React.FormEvent) => {
               ) : error ? (
                 <div className="text-center py-8">
                   <p className="text-sm text-destructive">{error}</p>
-                  <Button 
-                    onClick={() => fetchFeedbacks()} 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    onClick={() => fetchFeedbacks()}
+                    variant="outline"
+                    size="sm"
                     className="mt-4"
                   >
                     Tekrar Dene
@@ -416,7 +416,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <span>{new Date(feedback.created_at).toLocaleDateString('tr-TR')}</span>
                       </div>
                     </div>
-                    
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -432,7 +432,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                           <Edit className="mr-2 h-4 w-4" />
                           Düzenle
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => handleDelete(feedback.feedback_id)}
                           className="text-destructive"
                         >
@@ -516,14 +516,14 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
 
             <div className="flex gap-2 justify-end">
-              <Button 
-                type="button" 
+              <Button
+                type="button"
                 variant="outline"
                 onClick={() => setIsEditModalOpen(false)}
               >
                 İptal
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 disabled={!hasChanges()}
               >
@@ -559,7 +559,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   {new Date(selectedFeedback.created_at).toLocaleString('tr-TR')}
                 </div>
               </div>
-              
+
               <div>
                 <span className="font-semibold">Başlık:</span>
                 <div className="mt-1 p-3 bg-secondary/10 rounded-md">

@@ -50,7 +50,7 @@ interface Medication {
   instructions: string;
 }
 
-const API_BASE_URL = 'http://localhost:3005/api/doctor';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api/doctor';
 
 const PrescriptionManagement: React.FC = () => {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);

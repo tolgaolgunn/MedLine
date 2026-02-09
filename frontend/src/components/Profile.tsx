@@ -55,7 +55,7 @@ export function Profile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -72,7 +72,7 @@ export function Profile() {
           return;
         }
 
-        const response = await fetch('http://localhost:3005/api/profile', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -84,7 +84,7 @@ export function Profile() {
 
         const userData = await response.json();
         const nameParts = (userData.full_name || "").split(" ");
-        
+
         const newFormData = {
           firstName: nameParts[0] || "",
           lastName: nameParts.slice(1).join(" ") || "",
@@ -94,7 +94,7 @@ export function Profile() {
           address: userData.address || "",
           bloodType: userData.blood_type || ""
         };
-        
+
         setFormData(newFormData);
         setOriginalFormData({
           ...newFormData,
@@ -121,7 +121,7 @@ export function Profile() {
 
   const handleInputChange = (field: string, value: string) => {
     let validatedValue = value;
-    
+
     switch (field) {
       case 'firstName':
       case 'lastName':
@@ -137,7 +137,7 @@ export function Profile() {
         }
         break;
     }
-    
+
     setFormData(prev => ({ ...prev, [field]: validatedValue }));
   };
 
@@ -183,7 +183,7 @@ export function Profile() {
         blood_type: formData.bloodType || null
       };
 
-      const response = await fetch('http://localhost:3005/api/profile', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -202,7 +202,7 @@ export function Profile() {
         ...formData,
         birthDate: birthDate
       });
-      
+
     } catch (error: any) {
       console.error('Profil güncellenirken hata:', error);
       toast.error(error.message || 'Profil bilgileri güncellenemedi. Lütfen tekrar deneyin.');
@@ -217,7 +217,7 @@ export function Profile() {
     if (passwordData.currentPassword === passwordData.newPassword) {
       return toast.error("Mevcut şifre yeni şifre ile aynı olamaz!");
     }
-    
+
     const errors = getPasswordErrors(passwordData.newPassword);
     if (Object.values(errors).some(Boolean)) {
       return toast.error("Şifre gereksinimlerini karşılayınız.");
@@ -227,7 +227,7 @@ export function Profile() {
       const token = localStorage.getItem('token');
       if (!token) return toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
 
-      const response = await fetch('http://localhost:3005/api/change-password', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -250,7 +250,7 @@ export function Profile() {
         newPassword: "",
         confirmPassword: ""
       });
-      
+
     } catch (error: any) {
       console.error('Şifre değiştirilirken hata:', error);
       toast.error(error.message || 'Şifre değiştirilemedi. Lütfen tekrar deneyin.');
@@ -385,8 +385,8 @@ export function Profile() {
                 </div>
               </div>
 
-              <Button 
-                onClick={handleSaveProfile} 
+              <Button
+                onClick={handleSaveProfile}
                 className="w-full"
                 disabled={!hasChanges()}
               >
@@ -474,8 +474,8 @@ export function Profile() {
                 </ul>
               </div>
 
-              <Button 
-                onClick={handleChangePassword} 
+              <Button
+                onClick={handleChangePassword}
                 className="w-full"
                 disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
               >

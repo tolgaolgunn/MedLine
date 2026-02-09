@@ -44,7 +44,7 @@ const MedLineChatbot: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/api/rag_chat", {
+            const response = await fetch(`${import.meta.env.VITE_AI_API_URL || 'http://127.0.0.1:8000'}/api/rag_chat`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -116,7 +116,7 @@ const MedLineChatbot: React.FC = () => {
         formData.append("file", audioBlob, "recording.webm");
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/api/speech_to_text", {
+            const response = await fetch(`${import.meta.env.VITE_AI_API_URL || 'http://127.0.0.1:8000'}/api/speech_to_text`, {
                 method: "POST",
                 body: formData,
             });

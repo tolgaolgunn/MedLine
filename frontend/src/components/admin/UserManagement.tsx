@@ -9,10 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { PageHeader } from '../ui/PageHeader';
 import { toast } from 'react-toastify';
-import { 
-  Users, 
-  UserPlus, 
-  Search, 
+import {
+  Users,
+  UserPlus,
+  Search,
   Edit,
   Trash2,
   Eye,
@@ -64,7 +64,7 @@ const UserManagement: React.FC = () => {
     gender: 'male',
     address: ''
   });
-  
+
   // Orijinal kullanıcı verilerini sakla
   const [originalUser, setOriginalUser] = useState<NewUser>({
     firstName: '',
@@ -79,7 +79,7 @@ const UserManagement: React.FC = () => {
     gender: 'male',
     address: ''
   });
-  
+
   // Şifre görünürlük state'leri
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -99,8 +99,8 @@ const UserManagement: React.FC = () => {
         }
         const headers: any = { 'Authorization': `Bearer ${token}` };
         const [doctorsRes, patientsRes] = await Promise.all([
-          fetch('http://localhost:3005/api/admin/doctors/all', { headers }),
-          fetch('http://localhost:3005/api/admin/patients/all', { headers })
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/admin/doctors/all`, { headers }),
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/admin/patients/all`, { headers })
         ]);
         if (!doctorsRes.ok || !patientsRes.ok) return;
         const doctorsData = await doctorsRes.json();
@@ -129,9 +129,9 @@ const UserManagement: React.FC = () => {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    
+
     return matchesSearch && matchesRole;
   });
 
@@ -144,7 +144,7 @@ const UserManagement: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) return toast.error('Oturum bulunamadı. Lütfen giriş yapın.');
       const headers: any = { 'Authorization': `Bearer ${token}` };
-      const base = 'http://localhost:3005/api/admin';
+      const base = (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api/admin';
       const url = target.role === 'doctor'
         ? `${base}/doctors/${userId}`
         : `${base}/patients/${userId}`;
@@ -170,15 +170,15 @@ const UserManagement: React.FC = () => {
     const hasNumbers = /\d/.test(newUser.password);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(newUser.password);
     const hasMinLength = newUser.password.length >= 8;
-    
+
     if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
       toast.error('Lütfen gerekli alanları doldurun!');
       return;
     }
     if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar || !hasMinLength) {
-        toast.error('Şifre tüm kısıtlamaları karşılamıyor!');
-        return;
-      }
+      toast.error('Şifre tüm kısıtlamaları karşılamıyor!');
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -202,7 +202,7 @@ const UserManagement: React.FC = () => {
           district: '',
           hospital_name: null
         };
-        const res = await fetch('http://localhost:3005/api/admin/doctors/add', { method: 'POST', headers, body: JSON.stringify(body) });
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/admin/doctors/add`, { method: 'POST', headers, body: JSON.stringify(body) });
         if (!res.ok) {
           const e = await res.json().catch(() => ({}));
           throw new Error(e.message || 'Doktor oluşturulamadı');
@@ -240,14 +240,14 @@ const UserManagement: React.FC = () => {
       gender: 'male',
       address: ''
     });
-    
+
     setIsAddUserOpen(false);
     toast.success('Kullanıcı başarıyla eklendi!');
   };
 
   // Modal açıldığında orijinal verileri sakla
   const handleOpenModal = () => {
-    setOriginalUser({...newUser});
+    setOriginalUser({ ...newUser });
     setIsAddUserOpen(true);
   };
 
@@ -263,7 +263,7 @@ const UserManagement: React.FC = () => {
 
   // Modal kapatma işlemi (Add) - Onaylandıysa
   const confirmCloseAdd = () => {
-    setNewUser({...originalUser});
+    setNewUser({ ...originalUser });
     setIsAddUserOpen(false);
     setConfirmCloseAddOpen(false);
   };
@@ -275,18 +275,18 @@ const UserManagement: React.FC = () => {
     const nameParts = user.name.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
-    
+
     setNewUser({
       firstName,
       lastName,
       email: user.email,
-      phone: '', 
+      phone: '',
       password: '',
       confirmPassword: '',
-      role: user.role === 'admin' ? 'doctor' : user.role, 
-      tcNo: '', 
-      birthDate: '', 
-      gender: 'male', 
+      role: user.role === 'admin' ? 'doctor' : user.role,
+      tcNo: '',
+      birthDate: '',
+      gender: 'male',
       address: ''
     });
     setOriginalUser({
@@ -352,7 +352,7 @@ const UserManagement: React.FC = () => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
-      const base = 'http://localhost:3005/api/admin';
+      const base = (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api/admin';
       const payload = {
         full_name: `${newUser.firstName} ${newUser.lastName}`.trim(),
         email: newUser.email
@@ -388,11 +388,11 @@ const UserManagement: React.FC = () => {
   // Değişiklik olup olmadığını kontrol et
   const hasChanges = () => {
     if (!editingUser) return false;
-    
+
     const nameParts = editingUser.name.split(' ');
     const originalFirstName = nameParts[0] || '';
     const originalLastName = nameParts.slice(1).join(' ') || '';
-    
+
     return (
       newUser.firstName !== originalFirstName ||
       newUser.lastName !== originalLastName ||
@@ -416,18 +416,18 @@ const UserManagement: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader 
-        title="Kullanıcı Yönetimi" 
+      <PageHeader
+        title="Kullanıcı Yönetimi"
         subtitle="Sistemdeki tüm kullanıcıları yönetin"
       />
       <div className="flex justify-end items-center mb-6">
-        
+
         <Dialog open={isAddUserOpen} onOpenChange={handleRequestCloseAdd}>
           <Button onClick={handleOpenModal}>
             <UserPlus className="w-4 h-4 mr-2" />
             Yeni Kullanıcı Ekle
           </Button>
-          <DialogContent 
+          <DialogContent
             className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:hidden"
             onPointerDownOutside={(e) => e.preventDefault()}
           >
@@ -437,7 +437,7 @@ const UserManagement: React.FC = () => {
                 Yeni Kullanıcı Ekle
               </DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-6">
               {/* Kişisel Bilgiler */}
               <div className="space-y-4">
@@ -449,7 +449,7 @@ const UserManagement: React.FC = () => {
                       id="firstName"
                       className="border border-gray-300 rounded-md"
                       value={newUser.firstName}
-                      onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
+                      onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
                     />
                   </div>
                   <div>
@@ -458,11 +458,11 @@ const UserManagement: React.FC = () => {
                       id="lastName"
                       className="border border-gray-300 rounded-md"
                       value={newUser.lastName}
-                      onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
+                      onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="tcNo">T.C. Kimlik No</Label>
@@ -470,7 +470,7 @@ const UserManagement: React.FC = () => {
                       id="tcNo"
                       value={newUser.tcNo}
                       className="border border-gray-300 rounded-md"
-                      onChange={(e) => setNewUser({...newUser, tcNo: e.target.value})}
+                      onChange={(e) => setNewUser({ ...newUser, tcNo: e.target.value })}
                       maxLength={11}
                     />
                   </div>
@@ -481,14 +481,14 @@ const UserManagement: React.FC = () => {
                       className="border border-gray-300 rounded-md"
                       type="date"
                       value={newUser.birthDate}
-                      onChange={(e) => setNewUser({...newUser, birthDate: e.target.value})}
+                      onChange={(e) => setNewUser({ ...newUser, birthDate: e.target.value })}
                     />
                   </div>
                 </div>
-                
+
                 <div className="w-1/3">
                   <Label htmlFor="gender">Cinsiyet</Label>
-                  <Select value={newUser.gender} onValueChange={(value: 'male' | 'female' | 'other') => setNewUser({...newUser, gender: value})}>
+                  <Select value={newUser.gender} onValueChange={(value: 'male' | 'female' | 'other') => setNewUser({ ...newUser, gender: value })}>
                     <SelectTrigger className="border border-gray-300 rounded-md">
                       <SelectValue />
                     </SelectTrigger>
@@ -511,29 +511,29 @@ const UserManagement: React.FC = () => {
                     className="border border-gray-300 rounded-md"
                     type="email"
                     value={newUser.email}
-                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                     placeholder="ornek@email.com"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="phone">Telefon</Label>
                   <Input
                     id="phone"
                     className="border border-gray-300 rounded-md"
                     value={newUser.phone}
-                    onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                    onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
                     placeholder="+90 555 123 45 67"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="address">Adres</Label>
                   <Textarea
                     id="address"
                     className="border border-gray-300 rounded-md min-h-[20px]"
                     value={newUser.address}
-                    onChange={(e) => setNewUser({...newUser, address: e.target.value})}
+                    onChange={(e) => setNewUser({ ...newUser, address: e.target.value })}
                     placeholder="Tam adres bilgisi"
                     maxLength={200}
                   />
@@ -548,7 +548,7 @@ const UserManagement: React.FC = () => {
                 <h3 className="text-lg font-semibold border-b pb-2">Hesap Bilgileri</h3>
                 <div className="w-1/3">
                   <Label htmlFor="role">Rol</Label>
-                  <Select value={newUser.role} onValueChange={(value: 'patient' | 'doctor') => setNewUser({...newUser, role: value})}>
+                  <Select value={newUser.role} onValueChange={(value: 'patient' | 'doctor') => setNewUser({ ...newUser, role: value })}>
                     <SelectTrigger className="border border-gray-300 rounded-md">
                       <SelectValue />
                     </SelectTrigger>
@@ -558,7 +558,7 @@ const UserManagement: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="password">Şifre *</Label>
@@ -568,7 +568,7 @@ const UserManagement: React.FC = () => {
                         className="border border-gray-300 rounded-md pr-10"
                         type={showPassword ? "text" : "password"}
                         value={newUser.password}
-                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                         placeholder="Şifre"
                       />
                       <Button
@@ -611,7 +611,7 @@ const UserManagement: React.FC = () => {
                         className="border border-gray-300 rounded-md pr-10"
                         type={showConfirmPassword ? "text" : "password"}
                         value={newUser.confirmPassword}
-                        onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
+                        onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
                         placeholder="Şifre tekrar"
                       />
                       <Button
@@ -664,7 +664,7 @@ const UserManagement: React.FC = () => {
 
         {/* Kullanıcı Düzenleme Modal */}
         <Dialog open={isEditUserOpen} onOpenChange={handleRequestCloseEdit}>
-          <DialogContent 
+          <DialogContent
             className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:hidden"
             onPointerDownOutside={(e) => e.preventDefault()}
           >
@@ -674,7 +674,7 @@ const UserManagement: React.FC = () => {
                 Kullanıcı Düzenle: {editingUser?.name}
               </DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-6">
               {/* Kişisel Bilgiler */}
               <div className="space-y-4">
@@ -686,7 +686,7 @@ const UserManagement: React.FC = () => {
                       id="editFirstName"
                       className="border border-gray-300 rounded-md"
                       value={newUser.firstName}
-                      onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
+                      onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
                       placeholder="Ad"
                     />
                   </div>
@@ -696,7 +696,7 @@ const UserManagement: React.FC = () => {
                       id="editLastName"
                       className="border border-gray-300 rounded-md"
                       value={newUser.lastName}
-                      onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
+                      onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
                       placeholder="Soyad"
                     />
                   </div>
@@ -713,7 +713,7 @@ const UserManagement: React.FC = () => {
                     className="border border-gray-300 rounded-md"
                     type="email"
                     value={newUser.email}
-                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                     placeholder="ornek@email.com"
                   />
                 </div>
@@ -724,7 +724,7 @@ const UserManagement: React.FC = () => {
                 <h3 className="text-lg font-semibold border-b pb-2">Hesap Bilgileri</h3>
                 <div className="w-1/3">
                   <Label htmlFor="editRole">Rol</Label>
-                  <Select value={newUser.role} onValueChange={(value: 'patient' | 'doctor') => setNewUser({...newUser, role: value})}>
+                  <Select value={newUser.role} onValueChange={(value: 'patient' | 'doctor') => setNewUser({ ...newUser, role: value })}>
                     <SelectTrigger className="border border-gray-300 rounded-md">
                       <SelectValue />
                     </SelectTrigger>
@@ -743,7 +743,7 @@ const UserManagement: React.FC = () => {
                   onClick={handleRequestCloseEdit}>
                   İptal
                 </Button>
-                <Button 
+                <Button
                   onClick={handleUpdateUser}
                   disabled={!hasChanges()}
                   className={!hasChanges() ? 'opacity-50 cursor-not-allowed' : ''}

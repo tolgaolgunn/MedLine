@@ -95,7 +95,7 @@ const DoctorManagement = () => {
 
   const handleAddDoctor = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Tüm alanların doldurulup doldurulmadığını kontrol et
     if (!formData.name.trim()) {
       toast.error('Ad Soyad alanı boş bırakılamaz');
@@ -195,18 +195,18 @@ const DoctorManagement = () => {
 
     try {
       const requestData = {
-      name: formData.name.trim(), // Backend name alanını bekliyor
-      email: formData.email.trim(),
-      password: formData.password,
-      phoneNumber: formData.phoneNumber?.trim(), // Backend phoneNumber alanını bekliyor
-      specialization: formData.specialization?.trim(), // Backend specialization alanını bekliyor
-      license_number: formData.license_number.trim(),
-      experience_years: parseInt(formData.experience_years) || 0,
-      biography: formData.biography?.trim(),
-      city: formData.city?.trim(),
-      district: formData.district?.trim(),
-      hospital_name: formData.hospital_name?.trim()
-    };
+        name: formData.name.trim(), // Backend name alanını bekliyor
+        email: formData.email.trim(),
+        password: formData.password,
+        phoneNumber: formData.phoneNumber?.trim(), // Backend phoneNumber alanını bekliyor
+        specialization: formData.specialization?.trim(), // Backend specialization alanını bekliyor
+        license_number: formData.license_number.trim(),
+        experience_years: parseInt(formData.experience_years) || 0,
+        biography: formData.biography?.trim(),
+        city: formData.city?.trim(),
+        district: formData.district?.trim(),
+        hospital_name: formData.hospital_name?.trim()
+      };
 
       await axios.post('/api/admin/doctors/add', requestData);
       toast.success('Doktor başarıyla eklendi');
@@ -223,62 +223,62 @@ const DoctorManagement = () => {
     }
   };
 
- const handleUpdateDoctor = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!selectedDoctor) return;
+  const handleUpdateDoctor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDoctor) return;
 
-  // Form validasyonu
-  if (!formData.name.trim()) {
-    toast.error('İsim alanı boş bırakılamaz');
-    return;
-  }
-
-  if (!formData.email.trim()) {
-    toast.error('E-posta alanı boş bırakılamaz');
-    return;
-  }
-
-  // E-posta format kontrolü
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(formData.email)) {
-    toast.error('Geçerli bir e-posta adresi giriniz');
-    return;
-  }
-
-  // Lisans numarası format kontrolü
-  if (formData.license_number) {
-    const licenseNumberRegex = /^[A-Z]{3}\d{7}$/;
-    if (!licenseNumberRegex.test(formData.license_number)) {
-      toast.error('Lisans numarası geçerli formatta değil. Örnek format: ABC1234567');
+    // Form validasyonu
+    if (!formData.name.trim()) {
+      toast.error('İsim alanı boş bırakılamaz');
       return;
     }
-  }
 
-  try {
-    // Backend'in beklediği formata uygun veri yapısı
-    const requestData = {
-      name: formData.name.trim(), // Backend name alanını bekliyor
-      email: formData.email.trim(),
-      phoneNumber: formData.phoneNumber?.trim(), // Backend phoneNumber alanını bekliyor
-      specialization: formData.specialization?.trim(), // Backend specialization alanını bekliyor
-      license_number: formData.license_number?.trim(),
-      experience_years: parseInt(formData.experience_years) || 0,
-      biography: formData.biography?.trim(),
-      city: formData.city?.trim(),
-      district: formData.district?.trim(),
-      hospital_name: formData.hospital_name?.trim()
-    };
+    if (!formData.email.trim()) {
+      toast.error('E-posta alanı boş bırakılamaz');
+      return;
+    }
 
-    await axios.put(`/api/admin/doctors/${selectedDoctor.user_id}`, requestData);
-    toast.success('Doktor bilgileri güncellendi');
-    setIsEditDialogOpen(false);
-    resetFormData();
-    fetchDoctors();
-  } catch (error: any) {
-    console.error('Error details:', error.response?.data);
-    toast.error(error.response?.data?.message || 'Doktor güncellenirken bir hata oluştu');
-  }
-};
+    // E-posta format kontrolü
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Geçerli bir e-posta adresi giriniz');
+      return;
+    }
+
+    // Lisans numarası format kontrolü
+    if (formData.license_number) {
+      const licenseNumberRegex = /^[A-Z]{3}\d{7}$/;
+      if (!licenseNumberRegex.test(formData.license_number)) {
+        toast.error('Lisans numarası geçerli formatta değil. Örnek format: ABC1234567');
+        return;
+      }
+    }
+
+    try {
+      // Backend'in beklediği formata uygun veri yapısı
+      const requestData = {
+        name: formData.name.trim(), // Backend name alanını bekliyor
+        email: formData.email.trim(),
+        phoneNumber: formData.phoneNumber?.trim(), // Backend phoneNumber alanını bekliyor
+        specialization: formData.specialization?.trim(), // Backend specialization alanını bekliyor
+        license_number: formData.license_number?.trim(),
+        experience_years: parseInt(formData.experience_years) || 0,
+        biography: formData.biography?.trim(),
+        city: formData.city?.trim(),
+        district: formData.district?.trim(),
+        hospital_name: formData.hospital_name?.trim()
+      };
+
+      await axios.put(`/api/admin/doctors/${selectedDoctor.user_id}`, requestData);
+      toast.success('Doktor bilgileri güncellendi');
+      setIsEditDialogOpen(false);
+      resetFormData();
+      fetchDoctors();
+    } catch (error: any) {
+      console.error('Error details:', error.response?.data);
+      toast.error(error.response?.data?.message || 'Doktor güncellenirken bir hata oluştu');
+    }
+  };
 
   const handleDeleteDoctor = async (id: string) => {
     if (!window.confirm('Bu doktoru silmek istediğinize emin misiniz?')) return;
@@ -332,16 +332,16 @@ const DoctorManagement = () => {
   // Check if any form field has been filled
   const isFormDirty = () => {
     return formData.name.trim() !== '' ||
-           formData.email.trim() !== '' ||
-           formData.password.trim() !== '' ||
-           formData.specialization.trim() !== '' ||
-           formData.phoneNumber.trim() !== '' ||
-           formData.city.trim() !== '' ||
-           formData.district.trim() !== '' ||
-           formData.hospital_name.trim() !== '' ||
-           formData.experience_years.trim() !== '' ||
-           formData.license_number.trim() !== '' ||
-           formData.biography.trim() !== '';
+      formData.email.trim() !== '' ||
+      formData.password.trim() !== '' ||
+      formData.specialization.trim() !== '' ||
+      formData.phoneNumber.trim() !== '' ||
+      formData.city.trim() !== '' ||
+      formData.district.trim() !== '' ||
+      formData.hospital_name.trim() !== '' ||
+      formData.experience_years.trim() !== '' ||
+      formData.license_number.trim() !== '' ||
+      formData.biography.trim() !== '';
   };
 
   // Handle dialog close with confirmation
@@ -369,15 +369,15 @@ const DoctorManagement = () => {
   // Check if edit form has been modified
   const isEditFormDirty = () => {
     return formData.name !== originalFormData.name ||
-           formData.email !== originalFormData.email ||
-           formData.specialization !== originalFormData.specialization ||
-           formData.phoneNumber !== originalFormData.phoneNumber ||
-           formData.city !== originalFormData.city ||
-           formData.district !== originalFormData.district ||
-           formData.hospital_name !== originalFormData.hospital_name ||
-           formData.experience_years !== originalFormData.experience_years ||
-           formData.license_number !== originalFormData.license_number ||
-           formData.biography !== originalFormData.biography;
+      formData.email !== originalFormData.email ||
+      formData.specialization !== originalFormData.specialization ||
+      formData.phoneNumber !== originalFormData.phoneNumber ||
+      formData.city !== originalFormData.city ||
+      formData.district !== originalFormData.district ||
+      formData.hospital_name !== originalFormData.hospital_name ||
+      formData.experience_years !== originalFormData.experience_years ||
+      formData.license_number !== originalFormData.license_number ||
+      formData.biography !== originalFormData.biography;
   };
 
   const filteredDoctors = doctors.filter((doctor) =>
@@ -471,8 +471,8 @@ const DoctorManagement = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                   </Button>
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     size="sm"
                     onClick={() => handleDeleteDoctor(doctor.user_id)}
                   >
@@ -756,18 +756,18 @@ const DoctorManagement = () => {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-gray-700">
-              Formda doldurulmuş alanlar var. Çıkmak istediğinizden emin misiniz? 
+              Formda doldurulmuş alanlar var. Çıkmak istediğinizden emin misiniz?
               Girilen bilgiler kaybolacaktır.
             </p>
             <div className="flex justify-end gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={cancelExit}
                 className="border-2 border-gray-300"
               >
                 İptal
               </Button>
-              <Button 
+              <Button
                 onClick={confirmExit}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
