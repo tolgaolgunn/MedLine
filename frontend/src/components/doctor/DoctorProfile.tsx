@@ -115,7 +115,7 @@ export function DoctorProfile() {
           return;
         }
 
-        const response = await fetch('http://localhost:3005/api/profile', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -124,10 +124,10 @@ export function DoctorProfile() {
         });
 
         if (!response.ok) throw new Error('Profil bilgileri alınamadı');
-        
+
         const userData = await response.json();
         const nameParts = (userData.full_name || "").split(" ");
-        
+
         const newFormData = {
           firstName: nameParts[0] || "",
           lastName: nameParts.slice(1).join(" ") || "",
@@ -177,7 +177,7 @@ export function DoctorProfile() {
   // Handlers
   const handleInputChange = (field: keyof FormData, value: string) => {
     let validatedValue = value;
-    
+
     switch (field) {
       case 'firstName':
       case 'lastName':
@@ -206,8 +206,8 @@ export function DoctorProfile() {
   const hasChanges = (): boolean => {
     const currentData = { ...formData, ...doctorData };
     return Object.keys(currentData).some(
-      key => currentData[key as keyof typeof currentData] !== 
-             originalFormData[key as keyof typeof originalFormData]
+      key => currentData[key as keyof typeof currentData] !==
+        originalFormData[key as keyof typeof originalFormData]
     );
   };
 
@@ -276,7 +276,7 @@ export function DoctorProfile() {
         hospital_name: doctorData.hospital_name
       };
 
-      const response = await fetch('http://localhost:3005/api/profile', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -324,7 +324,7 @@ export function DoctorProfile() {
         return;
       }
 
-      const response = await fetch('http://localhost:3005/api/change-password', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -485,8 +485,8 @@ export function DoctorProfile() {
                 />
               </div>
 
-              <Button 
-                onClick={handleSaveProfile} 
+              <Button
+                onClick={handleSaveProfile}
                 className="w-full"
                 disabled={!hasChanges()}
               >
@@ -580,12 +580,12 @@ export function DoctorProfile() {
                 </ul>
               </div>
 
-              <Button 
-                onClick={handleChangePassword} 
+              <Button
+                onClick={handleChangePassword}
                 className="w-full"
                 disabled={
-                  !passwordData.currentPassword || 
-                  !passwordData.newPassword || 
+                  !passwordData.currentPassword ||
+                  !passwordData.newPassword ||
                   !passwordData.confirmPassword ||
                   passwordData.newPassword !== passwordData.confirmPassword ||
                   Object.values(getPasswordErrors(passwordData.newPassword)).some(Boolean)

@@ -8,13 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { PageHeader } from '../ui/PageHeader';
-import { 
-  Calendar, 
-  Clock, 
-  Users, 
-  Filter, 
-  Eye, 
-  Play, 
+import {
+  Calendar,
+  Clock,
+  Users,
+  Filter,
+  Eye,
+  Play,
   FileText,
   Search,
   ChevronDown,
@@ -44,20 +44,20 @@ const DoctorAppointments: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  
+
   // State for appointment details and modals
   const [showDetail, setShowDetail] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  
+
   // State for patient history modal
   const [showPatientHistory, setShowPatientHistory] = useState(false);
   const [historyPatientId, setHistoryPatientId] = useState<number | null>(null);
-  
+
   // State for exit confirmation and unsaved changes
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
+
   // Temporary filters state for modal
   const [tempFilters, setTempFilters] = useState({
     filter: 'today',
@@ -68,61 +68,61 @@ const DoctorAppointments: React.FC = () => {
 
   // Fetch appointments from API on component mount
   useEffect(() => {
-  const userDataStr = localStorage.getItem('user');
-  const userData = userDataStr ? JSON.parse(userDataStr) : null;
-  const doctorId = userData?.user_id;
-  
-  const token = localStorage.getItem('token');
-  if (!doctorId) {
-    console.error('Doktor ID bulunamadı');
-    return;
-  }
-  if (!token) {
-    console.error('Token bulunamadı');
-    return;
-  }
+    const userDataStr = localStorage.getItem('user');
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const doctorId = userData?.user_id;
 
-  if (doctorId) {
-    axios.get(`http://localhost:3005/api/doctor/appointments/${doctorId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-      .then(res => {
-        console.log('API Yanıtı:', res.data);
-        
-        // API'den gelen veriyi işlerken yaşı tam sayıya yuvarla
-const mapped = res.data.map((item: any) => {
-  console.log('Hasta bilgisi:', {
-    id: item.appointment_id,
-    patientname: item.patientName,
-    hasPatientname: !!item.patientname,
-    rawData: item
-  });
-  
-  const dateObj = new Date(item.datetime);
-  return {
-    id: item.appointment_id,
-    appointment_id: item.appointment_id,
-    patient_id: item.patient_id,
-    patientname: item.patientName || 'İsimsiz Hasta',
-    patientAge: Math.floor(parseFloat(item.patientage || item.patientAge || '0')), // Yaşı tam sayıya yuvarla
-    specialty: item.specialty,
-    date: dateObj.toLocaleDateString('tr-TR'),
-    time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-    datetime: item.datetime,
-    type: item.type,
-    status: item.status,
-  };
-});
-        console.log('Map edilmiş veri:', mapped);
-        setAppointments(mapped);
+    const token = localStorage.getItem('token');
+    if (!doctorId) {
+      console.error('Doktor ID bulunamadı');
+      return;
+    }
+    if (!token) {
+      console.error('Token bulunamadı');
+      return;
+    }
+
+    if (doctorId) {
+      axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/appointments/${doctorId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
-      .catch(error => {
-        console.error('API hatası:', error);
-      });
-  }
-}, []);
+        .then(res => {
+          console.log('API Yanıtı:', res.data);
+
+          // API'den gelen veriyi işlerken yaşı tam sayıya yuvarla
+          const mapped = res.data.map((item: any) => {
+            console.log('Hasta bilgisi:', {
+              id: item.appointment_id,
+              patientname: item.patientName,
+              hasPatientname: !!item.patientname,
+              rawData: item
+            });
+
+            const dateObj = new Date(item.datetime);
+            return {
+              id: item.appointment_id,
+              appointment_id: item.appointment_id,
+              patient_id: item.patient_id,
+              patientname: item.patientName || 'İsimsiz Hasta',
+              patientAge: Math.floor(parseFloat(item.patientage || item.patientAge || '0')), // Yaşı tam sayıya yuvarla
+              specialty: item.specialty,
+              date: dateObj.toLocaleDateString('tr-TR'),
+              time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+              datetime: item.datetime,
+              type: item.type,
+              status: item.status,
+            };
+          });
+          console.log('Map edilmiş veri:', mapped);
+          setAppointments(mapped);
+        })
+        .catch(error => {
+          console.error('API hatası:', error);
+        });
+    }
+  }, []);
 
   // Synchronize tempFilters with actual filters
   useEffect(() => {
@@ -142,7 +142,7 @@ const mapped = res.data.map((item: any) => {
     const appointmentDateTime = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
     const now = new Date();
     const diff = (appointmentDateTime.getTime() - now.getTime()) / 60000; // dakika cinsinden fark
-    
+
     // Randevu zamanından 30 dakika önce ve 10 dakika sonrasına kadar aktif say
     return diff >= -30 && diff <= 10;
   };
@@ -191,7 +191,7 @@ const mapped = res.data.map((item: any) => {
   const handleQuickActionToggle = (action: string) => {
     setTempFilters(prev => ({
       ...prev,
-      activeFilters: prev.activeFilters.includes(action) 
+      activeFilters: prev.activeFilters.includes(action)
         ? prev.activeFilters.filter(f => f !== action)
         : [...prev.activeFilters, action]
     }));
@@ -284,35 +284,35 @@ const mapped = res.data.map((item: any) => {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
-    
+
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     return appointments.filter(appointment => {
       const appointmentDate = new Date(appointment.datetime);
-      
+
       // Set today to start of day
       today.setHours(0, 0, 0, 0);
       tomorrow.setHours(0, 0, 0, 0);
       startOfWeek.setHours(0, 0, 0, 0);
       startOfMonth.setHours(0, 0, 0, 0);
-      
+
       // End dates for comparisons
       const endOfDay = new Date(today);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       const endOfTomorrow = new Date(tomorrow);
       endOfTomorrow.setHours(23, 59, 59, 999);
-      
+
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
-      
+
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
       endOfMonth.setHours(23, 59, 59, 999);
-      
+
       // Apply date filter based on selected option
       let dateFilter = true;
       switch (filter) {
@@ -361,7 +361,7 @@ const mapped = res.data.map((item: any) => {
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-full mx-auto overflow-x-hidden">
       {/* Page Header */}
-      <PageHeader 
+      <PageHeader
         title="Randevu Yönetimi"
         subtitle="Hasta randevularınızı yönetin ve takip edin."
       />
@@ -376,8 +376,8 @@ const mapped = res.data.map((item: any) => {
               <h2 className="text-lg sm:text-xl font-semibold">Randevular</h2>
               <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 {/* Filter Button */}
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex items-center gap-2 border-2 border-gray-300 shadow-sm text-xs sm:text-sm flex-1 sm:flex-initial"
                   onClick={handleOpenFilterModal}
                 >
@@ -386,7 +386,7 @@ const mapped = res.data.map((item: any) => {
                   <span className="sm:hidden">Filtre</span>
                   {(filter !== 'today' || activeFilters.length > 0) && (
                     <Badge variant="secondary" className="ml-1 text-xs">
-                      {activeFilters.length + (filter !== 'today' ? 1 : 0)} 
+                      {activeFilters.length + (filter !== 'today' ? 1 : 0)}
                     </Badge>
                   )}
                 </Button>
@@ -398,7 +398,7 @@ const mapped = res.data.map((item: any) => {
                       <DialogTitle>Filtreler</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-6">
-                      
+
                       {/* Date Range Filters */}
                       <div>
                         <h3 className="font-medium mb-3">Tarih Aralığı</h3>
@@ -419,8 +419,8 @@ const mapped = res.data.map((item: any) => {
                         {/* Custom Date Range Inputs */}
                         {tempFilters.filter === 'custom' && (
                           <div className="mt-3 flex gap-2">
-                            <Input 
-                              type="date" 
+                            <Input
+                              type="date"
                               value={tempFilters.startDate}
                               onChange={(e) => {
                                 setTempFilters(prev => ({ ...prev, startDate: e.target.value }));
@@ -428,8 +428,8 @@ const mapped = res.data.map((item: any) => {
                               }}
                               placeholder="Başlangıç"
                             />
-                            <Input 
-                              type="date" 
+                            <Input
+                              type="date"
                               value={tempFilters.endDate}
                               onChange={(e) => {
                                 setTempFilters(prev => ({ ...prev, endDate: e.target.value }));
@@ -458,24 +458,24 @@ const mapped = res.data.map((item: any) => {
                           ))}
                         </div>
                       </div>
-                      
+
                       {/* Action Buttons */}
                       <div className="pt-4 border-t space-y-2">
-                        <Button 
+                        <Button
                           onClick={applyFilters}
                           disabled={!hasUnsavedChanges}
                           className="w-full border-2 border-gray-300 shadow-sm"
                         >
                           Filtreleri Uygula
                         </Button>
-                        
+
                         {(tempFilters.filter !== 'today' || tempFilters.activeFilters.length > 0) && (
-                          <Button 
+                          <Button
                             variant="outline"
                             onClick={clearAllFilters}
                             className="w-full border-2 border-gray-300 shadow-sm rounded-md"
                           >
-                           Filtreleri Kaldır
+                            Filtreleri Kaldır
                           </Button>
                         )}
                       </div>
@@ -498,17 +498,17 @@ const mapped = res.data.map((item: any) => {
                     <div key={appointment.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors gap-3">
                       {/* Appointment Info */}
                       <div className="min-w-0 flex-1">
-    <p className="font-medium text-sm sm:text-base truncate">
-      {appointment.patientname || 'İsimsiz Hasta'}
-    </p>
-    <p className="text-xs sm:text-sm text-gray-600 truncate">
-      {appointment.patientAge} yaş • {appointment.specialty}
-    </p>
-    <p className="text-xs text-gray-500 truncate">
-      {appointment.date} - {appointment.time} • 
-      {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}
-    </p>
-  </div>
+                        <p className="font-medium text-sm sm:text-base truncate">
+                          {appointment.patientname || 'İsimsiz Hasta'}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">
+                          {appointment.patientAge} yaş • {appointment.specialty}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {appointment.date} - {appointment.time} •
+                          {appointment.type === 'online' ? 'Online' : 'Yüz Yüze'}
+                        </p>
+                      </div>
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
 
@@ -534,7 +534,7 @@ const mapped = res.data.map((item: any) => {
         <div>
           <Card className="p-4 sm:p-6">
             <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Şu Anki Randevu</h2>
-            
+
             {appointments.find(app => isCurrentAppointment(app)) ? (
               <div className="space-y-3 sm:space-y-4">
                 {/* Time Display */}
@@ -553,17 +553,17 @@ const mapped = res.data.map((item: any) => {
                     <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Hasta</Label>
                     <p className="font-medium text-sm sm:text-base truncate">{appointments.find(app => isCurrentAppointment(app))?.patientname}</p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Yaş</Label>
                     <p className="text-sm sm:text-base">{appointments.find(app => isCurrentAppointment(app))?.patientAge} yaş</p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Uzmanlık</Label>
                     <p className="text-sm sm:text-base truncate">{appointments.find(app => isCurrentAppointment(app))?.specialty}</p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Randevu Türü</Label>
                     <div className="flex items-center gap-2 mt-1">
@@ -572,7 +572,7 @@ const mapped = res.data.map((item: any) => {
                       </Badge>
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Şikayet</Label>
                     <p className="text-xs sm:text-sm">Belirtilmemiş</p>
@@ -581,36 +581,36 @@ const mapped = res.data.map((item: any) => {
 
                 {/* Start Online Appointment Button */}
                 {appointments.find(app => isCurrentAppointment(app))?.type === 'online' && (
-  <StartAppointmentButton 
-    appointments={appointments} 
-    handleStartAppointment={handleStartAppointment}
-    isCurrentAppointment={isCurrentAppointment}
-  />
-)}
+                  <StartAppointmentButton
+                    appointments={appointments}
+                    handleStartAppointment={handleStartAppointment}
+                    isCurrentAppointment={isCurrentAppointment}
+                  />
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedAppointment(appointments.find(app => isCurrentAppointment(app)) || null);
-                            setShowDetail(true);
-                          }}
-                          className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors text-xs sm:text-sm"
-                        >
-                          <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                        <span className="hidden sm:inline">Randevu Detayı</span>
-                        <span className="sm:hidden">Detay</span>
-                        </Button>
-                                     <Button 
-                     variant="outline" 
-                     className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors text-xs sm:text-sm"
-                     onClick={handleOpenPatientHistory}
-                   >
-                     <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                     <span className="hidden sm:inline">Hasta Geçmişi</span>
-                     <span className="sm:hidden">Geçmiş</span>
-                   </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedAppointment(appointments.find(app => isCurrentAppointment(app)) || null);
+                      setShowDetail(true);
+                    }}
+                    className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors text-xs sm:text-sm"
+                  >
+                    <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    <span className="hidden sm:inline">Randevu Detayı</span>
+                    <span className="sm:hidden">Detay</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-2 border-gray-300 shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors text-xs sm:text-sm"
+                    onClick={handleOpenPatientHistory}
+                  >
+                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    <span className="hidden sm:inline">Hasta Geçmişi</span>
+                    <span className="sm:hidden">Geçmiş</span>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -623,83 +623,83 @@ const mapped = res.data.map((item: any) => {
         </div>
       </div>
 
-             {/* Appointment Detail Modal */}
-       {showDetail && selectedAppointment && (
-         <Dialog open={showDetail} onOpenChange={setShowDetail}>
-           <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
-             <DialogHeader>
-               <DialogTitle className="text-lg sm:text-xl">Randevu Detayı</DialogTitle>
-             </DialogHeader>
-             <div className="space-y-2 text-sm sm:text-base">
-               <div className="break-words"><b>Hasta:</b> {selectedAppointment.patientname}</div>
-               <div><b>Tarih:</b> {selectedAppointment.date}</div>
-               <div><b>Saat:</b> {selectedAppointment.time}</div>
-               <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
-               <div className="break-words"><b>Branş:</b> {selectedAppointment.specialty}</div>
-               <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
-             </div>
-             <Button onClick={() => setShowDetail(false)} className="border-2 border-gray-300 shadow-sm text-xs sm:text-sm w-full sm:w-auto">Kapat</Button>
-           </DialogContent>
-         </Dialog>
-       )}
+      {/* Appointment Detail Modal */}
+      {showDetail && selectedAppointment && (
+        <Dialog open={showDetail} onOpenChange={setShowDetail}>
+          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-lg sm:text-xl">Randevu Detayı</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 text-sm sm:text-base">
+              <div className="break-words"><b>Hasta:</b> {selectedAppointment.patientname}</div>
+              <div><b>Tarih:</b> {selectedAppointment.date}</div>
+              <div><b>Saat:</b> {selectedAppointment.time}</div>
+              <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
+              <div className="break-words"><b>Branş:</b> {selectedAppointment.specialty}</div>
+              <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : 'Beklemede'}</div>
+            </div>
+            <Button onClick={() => setShowDetail(false)} className="border-2 border-gray-300 shadow-sm text-xs sm:text-sm w-full sm:w-auto">Kapat</Button>
+          </DialogContent>
+        </Dialog>
+      )}
 
-       {/* Patient History Modal */}
-       <Dialog open={showPatientHistory} onOpenChange={setShowPatientHistory}>
-         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-           <DialogHeader>
-             <DialogTitle className="text-lg sm:text-xl">Hasta Geçmişi</DialogTitle>
-             <DialogDescription className="text-xs sm:text-sm">Hastaya ait son 1 senelik geçmiş kayıtları görüntüleyebilirsiniz.</DialogDescription>
-           </DialogHeader>
-           {/* Geçmiş randevuları filtrele ve göster */}
-           {(() => {
-             if (!historyPatientId) {
-               return (
-                 <div className="text-center py-8">
-                   <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                   <p className="text-lg font-medium text-gray-600 mb-2">Kayıt Bulunamadı</p>
-                   <p className="text-sm text-gray-500">Bu hasta için henüz geçmiş kayıt bulunmamaktadır.</p>
-                 </div>
-               );
-             }
-             // Bugünden önceki randevuları ve ilgili hastanınkileri al
-             const now = new Date();
-             const historyList = appointments.filter(app => {
-               if (app.patient_id !== historyPatientId) return false;
-               // Tarih parse
-               const [day, month, year] = app.date.split('.');
-               const appDate = new Date(Number(year), Number(month) - 1, Number(day));
-               return appDate < now;
-             });
-             if (historyList.length === 0) {
-               return (
-                 <div className="text-center py-8">
-                   <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                   <p className="text-lg font-medium text-gray-600 mb-2">Kayıt Bulunamadı</p>
-                   <p className="text-sm text-gray-500">Bu hasta için henüz geçmiş kayıt bulunmamaktadır.</p>
-                 </div>
-               );
-             }
-             return (
-               <div className="space-y-3 sm:space-y-4 max-h-[350px] overflow-y-auto px-1 sm:px-2">
-                 {historyList.map((app, idx) => (
-                   <div key={app.id} className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border">
-                     <div className="min-w-0 flex-1">
-                       <p className="font-medium text-sm sm:text-base truncate">{app.date} - {app.time}</p>
-                       <p className="text-xs sm:text-sm text-gray-700 truncate">{app.specialty}</p>
-                       <p className="text-xs text-gray-500 truncate">{app.type === 'online' ? 'Online' : 'Yüz Yüze'} • {app.status === 'confirmed' ? 'Onaylandı' : app.status === 'completed' ? 'Tamamlandı' : app.status === 'pending' ? 'Beklemede' : 'İptal'}</p>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             );
-           })()}
-           <DialogFooter>
-             <Button onClick={() => setShowPatientHistory(false)} className="border-2 border-gray-300 shadow-sm">Kapat</Button>
-           </DialogFooter>
-         </DialogContent>
-       </Dialog>
+      {/* Patient History Modal */}
+      <Dialog open={showPatientHistory} onOpenChange={setShowPatientHistory}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">Hasta Geçmişi</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">Hastaya ait son 1 senelik geçmiş kayıtları görüntüleyebilirsiniz.</DialogDescription>
+          </DialogHeader>
+          {/* Geçmiş randevuları filtrele ve göster */}
+          {(() => {
+            if (!historyPatientId) {
+              return (
+                <div className="text-center py-8">
+                  <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <p className="text-lg font-medium text-gray-600 mb-2">Kayıt Bulunamadı</p>
+                  <p className="text-sm text-gray-500">Bu hasta için henüz geçmiş kayıt bulunmamaktadır.</p>
+                </div>
+              );
+            }
+            // Bugünden önceki randevuları ve ilgili hastanınkileri al
+            const now = new Date();
+            const historyList = appointments.filter(app => {
+              if (app.patient_id !== historyPatientId) return false;
+              // Tarih parse
+              const [day, month, year] = app.date.split('.');
+              const appDate = new Date(Number(year), Number(month) - 1, Number(day));
+              return appDate < now;
+            });
+            if (historyList.length === 0) {
+              return (
+                <div className="text-center py-8">
+                  <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <p className="text-lg font-medium text-gray-600 mb-2">Kayıt Bulunamadı</p>
+                  <p className="text-sm text-gray-500">Bu hasta için henüz geçmiş kayıt bulunmamaktadır.</p>
+                </div>
+              );
+            }
+            return (
+              <div className="space-y-3 sm:space-y-4 max-h-[350px] overflow-y-auto px-1 sm:px-2">
+                {historyList.map((app, idx) => (
+                  <div key={app.id} className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm sm:text-base truncate">{app.date} - {app.time}</p>
+                      <p className="text-xs sm:text-sm text-gray-700 truncate">{app.specialty}</p>
+                      <p className="text-xs text-gray-500 truncate">{app.type === 'online' ? 'Online' : 'Yüz Yüze'} • {app.status === 'confirmed' ? 'Onaylandı' : app.status === 'completed' ? 'Tamamlandı' : app.status === 'pending' ? 'Beklemede' : 'İptal'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button onClick={() => setShowPatientHistory(false)} className="border-2 border-gray-300 shadow-sm">Kapat</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      
+
 
       {/* Exit Confirmation Modal */}
       <Dialog open={showExitConfirm} onOpenChange={(open) => {

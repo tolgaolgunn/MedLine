@@ -20,7 +20,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from './ui/form'  ;
+} from './ui/form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 
@@ -84,7 +84,7 @@ export function HealthAuthForm() {
     national_id: "",
     blood_type: ""
   });
-  
+
   // TC Kimlik input değişikliğini kontrol eden fonksiyon
   const handleTCKimlikInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
@@ -99,7 +99,7 @@ export function HealthAuthForm() {
     const pathname = location.pathname;
     const params = new URLSearchParams(location.search);
     const token = params.get('token');
-    
+
     if (pathname === '/register') {
       setMode('register');
     } else if (pathname === '/forgot-password') {
@@ -128,7 +128,7 @@ export function HealthAuthForm() {
           // Token'ı decode et ve süresini kontrol et
           const decodedToken = JSON.parse(atob(token.split('.')[1]));
           const expirationTime = decodedToken.exp * 1000; // Unix timestamp'i milisaniyeye çevir
-          
+
           // Token'ın süresi dolmak üzereyse (15 dakika kala) yenile
           if (expirationTime - Date.now() < 15 * 60 * 1000) {
             const success = await refreshToken();
@@ -144,7 +144,7 @@ export function HealthAuthForm() {
     };
 
     const tokenCheckInterval = setInterval(checkAndRefreshToken, 5 * 60 * 1000);
-    
+
     checkAndRefreshToken();
 
     return () => clearInterval(tokenCheckInterval);
@@ -154,7 +154,7 @@ export function HealthAuthForm() {
     if (mode === 'login') {
       const rememberedEmail = localStorage.getItem("rememberedEmail");
       const isRemembered = localStorage.getItem("rememberMe") === "true";
-      
+
       if (rememberedEmail && isRemembered) {
         setFormData(prev => ({ ...prev, email: rememberedEmail }));
         setRememberMe(true);
@@ -173,14 +173,14 @@ export function HealthAuthForm() {
     }
   }, [mode]);
 
-  const API_URL = "http://localhost:3005/api";
+  const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3005") + "/api";
 
   // Login işlemini güncelle
   // Token yenileme fonksiyonu
   const refreshToken = async () => {
     const rememberedEmail = localStorage.getItem("rememberedEmail");
     const isRemembered = localStorage.getItem("rememberMe") === "true";
-    
+
     if (rememberedEmail && isRemembered) {
       try {
         const response = await fetch(`${API_URL}/login`, {
@@ -219,7 +219,7 @@ export function HealthAuthForm() {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
           toast.error(data.message || "Giriş Başarısız.");
           return;
@@ -237,7 +237,7 @@ export function HealthAuthForm() {
         };
 
         localStorage.setItem('user', JSON.stringify(userData));
-        
+
         // Beni hatırla özelliği
         if (rememberMe) {
           localStorage.setItem("rememberMe", "true");
@@ -246,7 +246,7 @@ export function HealthAuthForm() {
           localStorage.removeItem("rememberMe");
           localStorage.removeItem("rememberedEmail");
         }
-        
+
         toast.success("Giriş Başarılı");
         navigate("/dashboard");
       } catch (err) {
@@ -270,7 +270,7 @@ export function HealthAuthForm() {
       //     setBirthDateError("");
       //   }
       // }
-      
+
       if (formData.password !== formData.confirmPassword) {
         toast.error("Şifreler Eşleşmiyor.");
         return;
@@ -281,10 +281,10 @@ export function HealthAuthForm() {
         toast.error("Şifre gereksinimlerini karşılayınız.");
         return;
       }
-      
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || 
-          !formData.birthDate || !formData.gender || !formData.address || 
-          !formData.national_id || !formData.blood_type) {
+
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone ||
+        !formData.birthDate || !formData.gender || !formData.address ||
+        !formData.national_id || !formData.blood_type) {
         toast.error("Lütfen tüm alanları doldurun.");
         return;
       }
@@ -310,12 +310,12 @@ export function HealthAuthForm() {
       // Telefon numarası birleştir
       const fullPhone = formData.phoneCountry + ' ' + formData.phone;
 
-     //Cinsiyet değerini veritabanı formatına çevir
+      //Cinsiyet değerini veritabanı formatına çevir
       let genderDB = formData.gender;
       if (formData.gender === 'Erkek') genderDB = 'male';
       else if (formData.gender === 'Kadın') genderDB = 'female';
       else if (formData.gender === 'Belirtmek istemiyorum') genderDB = 'other';
-      
+
       try {
         const response = await fetch(`${API_URL}/register`, {
           method: "POST",
@@ -377,14 +377,14 @@ export function HealthAuthForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: values.email })
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         sonnerToast.error(data.message || 'Şifre sıfırlama e-postası gönderilemedi. Lütfen tekrar deneyin.');
         return;
       }
-      
+
       setResetEmail(values.email);
       sonnerToast.success('Şifre sıfırlama e-postası gönderildi. Lütfen e-posta kutunuzu kontrol edin.');
       setMode("reset-success");
@@ -412,7 +412,7 @@ export function HealthAuthForm() {
           password: password
         })
       });
-      
+
       const data = await response.json();
       setIsSamePassword(response.status === 400 && data.message === "Şifreniz önceki şifrenizle aynı olamaz.");
     } catch (error) {
@@ -425,7 +425,7 @@ export function HealthAuthForm() {
   // Şifre sıfırlama fonksiyonu
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!resetToken) {
       sonnerToast.error('Geçersiz veya eksik token.');
       return;
@@ -459,14 +459,14 @@ export function HealthAuthForm() {
           password: resetPasswordData.newPassword
         })
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         sonnerToast.error(data.message || 'Şifre sıfırlama başarısız. Lütfen tekrar deneyin.');
         return;
       }
-      
+
       sonnerToast.success('Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.');
       navigate("/login");
     } catch (error) {
@@ -486,7 +486,7 @@ export function HealthAuthForm() {
           <div className="absolute bottom-20 right-20 w-40 h-40 bg-white rounded-full blur-3xl"></div>
           <div className="absolute top-1/2 left-1/4 w-20 h-20 bg-white rounded-full blur-2xl"></div>
         </div>
-        
+
         <div className="relative z-10 flex flex-col justify-center items-center p-12 text-white w-full">
           {/* Logo & Header */}
           <div className="text-center mb-12">
@@ -578,11 +578,11 @@ export function HealthAuthForm() {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 {isLogin && "Hesabınıza Giriş Yapın"}
                 {isRegister && "Yeni Hesabınızı Oluşturun"}
-              
+
               </h2>
               <p className="text-gray-600">
                 {isRegister && "Sağlıklı yaşam yolculuğunuza başlayın"}
-               
+
               </p>
             </div>
 
@@ -720,8 +720,8 @@ export function HealthAuthForm() {
                     )}
                   </div>
 
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isSubmitting}
                     className="w-full h-12 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800 hover:from-blue-950 hover:to-blue-950 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
                   >
@@ -792,8 +792,8 @@ export function HealthAuthForm() {
                       </div>
                     </div>
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       disabled={isSubmitting}
                       className="w-full h-12 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800 hover:from-blue-950 hover:to-blue-950 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
                     >
@@ -1057,7 +1057,7 @@ export function HealthAuthForm() {
                       </ul>
                     )}
                   </div>
-                  
+
                   {/* Beni Hatırla - Sadece login modunda göster */}
                   {isLogin && (
                     <div className="flex items-center space-x-2">
@@ -1067,8 +1067,8 @@ export function HealthAuthForm() {
                         onCheckedChange={(checked: boolean | "indeterminate") => setRememberMe(checked as boolean)}
                         className="border-slate-300 data-[state=checked]:bg-slate-800 data-[state=checked]:border-slate-800"
                       />
-                      <Label 
-                        htmlFor="rememberMe" 
+                      <Label
+                        htmlFor="rememberMe"
                         className="text-sm text-gray-600 cursor-pointer"
                         onClick={() => setRememberMe(!rememberMe)}
                       >
@@ -1076,7 +1076,7 @@ export function HealthAuthForm() {
                       </Label>
                     </div>
                   )}
-                  
+
                   {/* Şifre tekrar ve hata */}
                   {isRegister && (
                     <div className="space-y-2">
@@ -1194,8 +1194,8 @@ export function HealthAuthForm() {
             <div>
               <h3 className="font-semibold text-base mb-2">1. Genel Hükümler</h3>
               <p>
-                MedLine sağlık platformu , kullanıcılarına sağlık hizmetleri sunmak amacıyla tasarlanmıştır. 
-                Bu kullanım koşulları, Platform'un kullanımına ilişkin hak ve yükümlülükleri düzenlemektedir. 
+                MedLine sağlık platformu , kullanıcılarına sağlık hizmetleri sunmak amacıyla tasarlanmıştır.
+                Bu kullanım koşulları, Platform'un kullanımına ilişkin hak ve yükümlülükleri düzenlemektedir.
                 Platform'u kullanarak, bu koşulları kabul etmiş sayılırsınız.
               </p>
             </div>
@@ -1230,7 +1230,7 @@ export function HealthAuthForm() {
             <div>
               <h3 className="font-semibold text-base mb-2">4. Randevu İptali ve Değişiklik</h3>
               <p>
-                Randevularınızı en az 24 saat öncesinden iptal veya değiştirme hakkına sahipsiniz. 
+                Randevularınızı en az 24 saat öncesinden iptal veya değiştirme hakkına sahipsiniz.
                 Geç iptaller için doktorunuzla iletişime geçmeniz gerekmektedir.
               </p>
             </div>
@@ -1238,7 +1238,7 @@ export function HealthAuthForm() {
             <div>
               <h3 className="font-semibold text-base mb-2">5. Sorumluluk Reddi</h3>
               <p>
-                Platform, sağlık hizmetlerinin yerine geçmez. Acil durumlarda 112'yi arayınız. 
+                Platform, sağlık hizmetlerinin yerine geçmez. Acil durumlarda 112'yi arayınız.
                 Platform üzerinden verilen bilgiler genel bilgilendirme amaçlıdır ve profesyonel tıbbi tavsiye yerine geçmez.
               </p>
             </div>
@@ -1253,7 +1253,7 @@ export function HealthAuthForm() {
             <div>
               <h3 className="font-semibold text-base mb-2">7. Değişiklikler</h3>
               <p>
-                MedLine, bu kullanım koşullarını herhangi bir zamanda değiştirme hakkını saklı tutar. 
+                MedLine, bu kullanım koşullarını herhangi bir zamanda değiştirme hakkını saklı tutar.
                 Değişiklikler Platform üzerinden duyurulacaktır.
               </p>
             </div>
@@ -1278,7 +1278,7 @@ export function HealthAuthForm() {
             <div>
               <h3 className="font-semibold text-base mb-2">1. Veri Sorumlusu</h3>
               <p>
-                MedLine sağlık platformu olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında 
+                MedLine sağlık platformu olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında
                 veri sorumlusu sıfatıyla kişisel verilerinizi işlemekteyiz.
               </p>
             </div>
@@ -1323,7 +1323,7 @@ export function HealthAuthForm() {
             <div>
               <h3 className="font-semibold text-base mb-2">5. Verilerin Paylaşılması</h3>
               <p>
-                Kişisel verileriniz, yalnızca yasal zorunluluklar ve hizmet sunumu için gerekli olduğu ölçüde, 
+                Kişisel verileriniz, yalnızca yasal zorunluluklar ve hizmet sunumu için gerekli olduğu ölçüde,
                 aşağıdaki taraflarla paylaşılabilir:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
@@ -1366,7 +1366,7 @@ export function HealthAuthForm() {
             <div>
               <h3 className="font-semibold text-base mb-2">8. Çerezler</h3>
               <p>
-                Platform, kullanıcı deneyimini iyileştirmek için çerezler kullanmaktadır. 
+                Platform, kullanıcı deneyimini iyileştirmek için çerezler kullanmaktadır.
                 Çerez tercihlerinizi tarayıcı ayarlarınızdan yönetebilirsiniz.
               </p>
             </div>
@@ -1374,7 +1374,7 @@ export function HealthAuthForm() {
             <div>
               <h3 className="font-semibold text-base mb-2">9. Veri Saklama Süresi</h3>
               <p>
-                Kişisel verileriniz, işleme amacının gerektirdiği süre boyunca ve yasal saklama süreleri 
+                Kişisel verileriniz, işleme amacının gerektirdiği süre boyunca ve yasal saklama süreleri
                 (örneğin, sağlık kayıtları için 10 yıl) boyunca saklanmaktadır.
               </p>
             </div>
@@ -1382,14 +1382,14 @@ export function HealthAuthForm() {
             <div>
               <h3 className="font-semibold text-base mb-2">10. İletişim ve Başvuru</h3>
               <p>
-                KVKK kapsamındaki haklarınızı kullanmak için bizimle iletişime geçebilirsiniz. 
+                KVKK kapsamındaki haklarınızı kullanmak için bizimle iletişime geçebilirsiniz.
                 Ayrıca, Kişisel Verileri Koruma Kurulu'na şikayette bulunma hakkınız saklıdır.
               </p>
             </div>
 
             <div className="pt-4 border-t">
               <p className="text-xs text-gray-500">
-                Bu politika KVKK'ya uygun olarak hazırlanmıştır. 
+                Bu politika KVKK'ya uygun olarak hazırlanmıştır.
               </p>
             </div>
           </div>

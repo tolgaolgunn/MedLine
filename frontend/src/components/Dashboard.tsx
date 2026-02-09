@@ -126,7 +126,7 @@ export function Dashboard() {
       if (!userStr) return;
       const user = JSON.parse(userStr);
 
-      const res = await fetch(`http://localhost:3005/api/appointments/${user.user_id}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/appointments/${user.user_id}`);
       if (!res.ok) return;
 
       const data = await res.json();
@@ -159,8 +159,8 @@ export function Dashboard() {
       const userId = user.user_id;
 
       const [prescriptionsRes, appointmentsRes] = await Promise.all([
-        fetch(`http://localhost:3005/api/patient/patient/prescriptions/active/count/${userId}`),
-        fetch(`http://localhost:3005/api/patient/patient/appointments/completed/count/${userId}`)
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/patient/patient/prescriptions/active/count/${userId}`),
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/patient/patient/appointments/completed/count/${userId}`)
       ]);
 
       if (prescriptionsRes.ok) {

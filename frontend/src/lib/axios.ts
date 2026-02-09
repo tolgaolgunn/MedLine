@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'http://localhost:3005'
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3005'
 });
 
 // Request interceptor to add auth token
@@ -40,7 +40,7 @@ instance.interceptors.response.use(
       status: error.response?.status,
       data: error.response?.data
     });
-    
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');

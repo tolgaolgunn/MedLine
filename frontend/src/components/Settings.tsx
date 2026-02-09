@@ -7,12 +7,12 @@ import { Checkbox } from "./ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
 import { PageHeader } from "./ui/PageHeader";
-import { 
-  Settings as SettingsIcon, 
-  Bell, 
-  Shield, 
-  Palette, 
-  Globe, 
+import {
+  Settings as SettingsIcon,
+  Bell,
+  Shield,
+  Palette,
+  Globe,
   Smartphone,
   Mail,
   Lock,
@@ -29,16 +29,16 @@ interface SettingsData {
   appointmentReminders: boolean;
   prescriptionUpdates: boolean;
   marketingEmails: boolean;
-  
+
   // Gizlilik Ayarları
   shareMedicalData: boolean;
   allowResearchData: boolean;
-  
+
   // Görünüm Ayarları
   theme: 'light' | 'dark' | 'auto';
   language: 'tr' | 'en';
   fontSize: 'small' | 'medium' | 'large';
-  
+
   // Güvenlik Ayarları
   twoFactorAuth: boolean;
   sessionTimeout: number;
@@ -49,23 +49,23 @@ export function Settings() {
   const [userRole, setUserRole] = useState<string>('patient');
   const [isLoading, setIsLoading] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
-  
+
   const [settings, setSettings] = useState<SettingsData>({
     // Bildirim Ayarları
     emailNotifications: true,
     appointmentReminders: true,
     prescriptionUpdates: true,
     marketingEmails: false,
-    
+
     // Gizlilik Ayarları
     shareMedicalData: true,
     allowResearchData: false,
-    
+
     // Görünüm Ayarları
     theme: 'light',
     language: 'tr',
     fontSize: 'medium',
-    
+
     // Güvenlik Ayarları
     twoFactorAuth: false,
     sessionTimeout: 30,
@@ -95,7 +95,7 @@ export function Settings() {
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const response = await fetch('http://localhost:3005/api/settings', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/settings`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -133,7 +133,7 @@ export function Settings() {
         return;
       }
 
-      const response = await fetch('http://localhost:3005/api/settings', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/settings`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -171,7 +171,7 @@ export function Settings() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <PageHeader 
+      <PageHeader
         title="Ayarlar"
         subtitle="Hesap ve uygulama ayarlarınızı yönetin"
         showBackButton={true}
@@ -200,7 +200,7 @@ export function Settings() {
                 onCheckedChange={(checked: boolean) => handleSettingChange('emailNotifications', checked)}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Randevu Hatırlatmaları</Label>
@@ -211,7 +211,7 @@ export function Settings() {
                 onCheckedChange={(checked: boolean) => handleSettingChange('appointmentReminders', checked)}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Reçete Güncellemeleri</Label>
@@ -222,7 +222,7 @@ export function Settings() {
                 onCheckedChange={(checked: boolean) => handleSettingChange('prescriptionUpdates', checked)}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Pazarlama E-postaları</Label>
@@ -247,8 +247,8 @@ export function Settings() {
               Verilerinizin nasıl kullanılacağını kontrol edin
             </CardDescription>
           </CardHeader>
-                     <CardContent className="space-y-4">
-             <div className="flex items-center justify-between">
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Tıbbi Veri Paylaşımı</Label>
                 <p className="text-sm text-gray-500">Doktorlarınızla tıbbi verilerinizi paylaş</p>
@@ -258,7 +258,7 @@ export function Settings() {
                 onCheckedChange={(checked: boolean) => handleSettingChange('shareMedicalData', checked)}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Araştırma Verileri</Label>
@@ -288,7 +288,7 @@ export function Settings() {
               <Label>Tema</Label>
               <Select
                 value={settings.theme}
-                onValueChange={(value: 'light' | 'dark' | 'auto') => 
+                onValueChange={(value: 'light' | 'dark' | 'auto') =>
                   handleSettingChange('theme', value)
                 }
               >
@@ -302,12 +302,12 @@ export function Settings() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Dil</Label>
               <Select
                 value={settings.language}
-                onValueChange={(value: 'tr' | 'en') => 
+                onValueChange={(value: 'tr' | 'en') =>
                   handleSettingChange('language', value)
                 }
               >
@@ -320,12 +320,12 @@ export function Settings() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Yazı Boyutu</Label>
               <Select
                 value={settings.fontSize}
-                onValueChange={(value: 'small' | 'medium' | 'large') => 
+                onValueChange={(value: 'small' | 'medium' | 'large') =>
                   handleSettingChange('fontSize', value)
                 }
               >
@@ -364,7 +364,7 @@ export function Settings() {
                 onCheckedChange={(checked: boolean) => handleSettingChange('twoFactorAuth', checked)}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label>Oturum Zaman Aşımı (dakika)</Label>
               <Select
@@ -381,7 +381,7 @@ export function Settings() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Giriş Bildirimleri</Label>
@@ -399,18 +399,18 @@ export function Settings() {
       {/* Kaydet ve Çıkış */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
         <div className="flex gap-4">
-          <Button 
-            onClick={handleSaveSettings} 
+          <Button
+            onClick={handleSaveSettings}
             disabled={!hasChanges}
             className="flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
             Ayarları Kaydet
           </Button>
-          
+
           {hasChanges && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setSettings({ ...originalSettings });
                 setHasChanges(false);

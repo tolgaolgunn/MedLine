@@ -71,7 +71,7 @@ export function MedicalRecords() {
       try {
         setIsLoading(true);
         const response = await fetch(
-          `http://localhost:3005/api/patient/results/${currentPatientId}`
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/patient/results/${currentPatientId}`
         );
 
         if (!response.ok) {
@@ -103,7 +103,7 @@ export function MedicalRecords() {
     // Arama filtresi
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter((r) => 
+      filtered = filtered.filter((r) =>
         r.title?.toLowerCase().includes(searchLower) ||
         r.details?.toLowerCase().includes(searchLower) ||
         r.record_type?.toLowerCase().includes(searchLower) ||
@@ -119,7 +119,7 @@ export function MedicalRecords() {
     // Sıralama
     filtered.sort((a, b) => {
       let comparison = 0;
-      
+
       if (sortBy === 'date') {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -254,28 +254,28 @@ export function MedicalRecords() {
           ) : (
             <div className="space-y-4">
               {filteredAndSortedResults.map((result) => (
-            <Card key={result.result_id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 sm:p-5">
-                <div className="space-y-1">
-                  <CardTitle className="text-sm sm:text-base font-semibold">
-                    {result.title}
-                  </CardTitle>
-                  <p className="text-xs sm:text-sm text-gray-500">
-                    {result.record_type && (
-                      <span className="font-medium text-blue-600">{result.record_type} • </span>
-                    )}
-                    Doktor: {result.doctor_name} • Tarih: {formatDate(result.created_at)}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  className="text-xs sm:text-sm"
-                  onClick={() => setSelectedResult(result)}
-                >
-                  Detayları incele
-                </Button>
-              </CardHeader>
-            </Card>
+                <Card key={result.result_id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 sm:p-5">
+                    <div className="space-y-1">
+                      <CardTitle className="text-sm sm:text-base font-semibold">
+                        {result.title}
+                      </CardTitle>
+                      <p className="text-xs sm:text-sm text-gray-500">
+                        {result.record_type && (
+                          <span className="font-medium text-blue-600">{result.record_type} • </span>
+                        )}
+                        Doktor: {result.doctor_name} • Tarih: {formatDate(result.created_at)}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="text-xs sm:text-sm"
+                      onClick={() => setSelectedResult(result)}
+                    >
+                      Detayları incele
+                    </Button>
+                  </CardHeader>
+                </Card>
               ))}
             </div>
           )}
@@ -329,7 +329,7 @@ export function MedicalRecords() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {selectedResult.files.map((file) => {
                       const isImage = file.mime_type.startsWith("image/");
-                      const url = `http://localhost:3005${file.file_path}`;
+                      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${file.file_path}`;
                       return (
                         <a
                           key={file.file_id}

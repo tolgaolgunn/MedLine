@@ -78,7 +78,7 @@ export function Prescriptions() {
 
   // API instance oluşturmayı güncelle
   const api = axios.create({
-    baseURL: 'http://localhost:3005/api',
+    baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -90,7 +90,7 @@ export function Prescriptions() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user data
       const userStr = localStorage.getItem('user');
       if (!userStr) {
@@ -104,7 +104,7 @@ export function Prescriptions() {
 
       // Create API instance with proper headers
       const api = axios.create({
-        baseURL: 'http://localhost:3005/api',
+        baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -125,7 +125,7 @@ export function Prescriptions() {
 
     } catch (err: any) {
       console.error('Reçete yükleme hatası:', err);
-      
+
       // More detailed error handling
       if (err.response) {
         // Server responded with error
@@ -137,7 +137,7 @@ export function Prescriptions() {
         // Other errors
         setError(err.message || 'Reçeteler yüklenirken bir hata oluştu');
       }
-      
+
       toast.error(err.response?.data?.message || 'Reçeteler yüklenemedi');
     } finally {
       setLoading(false);
@@ -160,7 +160,7 @@ export function Prescriptions() {
       }
 
       const response = await api.get(`/patient/prescriptions/${userId}/${prescriptionId}`);
-      
+
       if (response.data.success) {
         setSelected(response.data.data);
       } else {
@@ -177,7 +177,7 @@ export function Prescriptions() {
   const markAsUsed = async (prescriptionId: number) => {
     try {
       setLoading(true);
-      
+
       const userStr = localStorage.getItem('user');
       const userData = userStr ? JSON.parse(userStr) : null;
       const userId = userData?.user_id;
@@ -203,7 +203,7 @@ export function Prescriptions() {
 
         // Update modal if open
         if (selected && selected.prescription_id === prescriptionId) {
-          setSelected(prev => 
+          setSelected(prev =>
             prev ? { ...prev, prescription_status: 'used' } : null
           );
         }
@@ -212,7 +212,7 @@ export function Prescriptions() {
         setSelected(null);
 
         toast.success('Reçete kullanıldı olarak işaretlendi');
-        
+
         // Refetch prescriptions to ensure sync
         await fetchPrescriptions();
       } else {
@@ -221,8 +221,8 @@ export function Prescriptions() {
     } catch (error: any) {
       console.error('Reçete durumu güncellenirken hata:', error);
       toast.error(
-        error.response?.data?.message || 
-        error.message || 
+        error.response?.data?.message ||
+        error.message ||
         'Reçete durumu güncellenirken bir hata oluştu'
       );
     } finally {
@@ -237,7 +237,7 @@ export function Prescriptions() {
   const handleDownload = (prescription: Prescription) => {
     // PDF oluşturma ve indirme işlemi burada implement edilebilir
     console.log("Reçete indiriliyor:", prescription.prescription_code);
-    
+
     // Basit bir metin dosyası indirme örneği
     const content = `
 REÇETE DETAYI
@@ -250,9 +250,9 @@ Tarih: ${new Date(prescription.prescription_date).toLocaleDateString('tr-TR')}
 Teşhis: ${prescription.diagnosis || 'Belirtilmemiş'}
 
 İLAÇLAR:
-${prescription.medicines.map(m => 
-  `- ${m.medicine_name} ${m.dosage} - ${m.frequency} (${m.duration})`
-).join('\n')}
+${prescription.medicines.map(m =>
+      `- ${m.medicine_name} ${m.dosage} - ${m.frequency} (${m.duration})`
+    ).join('\n')}
 
 GENEL TALİMATLAR:
 ${prescription.general_instructions || 'Belirtilmemiş'}
@@ -284,9 +284,9 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
   const filteredPrescriptions = prescriptions.filter((prescription) => {
     const matchesSearch = searchTerm
       ? prescription.doctor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prescription.diagnosis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prescription.prescription_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prescription.prescription_id.toString().includes(searchTerm)
+      prescription.diagnosis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prescription.prescription_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prescription.prescription_id.toString().includes(searchTerm)
       : true;
 
     const matchesFilter = filterStatus === "all" || prescription.prescription_status === filterStatus;
@@ -319,8 +319,8 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
     if (prescription.prescription_code) {
       return prescription.prescription_code;
     }
-    
-    return prescription.prescription_id 
+
+    return prescription.prescription_id
       ? `RX${prescription.prescription_id.toString().padStart(6, '0')}`
       : 'RX000000';
   };
@@ -348,7 +348,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                 <p>{error}</p>
               </div>
             </div>
-            <Button 
+            <Button
               onClick={fetchPrescriptions}
               className="mt-4"
               variant="outline"
@@ -363,12 +363,12 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <PageHeader 
+      <PageHeader
         title="Reçetelerim"
         subtitle="Tüm reçetelerinizi görüntüleyin ve detaylarını inceleyin"
         showBackButton={true}
       />
-      
+
       {/* Search and Filters */}
       <Card>
         <CardContent className="p-6">
@@ -382,9 +382,9 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 h-10"
-               />
+              />
             </div>
-            
+
             {/* Filter Dropdown */}
             <div className="w-full md:w-40">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -403,8 +403,8 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
 
             {/* Clear Button - Only show when there are active filters */}
             {(searchTerm || filterStatus !== 'all') && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={clearSearch}
                 className="w-full md:w-32 h-10"
               >
@@ -422,7 +422,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
             <div className="flex items-center gap-2 flex-1">
               <Search className="w-4 h-4 text-gray-600" />
               <span className="text-sm text-gray-700">
-                Arama sonuçları: 
+                Arama sonuçları:
                 {searchTerm && ` "${searchTerm}"`}
                 {filterStatus !== 'all' && ` - ${getStatusText(filterStatus)}`}
                 {` (${filteredPrescriptions.length} reçete bulundu)`}
@@ -444,8 +444,8 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
           <CardContent className="p-12 text-center">
             <Stethoscope className="w-16 h-16 mx-auto mb-4 text-gray-400" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {searchTerm || filterStatus !== 'all' 
-                ? 'Arama kriterlerinize uygun reçete bulunamadı' 
+              {searchTerm || filterStatus !== 'all'
+                ? 'Arama kriterlerinize uygun reçete bulunamadı'
                 : 'Henüz reçete bulunmuyor'
               }
             </h3>
@@ -478,19 +478,19 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                       {getPrescriptionNumber(rx)}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-gray-500" />
                     <span className="font-medium">Tarih:</span>
                     <span>{new Date(rx.prescription_date).toLocaleDateString('tr-TR')}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Stethoscope className="w-4 h-4 text-gray-500" />
                     <span className="font-medium">Uzmanlık:</span>
                     <span>{rx.doctor_specialty}</span>
                   </div>
-                  
+
                   {rx.hospital_name && (
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-gray-500" />
@@ -498,24 +498,24 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                       <span className="text-sm">{rx.hospital_name}</span>
                     </div>
                   )}
-                  
+
                   {rx.diagnosis && (
                     <div>
                       <span className="font-medium">Teşhis:</span>
                       <span className="ml-2">{rx.diagnosis}</span>
                     </div>
                   )}
-                  
+
                   <div>
                     <span className="font-medium">İlaçlar:</span>
                     <span className="ml-2 text-sm text-gray-600">
-                      {rx.medicines.length > 0 
+                      {rx.medicines.length > 0
                         ? rx.medicines.map((m) => m.medicine_name).join(", ")
                         : "Belirtilmemiş"
                       }
                     </span>
                   </div>
-                  
+
                   <div className="flex gap-2 mt-4">
                     <Button
                       variant="outline"
@@ -528,7 +528,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                       ) : null}
                       Detayları Gör
                     </Button>
-                    
+
                     {rx.prescription_status === 'active' && (
                       <Button
                         onClick={() => markAsUsed(rx.prescription_id)}
@@ -566,7 +566,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                     {getPrescriptionNumber(selected)}
                   </p>
                 </div>
-                
+
                 <div>
                   <span className="font-medium text-gray-700">Durum:</span>
                   <div className="mt-1">
@@ -575,12 +575,12 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                     </Badge>
                   </div>
                 </div>
-                
+
                 <div>
                   <span className="font-medium text-gray-700">Tarih:</span>
                   <p className="mt-1">{new Date(selected.prescription_date).toLocaleDateString('tr-TR')}</p>
                 </div>
-                
+
                 {selected.next_visit_date && (
                   <div>
                     <span className="font-medium text-gray-700">Sonraki Ziyaret:</span>
@@ -600,19 +600,19 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                     <span className="font-medium text-gray-700">Doktor:</span>
                     <p className="mt-1">{selected.doctor?.name || selected.doctor_name}</p>
                   </div>
-                  
+
                   <div>
                     <span className="font-medium text-gray-700">Uzmanlık:</span>
                     <p className="mt-1">{selected.doctor?.specialty || selected.doctor_specialty}</p>
                   </div>
-                  
+
                   {selected.doctor?.license_number && (
                     <div>
                       <span className="font-medium text-gray-700">Lisans No:</span>
                       <p className="mt-1">{selected.doctor.license_number}</p>
                     </div>
                   )}
-                  
+
                   {selected.doctor?.hospital_name && (
                     <div>
                       <span className="font-medium text-gray-700">Hastane:</span>
@@ -642,35 +642,35 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                             <span className="font-medium text-gray-700">İlaç:</span>
                             <p className="font-semibold text-blue-900">{medicine.medicine_name}</p>
                           </div>
-                          
+
                           <div>
                             <span className="font-medium text-gray-700">Doz:</span>
                             <p>{medicine.dosage}</p>
                           </div>
-                          
+
                           <div>
                             <span className="font-medium text-gray-700">Adet:</span>
                             <p>{medicine.quantity} kutu</p>
                           </div>
-                          
+
                           <div>
                             <span className="font-medium text-gray-700">Sıklık:</span>
                             <p>{medicine.frequency}</p>
                           </div>
-                          
+
                           <div>
                             <span className="font-medium text-gray-700">Süre:</span>
                             <p>{medicine.duration}</p>
                           </div>
                         </div>
-                        
+
                         {medicine.usage_instructions && (
                           <div className="mt-3 pt-3 border-t border-gray-200">
                             <span className="font-medium text-gray-700">Kullanım:</span>
                             <p className="text-sm text-gray-600 mt-1">{medicine.usage_instructions}</p>
                           </div>
                         )}
-                        
+
                         {medicine.side_effects && (
                           <div className="mt-2">
                             <span className="font-medium text-red-600">Yan Etkiler:</span>
@@ -687,7 +687,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
               {(selected.general_instructions || selected.usage_instructions) && (
                 <div className="border-t pt-4">
                   <h4 className="font-semibold text-gray-900 mb-3">Talimatlar</h4>
-                  
+
                   {selected.general_instructions && (
                     <div className="mb-3">
                       <span className="font-medium text-gray-700">Genel Talimatlar:</span>
@@ -696,7 +696,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                       </p>
                     </div>
                   )}
-                  
+
                   {selected.usage_instructions && (
                     <div>
                       <span className="font-medium text-gray-700">Kullanım Talimatları:</span>
@@ -721,7 +721,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                     </Button>
                   )}
                 </div>
-                
+
                 <Button
                   onClick={() => handleDownload(selected)}
                   className="flex items-center gap-2"

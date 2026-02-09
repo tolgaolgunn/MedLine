@@ -61,7 +61,7 @@ const AdminProfile: React.FC = () => {
           return;
         }
 
-        const response = await fetch('http://localhost:3005/api/profile', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -134,7 +134,7 @@ const AdminProfile: React.FC = () => {
         phone_number: formData.phone
       };
 
-      const response = await fetch('http://localhost:3005/api/profile', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -176,7 +176,7 @@ const AdminProfile: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) return toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
 
-      const response = await fetch('http://localhost:3005/api/change-password', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -204,8 +204,8 @@ const AdminProfile: React.FC = () => {
   return (
     <div className="flex-1 p-6 bg-white">
       <div className="max-w-4xl mx-auto space-y-6">
-        <PageHeader 
-          title="Admin Profil" 
+        <PageHeader
+          title="Admin Profil"
           subtitle="Kişisel bilgilerinizi güncelleyin"
         />
 
@@ -265,8 +265,8 @@ const AdminProfile: React.FC = () => {
                 />
               </div>
 
-              <Button 
-                onClick={handleSaveProfile} 
+              <Button
+                onClick={handleSaveProfile}
                 className="w-full"
                 disabled={!hasChanges() || isLoading}
               >
@@ -356,8 +356,8 @@ const AdminProfile: React.FC = () => {
                 </ul>
               </div>
 
-              <Button 
-                onClick={handleChangePassword} 
+              <Button
+                onClick={handleChangePassword}
                 className="w-full"
                 disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
               >

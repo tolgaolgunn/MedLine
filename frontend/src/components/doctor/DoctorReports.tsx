@@ -53,7 +53,7 @@ interface Report {
   createdAt: string;
 }
 
-const API_BASE_URL = 'http://localhost:3005/api/doctor';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api/doctor';
 
 const DoctorReports: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
@@ -261,7 +261,7 @@ const DoctorReports: React.FC = () => {
       };
 
       const token = localStorage.getItem('token');
-      
+
       try {
         const response = await axios.post(`${API_BASE_URL}/reports`, reportData, {
           headers: {
@@ -380,7 +380,7 @@ const DoctorReports: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      
+
       try {
         await axios.delete(`${API_BASE_URL}/reports/${id}`, {
           headers: {
@@ -390,7 +390,7 @@ const DoctorReports: React.FC = () => {
       } catch (apiError) {
         // API endpoint yoksa sadece local olarak sil
       }
-      
+
       setReports(reports.filter(r => r.id !== id));
       toast.success('Rapor başarıyla silindi');
     } catch (err) {

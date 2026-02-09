@@ -72,12 +72,12 @@ const PatientCard = ({
               <span className="truncate">{patient.blood_type || 'Belirtilmemiş'}</span>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm min-w-0">
             <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
             <span className="truncate">{patient.phone_number}</span>
           </div>
-          
+
           <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm min-w-0">
             <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
             <span className="truncate">{patient.email}</span>
@@ -211,14 +211,14 @@ const PatientManagement: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const response = await fetch(`http://localhost:3005/api/doctor/patients/${currentDoctorId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/patients/${currentDoctorId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -247,7 +247,7 @@ const PatientManagement: React.FC = () => {
     // Arama filtresi
     if (resultSearchTerm) {
       const searchLower = resultSearchTerm.toLowerCase();
-      filtered = filtered.filter((r: any) => 
+      filtered = filtered.filter((r: any) =>
         r.title?.toLowerCase().includes(searchLower) ||
         r.details?.toLowerCase().includes(searchLower) ||
         r.record_type?.toLowerCase().includes(searchLower)
@@ -262,7 +262,7 @@ const PatientManagement: React.FC = () => {
     // Sıralama
     filtered.sort((a: any, b: any) => {
       let comparison = 0;
-      
+
       if (resultSortBy === 'date') {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -293,7 +293,7 @@ const PatientManagement: React.FC = () => {
         (patient.phone_number && patient.phone_number.includes(searchTerm)) ||
         (patient.patient_id && patient.patient_id.toString().includes(searchTerm))
       ) : true;
-      
+
       return matchesDoctor && matchesSearch;
     });
   }, [patients, currentDoctorId, searchTerm]);
@@ -312,7 +312,7 @@ const PatientManagement: React.FC = () => {
   }) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3005/api/doctor/patients/add', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/patients/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,7 +351,7 @@ const PatientManagement: React.FC = () => {
       const refreshPatients = async (retryCount = 0) => {
         try {
           console.log(`Refreshing patients list, attempt ${retryCount + 1}...`);
-          const fetchResponse = await fetch(`http://localhost:3005/api/doctor/patients/${currentDoctorId}`, {
+          const fetchResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/patients/${currentDoctorId}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -363,13 +363,13 @@ const PatientManagement: React.FC = () => {
             const data = await fetchResponse.json();
             console.log('Fetched patients:', data.length, 'patients');
             setPatients(data);
-            
+
             // Yeni eklenen hastanın listede olup olmadığını kontrol et
-            const newPatientInList = data.find((p: any) => 
-              p.patient_name === newPatient.patient_name || 
+            const newPatientInList = data.find((p: any) =>
+              p.patient_name === newPatient.patient_name ||
               p.email === newPatient.email
             );
-            
+
             if (newPatientInList) {
               toast.success('Hasta başarıyla eklendi!');
             } else if (retryCount < 3) {
@@ -438,7 +438,7 @@ const PatientManagement: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:3005/api/doctor/results/${patient.patient_id}`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/results/${patient.patient_id}`,
         {
           method: 'GET',
           headers: {
@@ -494,7 +494,7 @@ const PatientManagement: React.FC = () => {
           formData.append('files', file);
         });
 
-        response = await fetch('http://localhost:3005/api/doctor/results-with-files', {
+        response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/results-with-files`, {
           method: 'POST',
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -502,7 +502,7 @@ const PatientManagement: React.FC = () => {
           body: formData,
         });
       } else {
-        response = await fetch('http://localhost:3005/api/doctor/results', {
+        response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/results`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -567,7 +567,7 @@ const PatientManagement: React.FC = () => {
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-        <PageHeader 
+        <PageHeader
           title="Hasta Yönetimi"
           subtitle="Hastalarınızı görüntüleyin ve yönetin"
           showBackButton={true}
@@ -598,8 +598,8 @@ const PatientManagement: React.FC = () => {
                 Yeni hasta bilgilerini doldurun. Tüm alanlar zorunludur.
               </DialogDescription>
             </DialogHeader>
-            <AddPatientForm 
-              onSubmit={handleAddPatient} 
+            <AddPatientForm
+              onSubmit={handleAddPatient}
               onFormChange={setFormHasChanges}
             />
           </DialogContent>
@@ -620,9 +620,9 @@ const PatientManagement: React.FC = () => {
                 className="pl-8 sm:pl-10 h-9 sm:h-10 text-xs sm:text-sm"
               />
             </div>
-            
+
             {/* Remove Filter Dropdown */}
-            
+
           </div>
         </CardContent>
       </Card>
@@ -732,9 +732,9 @@ const PatientManagement: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row justify-end gap-2">
-            <Button variant="outline" 
-            className="!border-2 !border-gray-300 !rounded-md text-xs sm:text-sm w-full sm:w-auto"
-            onClick={cancelExit}>
+            <Button variant="outline"
+              className="!border-2 !border-gray-300 !rounded-md text-xs sm:text-sm w-full sm:w-auto"
+              onClick={cancelExit}>
               İptal
             </Button>
             <Button variant="destructive" onClick={confirmExit} className="text-xs sm:text-sm w-full sm:w-auto">
@@ -859,16 +859,16 @@ const PatientManagement: React.FC = () => {
                                 {r.record_type}
                               </span>
                             )}
-              <span className="text-[11px] sm:text-xs text-gray-500">
+                            <span className="text-[11px] sm:text-xs text-gray-500">
                               {r.created_at
                                 ? new Date(r.created_at).toLocaleString('tr-TR', {
-                                    year: 'numeric',
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    timeZone: 'Europe/Istanbul',
-                                  })
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  timeZone: 'Europe/Istanbul',
+                                })
                                 : ''}
                             </span>
                           </div>
@@ -903,7 +903,7 @@ const PatientManagement: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-2">
                                   {r.files.map((file: any) => {
                                     const isImage = file.mime_type?.startsWith('image/');
-                                    const url = `http://localhost:3005${file.file_path}`;
+                                    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${file.file_path}`;
                                     return (
                                       <a
                                         key={file.file_id}
@@ -1125,7 +1125,7 @@ const PatientManagement: React.FC = () => {
 };
 
 // Add Patient Form Component
-const AddPatientForm: React.FC<{ 
+const AddPatientForm: React.FC<{
   onSubmit: (patient: {
     patient_name: string;
     email: string;
@@ -1155,25 +1155,25 @@ const AddPatientForm: React.FC<{
     password: '',
     confirmPassword: ''
   };
-  
+
   const [formData, setFormData] = useState(initialFormData);
 
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // Check if form has any changes
   const hasChanges = () => {
     return formData.firstName !== initialFormData.firstName ||
-           formData.lastName !== initialFormData.lastName ||
-           formData.email !== initialFormData.email ||
-           formData.phone !== initialFormData.phone ||
-           formData.phoneCountry !== initialFormData.phoneCountry ||
-           formData.birthDate !== initialFormData.birthDate ||
-           formData.gender !== initialFormData.gender ||
-           formData.address !== initialFormData.address ||
-           formData.bloodType !== initialFormData.bloodType ||
-           formData.medicalHistory !== initialFormData.medicalHistory ||
-           formData.allergies !== initialFormData.allergies ||
-           formData.medications !== initialFormData.medications;
+      formData.lastName !== initialFormData.lastName ||
+      formData.email !== initialFormData.email ||
+      formData.phone !== initialFormData.phone ||
+      formData.phoneCountry !== initialFormData.phoneCountry ||
+      formData.birthDate !== initialFormData.birthDate ||
+      formData.gender !== initialFormData.gender ||
+      formData.address !== initialFormData.address ||
+      formData.bloodType !== initialFormData.bloodType ||
+      formData.medicalHistory !== initialFormData.medicalHistory ||
+      formData.allergies !== initialFormData.allergies ||
+      formData.medications !== initialFormData.medications;
   };
 
   // Notify parent component about form changes
@@ -1183,25 +1183,25 @@ const AddPatientForm: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Hata mesajlarını temizle
     setErrors({});
-    
+
     // Hata kontrolü
-    const newErrors: {[key: string]: string} = {};
-    
+    const newErrors: { [key: string]: string } = {};
+
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'Ad alanı zorunludur';
     } else if (formData.firstName.trim().length < 3) {
       newErrors.firstName = 'Ad en az 3 harf olmalıdır';
     }
-    
+
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Soyad alanı zorunludur';
     } else if (formData.lastName.trim().length < 3) {
       newErrors.lastName = 'Soyad en az 3 harf olmalıdır';
     }
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'E-posta alanı zorunludur';
     } else {
@@ -1210,25 +1210,25 @@ const AddPatientForm: React.FC<{
         newErrors.email = 'Geçerli bir e-posta adresi girin';
       }
     }
-    
+
     if (!formData.phone.trim()) {
       newErrors.phone = 'Telefon alanı zorunludur';
     } else if (formData.phone.length !== 11) {
       newErrors.phone = 'Telefon numarası 11 haneli olmalıdır';
     }
-    
+
     if (!formData.birthDate.trim()) {
       newErrors.birthDate = 'Doğum tarihi zorunludur';
     }
-    
+
     if (!formData.gender.trim()) {
       newErrors.gender = 'Cinsiyet seçimi zorunludur';
     }
-    
+
     if (!formData.bloodType.trim()) {
       newErrors.bloodType = 'Kan grubu seçimi zorunludur';
     }
-    
+
     if (!formData.address.trim()) {
       newErrors.address = 'Adres alanı zorunludur';
     }
@@ -1241,7 +1241,7 @@ const AddPatientForm: React.FC<{
       const hasLowerCase = /[a-z]/.test(password);
       const hasNumber = /[0-9]/.test(password);
       const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-      
+
       if (password.length < 6) {
         newErrors.password = 'Şifre en az 6 karakter olmalıdır';
       } else if (!hasUpperCase) {
@@ -1260,13 +1260,13 @@ const AddPatientForm: React.FC<{
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Şifreler eşleşmiyor';
     }
-    
+
     // Hata varsa formu gönderme
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    
+
     onSubmit({
       patient_name: `${formData.firstName} ${formData.lastName}`,
       email: formData.email,
@@ -1282,7 +1282,7 @@ const AddPatientForm: React.FC<{
       ].filter(Boolean).join(', '),
       password: formData.password
     });
-    
+
     // Formu temizle
     setFormData(initialFormData);
     setErrors({});
@@ -1301,7 +1301,7 @@ const AddPatientForm: React.FC<{
             type="text"
             placeholder="Adınız"
             value={formData.firstName}
-            onChange={(e) => setFormData({...formData, firstName: filterNameInput(e.target.value)})}
+            onChange={(e) => setFormData({ ...formData, firstName: filterNameInput(e.target.value) })}
             required
           />
           {errors.firstName && (
@@ -1313,10 +1313,10 @@ const AddPatientForm: React.FC<{
           <Input
             id="lastName"
             className={`border ${errors.lastName ? 'border-red-500' : 'border-border'} text-xs sm:text-sm h-9 sm:h-10`}
-            type="text" 
+            type="text"
             placeholder="Soyadınız"
             value={formData.lastName}
-            onChange={(e) => setFormData({...formData, lastName: filterNameInput(e.target.value)})}
+            onChange={(e) => setFormData({ ...formData, lastName: filterNameInput(e.target.value) })}
             required
           />
           {errors.lastName && (
@@ -1334,7 +1334,7 @@ const AddPatientForm: React.FC<{
           type="email"
           placeholder="ornek@email.com"
           value={formData.email}
-          onChange={(e) => setFormData({...formData, email: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
         />
         {errors.email && (
@@ -1351,7 +1351,7 @@ const AddPatientForm: React.FC<{
               <select
                 id="phoneCountry"
                 value={formData.phoneCountry}
-                onChange={(e) => setFormData({...formData, phoneCountry: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, phoneCountry: e.target.value })}
                 className="appearance-none outline-none h-9 sm:h-10 border border-border focus:border-slate-800 bg-white rounded-md px-2 pr-6 min-w-[70px] sm:min-w-[80px] font-medium text-xs sm:text-base text-gray-900"
                 required
               >
@@ -1378,7 +1378,7 @@ const AddPatientForm: React.FC<{
               type="tel"
               placeholder="555 555 55 55"
               value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: filterPhoneInput(e.target.value)})}
+              onChange={(e) => setFormData({ ...formData, phone: filterPhoneInput(e.target.value) })}
               className={`flex-1 border ${errors.phone ? 'border-red-500' : 'border-border'} text-xs sm:text-sm h-9 sm:h-10`}
               maxLength={11}
               required
@@ -1390,7 +1390,7 @@ const AddPatientForm: React.FC<{
         </div>
         <div>
           <Label htmlFor="bloodType" className="mb-2 block text-xs sm:text-sm">Kan Grubu</Label>
-          <Select value={formData.bloodType} onValueChange={(value) => setFormData({...formData, bloodType: value})}>
+          <Select value={formData.bloodType} onValueChange={(value) => setFormData({ ...formData, bloodType: value })}>
             <SelectTrigger className={`border ${errors.bloodType ? 'border-red-500' : 'border-border'} h-9 sm:h-10 text-xs sm:text-sm`}>
               <SelectValue placeholder="Seçiniz" />
             </SelectTrigger>
@@ -1419,7 +1419,7 @@ const AddPatientForm: React.FC<{
             id="birthDate"
             type="date"
             value={formData.birthDate}
-            onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
             className={`border ${errors.birthDate ? 'border-red-500' : 'border-border'} text-xs sm:text-sm h-9 sm:h-10`}
             required
           />
@@ -1433,7 +1433,7 @@ const AddPatientForm: React.FC<{
             <select
               id="gender"
               value={formData.gender}
-              onChange={(e) => setFormData({...formData, gender: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
               className={`appearance-none outline-none h-9 sm:h-10 border focus:border-slate-800 bg-white rounded-md px-2 sm:px-3 pr-6 sm:pr-8 w-full text-xs sm:text-base text-gray-900 ${errors.gender ? 'border-red-500' : 'border-border'}`}
               required
             >
@@ -1461,7 +1461,7 @@ const AddPatientForm: React.FC<{
           id="address"
           placeholder="Adresiniz"
           value={formData.address}
-          onChange={(e) => setFormData({...formData, address: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
           maxLength={200}
           className={`border break-words overflow-wrap-anywhere h-24 sm:h-32 text-xs sm:text-sm ${errors.address ? 'border-red-500' : 'border-border'}`}
           style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}
@@ -1475,7 +1475,7 @@ const AddPatientForm: React.FC<{
         )}
       </div>
 
-            {/* Tıbbi Bilgiler */}
+      {/* Tıbbi Bilgiler */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
         <div>
           <Label htmlFor="medicalHistory" className="mb-2 block text-xs sm:text-sm">Tıbbi Geçmiş</Label>
@@ -1483,14 +1483,14 @@ const AddPatientForm: React.FC<{
             id="medicalHistory"
             maxLength={100}
             value={formData.medicalHistory}
-            onChange={(e) => setFormData({...formData, medicalHistory: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, medicalHistory: e.target.value })}
             placeholder="Hipertansiyon, Diyabet"
             className="border border-border break-words overflow-wrap-anywhere h-24 sm:h-32 text-xs sm:text-sm"
             style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}
           />
           <div className="text-xs text-gray-500 mt-1 text-right">
-           {formData.medicalHistory.length}/100 karakter
-         </div>
+            {formData.medicalHistory.length}/100 karakter
+          </div>
         </div>
         <div>
           <Label htmlFor="allergies" className="mb-2 block text-xs sm:text-sm">Alerjiler</Label>
@@ -1498,14 +1498,14 @@ const AddPatientForm: React.FC<{
             id="allergies"
             maxLength={100}
             value={formData.allergies}
-            onChange={(e) => setFormData({...formData, allergies: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
             placeholder="Penisilin, Lateks"
             className="border border-border break-words overflow-wrap-anywhere h-24 sm:h-32 text-xs sm:text-sm"
             style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}
           />
           <div className="text-xs text-gray-500 mt-1 text-right">
-           {formData.allergies.length}/100 karakter
-         </div>
+            {formData.allergies.length}/100 karakter
+          </div>
         </div>
         <div>
           <Label htmlFor="medications" className="mb-2 block text-xs sm:text-sm">Mevcut İlaçlar </Label>
@@ -1513,14 +1513,14 @@ const AddPatientForm: React.FC<{
             id="medications"
             maxLength={100}
             value={formData.medications}
-            onChange={(e) => setFormData({...formData, medications: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, medications: e.target.value })}
             placeholder="Metformin, Aspirin"
             className="border border-border break-words overflow-wrap-anywhere h-24 sm:h-32 text-xs sm:text-sm"
             style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}
           />
           <div className="text-xs text-gray-500 mt-1 text-right">
-           {formData.medications.length}/100 karakter
-         </div>
+            {formData.medications.length}/100 karakter
+          </div>
         </div>
       </div>
 
@@ -1534,7 +1534,7 @@ const AddPatientForm: React.FC<{
             type="password"
             placeholder="En az 6 karakter"
             value={formData.password}
-            onChange={(e) => setFormData({...formData, password: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             required
           />
           {!errors.password && formData.password && (
@@ -1554,7 +1554,7 @@ const AddPatientForm: React.FC<{
             type="password"
             placeholder="Şifreyi tekrar girin"
             value={formData.confirmPassword}
-            onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
             required
           />
           {errors.confirmPassword && (
