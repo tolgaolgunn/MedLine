@@ -13,12 +13,23 @@
     const aiRoutes = require('./routes/aiRoute');
     const app = express();
 
-    app.use(cors({
-        origin: 'http://localhost:5173',
-        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
-        credentials: true
-    }));
+    const allowedOrigins = [
+    'http://localhost:5173',
+    'https://med-line-dmze.vercel.app'
+];
+   app.use(cors({
+    origin: function (origin, callback) {
+        // origin boşsa (örneğin mobil uygulamalar veya postman) izin ver
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS policy violation'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
     app.use(express.json()); 
     // Yüklenen dosyaları statik olarak servis et
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -87,13 +98,13 @@
     
         const { Server } = require('socket.io');
         // Assign to the outer 'io' variable
-        io = new Server(server, {
-            cors: {
-                origin: 'http://localhost:5173',
-                methods: ['GET', 'POST'],
-                credentials: true
-            }
-        });
+       io = new Server(server, {
+    cors: {
+        origin: allowedOrigins, // Yukarıdaki listeye göre izin ver
+        methods: ['GET', 'POST'],
+        credentials: true   
+    }
+});
 
         io.on('connection', (socket) => {
             console.log('Socket connected:', socket.id);
