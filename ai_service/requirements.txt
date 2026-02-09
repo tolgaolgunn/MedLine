@@ -11,3 +11,4 @@ pypdf
 chromadb
 sentence-transformers
 groq
+gunicorn==21.2.0
