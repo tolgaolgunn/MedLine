@@ -53,7 +53,7 @@ const FeedbackPage: React.FC = () => {
 
   // API instance
   const api = axios.create({
-    baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api',
+    baseURL: (import.meta.env.VITE_API_URL) + '/api',
     headers: {
       'Content-Type': 'application/json',
     },

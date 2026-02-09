@@ -83,7 +83,7 @@ const DoctorAppointments: React.FC = () => {
     }
 
     if (doctorId) {
-      axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/appointments/${doctorId}`, {
+      axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/${doctorId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

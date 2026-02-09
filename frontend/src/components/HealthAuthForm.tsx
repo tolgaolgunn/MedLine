@@ -173,7 +173,7 @@ export function HealthAuthForm() {
     }
   }, [mode]);
 
-  const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3005") + "/api";
+  const API_URL = (import.meta.env.VITE_API_URL) + "/api";
 
   // Login işlemini güncelle
   // Token yenileme fonksiyonu

@@ -99,8 +99,8 @@ const UserManagement: React.FC = () => {
         }
         const headers: any = { 'Authorization': `Bearer ${token}` };
         const [doctorsRes, patientsRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/admin/doctors/all`, { headers }),
-          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/admin/patients/all`, { headers })
+          fetch(`${import.meta.env.VITE_API_URL}/api/admin/doctors/all`, { headers }),
+          fetch(`${import.meta.env.VITE_API_URL}/api/admin/patients/all`, { headers })
         ]);
         if (!doctorsRes.ok || !patientsRes.ok) return;
         const doctorsData = await doctorsRes.json();
@@ -144,7 +144,7 @@ const UserManagement: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) return toast.error('Oturum bulunamadı. Lütfen giriş yapın.');
       const headers: any = { 'Authorization': `Bearer ${token}` };
-      const base = (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api/admin';
+      const base = (import.meta.env.VITE_API_URL) + '/api/admin';
       const url = target.role === 'doctor'
         ? `${base}/doctors/${userId}`
         : `${base}/patients/${userId}`;
@@ -202,7 +202,7 @@ const UserManagement: React.FC = () => {
           district: '',
           hospital_name: null
         };
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/admin/doctors/add`, { method: 'POST', headers, body: JSON.stringify(body) });
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/doctors/add`, { method: 'POST', headers, body: JSON.stringify(body) });
         if (!res.ok) {
           const e = await res.json().catch(() => ({}));
           throw new Error(e.message || 'Doktor oluşturulamadı');
@@ -352,7 +352,7 @@ const UserManagement: React.FC = () => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
-      const base = (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api/admin';
+      const base = (import.meta.env.VITE_API_URL) + '/api/admin';
       const payload = {
         full_name: `${newUser.firstName} ${newUser.lastName}`.trim(),
         email: newUser.email

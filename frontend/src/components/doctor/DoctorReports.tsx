@@ -53,7 +53,7 @@ interface Report {
   createdAt: string;
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api/doctor';
+const API_BASE_URL = (import.meta.env.VITE_API_URL) + '/api/doctor';
 
 const DoctorReports: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
