@@ -31,9 +31,14 @@ export const requestPermission = async () => {
     try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
+            // Service Worker'ı manuel olarak kaydedip getToken'a paslıyoruz
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
             const token = await getToken(messaging, {
-                vapidKey: VAPID_KEY
+                vapidKey: VAPID_KEY,
+                serviceWorkerRegistration: registration // Bu satır 404 hatasını çözer
             });
+
             return token;
         }
     } catch (error) {
