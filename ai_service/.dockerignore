@@ -1,9 +1,8 @@
-node_modules
-backend
-frontend
-venv
-.venv
-.git
+../node_modules
+../backend
+../frontend
 __pycache__
 *.pyc
-.env
+.git
+venv
+.venv
