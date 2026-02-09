@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 // Update the Appointment interface to match backend response
+// Appointments.tsx içindeki interface'i bu şekilde güncelleyin:
 interface Appointment {
   appointment_id: number;
   patient_id: number;
@@ -32,14 +33,14 @@ interface Appointment {
   datetime: string;
   type: 'online' | 'face_to_face';
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
-  // Hata veren eksik alanlar aşağıdadır:
-  date?: string;           // formattedAppointments içinde ekleniyor
-  time?: string;           // formattedAppointments içinde ekleniyor
-  doctorPhone?: string;    // Detay modalında kullanılıyor
-  doctorEmail?: string;    // Detay modalında kullanılıyor
-  doctorAddress?: string;  // Detay modalında kullanılıyor
-  complaint?: string;      // Detay modalında kullanılıyor
-  notes?: string;          // Detay modalında kullanılıyor
+  // Hata veren eksik alanlar (Bunları eklemezsen build hata verir):
+  date?: string;
+  time?: string;
+  doctorPhone?: string;
+  doctorEmail?: string;
+  doctorAddress?: string;
+  complaint?: string;
+  notes?: string;
 }
 
 // Durum çevirileri için mapping
