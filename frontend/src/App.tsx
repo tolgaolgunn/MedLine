@@ -9,7 +9,8 @@ import { Profile } from "./components/Profile";
 import DoctorReports from "./components/doctor/DoctorReports";
 import { Notifications } from "./components/notifications";
 import { Settings } from "./components/Settings";
-import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
+import ProtectedRoute from "./components/routes/ProtectedRoute";
+import AdminRoute from "./components/routes/adminRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // Toast için stil
