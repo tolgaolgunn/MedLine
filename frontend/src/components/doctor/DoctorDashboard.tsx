@@ -122,7 +122,7 @@ const DoctorDashboard = () => {
       if (!doctorId) return;
 
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/${doctorId}`);
+        const response = await axios.get(`/api/doctor/appointments/${doctorId}`);
 
         // API yanıtını konsola yazdır
         console.log('API Response:', response.data);
@@ -278,9 +278,9 @@ const DoctorDashboard = () => {
     try {
       // Tüm istatistikleri paralel olarak çek
       const [patientsRes, todayRes, prescriptionsRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/patients/count/${doctorId}`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/today/count/${doctorId}`),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/prescriptions/count/${doctorId}`)
+        axios.get(`/api/doctor/patients/count/${doctorId}`),
+        axios.get(`/api/doctor/appointments/today/count/${doctorId}`),
+        axios.get(`/api/doctor/prescriptions/count/${doctorId}`)
       ]);
 
       if (patientsRes.data && typeof patientsRes.data.count === 'number') {
@@ -333,7 +333,7 @@ const DoctorDashboard = () => {
       if (!doctorId) return;
 
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/${doctorId}`);
+        const response = await axios.get(`/api/doctor/appointments/${doctorId}`);
 
         // API yanıtını konsola yazdır
         console.log('API Response:', response.data);
@@ -371,7 +371,7 @@ const DoctorDashboard = () => {
 
   const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
     try {
-      await axios.patch(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/${appointmentId}/status`, { status: newStatus });
+      await axios.patch(`/api/doctor/appointments/${appointmentId}/status`, { status: newStatus });
       // Güncel randevuları tekrar çek veya local state'i güncelle
       setAppointments(prev =>
         prev.map(app =>
