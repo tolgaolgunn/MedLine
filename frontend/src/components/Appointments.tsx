@@ -28,10 +28,18 @@ interface Appointment {
   doctor_id: number;
   doctor_name: string;
   doctor_specialty: string;
-  hospital_name: string; // Changed from doctor_hospital
+  hospital_name: string;
   datetime: string;
   type: 'online' | 'face_to_face';
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  // Hata veren eksik alanlar aşağıdadır:
+  date?: string;           // formattedAppointments içinde ekleniyor
+  time?: string;           // formattedAppointments içinde ekleniyor
+  doctorPhone?: string;    // Detay modalında kullanılıyor
+  doctorEmail?: string;    // Detay modalında kullanılıyor
+  doctorAddress?: string;  // Detay modalında kullanılıyor
+  complaint?: string;      // Detay modalında kullanılıyor
+  notes?: string;          // Detay modalında kullanılıyor
 }
 
 // Durum çevirileri için mapping
