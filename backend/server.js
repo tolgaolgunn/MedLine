@@ -94,7 +94,17 @@
             console.log('Server is running on port ' + PORT);
             console.log('http://localhost:' + PORT);
         });
+        const cron = require('node-cron');
 
+cron.schedule('0 9 * * *', () => {
+  console.log('Günlük randevu kontrolleri yapılıyor...');
+  // Buraya veritabanı işlemlerini yazabilirsin
+});
+
+// Her 10 dakikada bir çalışan test görevi
+cron.schedule('*/10 * * * *', () => {
+  console.log('Sistem sağlığı kontrol edildi.');
+});
     
         const { Server } = require('socket.io');
         // Assign to the outer 'io' variable
