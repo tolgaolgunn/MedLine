@@ -115,7 +115,7 @@ export function DoctorProfile() {
           return;
         }
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profile`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -276,7 +276,7 @@ export function DoctorProfile() {
         hospital_name: doctorData.hospital_name
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -324,7 +324,7 @@ export function DoctorProfile() {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/change-password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

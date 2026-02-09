@@ -123,7 +123,7 @@ const PatientManagement = () => {
 
     // Duplicate kontrolü - TC Kimlik No (excluding current patient)
     if (formData.national_id) {
-      const existingPatientByTC = patients.find(patient => 
+      const existingPatientByTC = patients.find(patient =>
         patient.national_id === formData.national_id && patient.user_id !== selectedPatient.user_id
       );
       if (existingPatientByTC) {
@@ -134,7 +134,7 @@ const PatientManagement = () => {
 
     // Duplicate kontrolü - Telefon numarası (excluding current patient)
     if (formData.phone_number) {
-      const existingPatientByPhone = patients.find(patient => 
+      const existingPatientByPhone = patients.find(patient =>
         patient.phone_number === formData.phone_number && patient.user_id !== selectedPatient.user_id
       );
       if (existingPatientByPhone) {
@@ -144,7 +144,7 @@ const PatientManagement = () => {
     }
 
     // Duplicate kontrolü - E-posta (excluding current patient)
-    const existingPatientByEmail = patients.find(patient => 
+    const existingPatientByEmail = patients.find(patient =>
       patient.email.toLowerCase() === formData.email.toLowerCase() && patient.user_id !== selectedPatient.user_id
     );
     if (existingPatientByEmail) {
@@ -212,15 +212,15 @@ const PatientManagement = () => {
   // Check if any form field has been filled
   const isFormDirty = () => {
     return formData.full_name.trim() !== '' ||
-           formData.email.trim() !== '' ||
-           formData.phone_number.trim() !== '' ||
-           formData.health_history.trim() !== '' ||
-           (formData.password && formData.password.trim() !== '') ||
-           formData.birth_date !== '' ||
-           formData.gender !== undefined ||
-           (formData.address && formData.address.trim() !== '') ||
-           formData.blood_type !== undefined ||
-           (formData.national_id && formData.national_id.trim() !== '');
+      formData.email.trim() !== '' ||
+      formData.phone_number.trim() !== '' ||
+      formData.health_history.trim() !== '' ||
+      (formData.password && formData.password.trim() !== '') ||
+      formData.birth_date !== '' ||
+      formData.gender !== undefined ||
+      (formData.address && formData.address.trim() !== '') ||
+      formData.blood_type !== undefined ||
+      (formData.national_id && formData.national_id.trim() !== '');
   };
 
   // Handle dialog close with confirmation
@@ -248,14 +248,14 @@ const PatientManagement = () => {
   // Check if edit form has been modified
   const isEditFormDirty = () => {
     return formData.full_name !== originalFormData.full_name ||
-           formData.email !== originalFormData.email ||
-           formData.phone_number !== originalFormData.phone_number ||
-           formData.health_history !== originalFormData.health_history ||
-           formData.birth_date !== originalFormData.birth_date ||
-           formData.gender !== originalFormData.gender ||
-           formData.address !== originalFormData.address ||
-           formData.blood_type !== originalFormData.blood_type ||
-           formData.national_id !== originalFormData.national_id;
+      formData.email !== originalFormData.email ||
+      formData.phone_number !== originalFormData.phone_number ||
+      formData.health_history !== originalFormData.health_history ||
+      formData.birth_date !== originalFormData.birth_date ||
+      formData.gender !== originalFormData.gender ||
+      formData.address !== originalFormData.address ||
+      formData.blood_type !== originalFormData.blood_type ||
+      formData.national_id !== originalFormData.national_id;
   };
 
   // Handle edit dialog close with confirmation
@@ -340,7 +340,7 @@ const PatientManagement = () => {
 
     // Duplicate kontrolü - TC Kimlik No
     if (formData.national_id) {
-      const existingPatientByTC = patients.find(patient => 
+      const existingPatientByTC = patients.find(patient =>
         patient.national_id === formData.national_id
       );
       if (existingPatientByTC) {
@@ -351,7 +351,7 @@ const PatientManagement = () => {
 
     // Duplicate kontrolü - Telefon numarası
     if (formData.phone_number) {
-      const existingPatientByPhone = patients.find(patient => 
+      const existingPatientByPhone = patients.find(patient =>
         patient.phone_number === formData.phone_number
       );
       if (existingPatientByPhone) {
@@ -361,14 +361,14 @@ const PatientManagement = () => {
     }
 
     // Duplicate kontrolü - E-posta
-    const existingPatientByEmail = patients.find(patient => 
+    const existingPatientByEmail = patients.find(patient =>
       patient.email.toLowerCase() === formData.email.toLowerCase()
     );
     if (existingPatientByEmail) {
       toast.error('Bu e-posta adresi ile zaten kayıtlı bir hasta bulunmaktadır');
       return;
     }
-    
+
     try {
       await axios.post('/api/admin/patients', formData);
       toast.success('Yeni hasta başarıyla eklendi');
@@ -621,8 +621,8 @@ const PatientManagement = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                   </Button>
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     size="sm"
                     onClick={() => handleDeletePatient(patient.user_id)}
                   >
@@ -787,18 +787,18 @@ const PatientManagement = () => {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-gray-700">
-              Formda doldurulmuş alanlar var. Çıkmak istediğinizden emin misiniz? 
+              Formda doldurulmuş alanlar var. Çıkmak istediğinizden emin misiniz?
               Girilen bilgiler kaybolacaktır.
             </p>
             <div className="flex justify-end gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={cancelExit}
                 className="border-2 border-gray-300"
               >
                 İptal
               </Button>
-              <Button 
+              <Button
                 onClick={confirmExit}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
@@ -817,18 +817,18 @@ const PatientManagement = () => {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-gray-700">
-              Hasta bilgilerinde değişiklik yapıldı. Çıkmak istediğinizden emin misiniz? 
+              Hasta bilgilerinde değişiklik yapıldı. Çıkmak istediğinizden emin misiniz?
               Yapılan değişiklikler kaybolacaktır.
             </p>
             <div className="flex justify-end gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={cancelEditExit}
                 className="border-2 border-gray-300"
               >
                 İptal
               </Button>
-              <Button 
+              <Button
                 onClick={confirmEditExit}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >

@@ -61,7 +61,7 @@ const AdminProfile: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profile`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -134,7 +134,7 @@ const AdminProfile: React.FC = () => {
         phone_number: formData.phone
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -176,7 +176,7 @@ const AdminProfile: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) return toast.error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/change-password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

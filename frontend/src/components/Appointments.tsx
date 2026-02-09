@@ -92,7 +92,7 @@ const Appointments: React.FC = () => {
         throw new Error('Oturum bilgisi bulunamadı');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/appointments/${user.user_id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/appointments/${user.user_id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

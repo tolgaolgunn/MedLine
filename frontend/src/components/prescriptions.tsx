@@ -78,7 +78,7 @@ export function Prescriptions() {
 
   // API instance oluşturmayı güncelle
   const api = axios.create({
-    baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api',
+    baseURL: (import.meta.env.VITE_API_URL) + '/api',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -104,7 +104,7 @@ export function Prescriptions() {
 
       // Create API instance with proper headers
       const api = axios.create({
-        baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:3005') + '/api',
+        baseURL: (import.meta.env.VITE_API_URL) + '/api',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

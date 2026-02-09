@@ -94,7 +94,7 @@ export function DoctorSearch() {
     async function fetchDoctors() {
       setLoading(true);
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctors`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/doctors`);
         const data = await res.json();
         const mapped = data.map((doc: any) => ({
           id: doc.user_id,
@@ -207,7 +207,7 @@ export function DoctorSearch() {
     const datetime = dateObj.toISOString();
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/appointments`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -253,12 +253,12 @@ export function DoctorSearch() {
       const patient_id = userData?.user_id;
 
       // Doktorun randevularını getir
-      const doctorResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor-appointments/${doctorId}/${dateStr}`);
+      const doctorResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor-appointments/${doctorId}/${dateStr}`);
       const doctorData = await doctorResponse.json();
       setDoctorAppointments(doctorData);
 
       // Hastanın randevularını getir
-      const patientResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/patient-appointments/${patient_id}/${dateStr}`);
+      const patientResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/patient-appointments/${patient_id}/${dateStr}`);
       const patientData = await patientResponse.json();
       setPatientAppointments(patientData);
       if (selectedTime && isTimeSlotDisabled(selectedTime)) {
@@ -807,8 +807,8 @@ export function DoctorSearch() {
                                       }
                                       size="sm"
                                       className={`h-10 text-sm font-medium w-full border border-black ${selectedTime === time
-                                          ? 'border-black'
-                                          : 'border-gray-400'
+                                        ? 'border-black'
+                                        : 'border-gray-400'
                                         } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''
                                         }`}
                                       onClick={() => {

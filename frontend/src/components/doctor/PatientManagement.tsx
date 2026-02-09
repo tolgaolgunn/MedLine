@@ -211,7 +211,7 @@ const PatientManagement: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/patients/${currentDoctorId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor/patients/${currentDoctorId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -312,7 +312,7 @@ const PatientManagement: React.FC = () => {
   }) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/patients/add`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor/patients/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,7 +351,7 @@ const PatientManagement: React.FC = () => {
       const refreshPatients = async (retryCount = 0) => {
         try {
           console.log(`Refreshing patients list, attempt ${retryCount + 1}...`);
-          const fetchResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/patients/${currentDoctorId}`, {
+          const fetchResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor/patients/${currentDoctorId}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -438,7 +438,7 @@ const PatientManagement: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/results/${patient.patient_id}`,
+        `${import.meta.env.VITE_API_URL}/api/doctor/results/${patient.patient_id}`,
         {
           method: 'GET',
           headers: {
@@ -494,7 +494,7 @@ const PatientManagement: React.FC = () => {
           formData.append('files', file);
         });
 
-        response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/results-with-files`, {
+        response = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor/results-with-files`, {
           method: 'POST',
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -502,7 +502,7 @@ const PatientManagement: React.FC = () => {
           body: formData,
         });
       } else {
-        response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/doctor/results`, {
+        response = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor/results`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -903,7 +903,7 @@ const PatientManagement: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-2">
                                   {r.files.map((file: any) => {
                                     const isImage = file.mime_type?.startsWith('image/');
-                                    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${file.file_path}`;
+                                    const url = `${import.meta.env.VITE_API_URL}${file.file_path}`;
                                     return (
                                       <a
                                         key={file.file_id}

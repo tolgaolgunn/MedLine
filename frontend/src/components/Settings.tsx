@@ -95,7 +95,7 @@ export function Settings() {
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/settings`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -133,7 +133,7 @@ export function Settings() {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/settings`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

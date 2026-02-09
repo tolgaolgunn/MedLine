@@ -71,7 +71,7 @@ export function MedicalRecords() {
       try {
         setIsLoading(true);
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/patient/results/${currentPatientId}`
+          `${import.meta.env.VITE_API_URL}/api/patient/results/${currentPatientId}`
         );
 
         if (!response.ok) {
@@ -329,7 +329,7 @@ export function MedicalRecords() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {selectedResult.files.map((file) => {
                       const isImage = file.mime_type.startsWith("image/");
-                      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}${file.file_path}`;
+                      const url = `${import.meta.env.VITE_API_URL}${file.file_path}`;
                       return (
                         <a
                           key={file.file_id}
