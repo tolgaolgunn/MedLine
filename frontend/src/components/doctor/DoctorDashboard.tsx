@@ -20,7 +20,7 @@ import {
   Clock,
   Play
 } from 'lucide-react';
-import axios from 'axios';
+import axios from '../../lib/axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 
 type AppointmentStatus = 'confirmed' | 'pending' | 'completed' | 'cancelled';
@@ -119,15 +119,14 @@ const DoctorDashboard = () => {
 
   useEffect(() => {
     const fetchAppointments = async () => {
-      const token = localStorage.getItem('token');
-      if (!doctorId || !token) return;
+      const userDataStr = localStorage.getItem('user');
+      const userData = userDataStr ? JSON.parse(userDataStr) : null;
+      const doctorId = userData?.user_id;
+
+      if (!doctorId) return;
 
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/${doctorId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await axios.get(`/api/doctor/appointments/${doctorId}`);
 
         // API yanıtını konsola yazdır
         console.log('API Response:', response.data);
@@ -278,21 +277,14 @@ const DoctorDashboard = () => {
 
   // Tüm istatistikleri yeniden çek
   const refreshStatistics = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!doctorId || !token) return;
+    if (!doctorId) return;
 
     try {
-      const config = {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      };
-
       // Tüm istatistikleri paralel olarak çek
       const [patientsRes, todayRes, prescriptionsRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/patients/count/${doctorId}`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/today/count/${doctorId}`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/prescriptions/count/${doctorId}`, config)
+        axios.get(`/api/doctor/patients/count/${doctorId}`),
+        axios.get(`/api/doctor/appointments/today/count/${doctorId}`),
+        axios.get(`/api/doctor/prescriptions/count/${doctorId}`)
       ]);
 
       if (patientsRes.data && typeof patientsRes.data.count === 'number') {
@@ -342,34 +334,17 @@ const DoctorDashboard = () => {
 
 
   const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
-    const token = localStorage.getItem('token');
     console.log('Update Status Triggered:', {
       appointmentId,
-      newStatus,
-      hasToken: !!token,
-      tokenPreview: token ? `${token.substring(0, 10)}...` : 'No Token'
+      newStatus
     });
 
-    if (!token) {
-      toast.error('Oturum süreniz dolmuş olabilir. Lütfen tekrar giriş yapın.');
-      return;
-    }
-
     try {
-      const url = `${import.meta.env.VITE_API_URL}/api/doctor/appointments/${appointmentId}/status`;
+      const url = `/api/doctor/appointments/${appointmentId}/status`;
       console.log('Sending Patch Request to:', url);
 
-      const config = {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      };
-      console.log('Request Config Headers:', config.headers);
-
       const response = await axios.patch(url,
-        { status: newStatus },
-        config
+        { status: newStatus }
       );
 
       console.log('Patch Response:', response.data);
