@@ -2,9 +2,18 @@ const jwt = require('jsonwebtoken');
 
 // Token authentication middleware
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
+  const authHeader = req.headers['authorization'] || req.cookies.token || req.body.token || req.headers["Authorization"];
+  if(!authHeader){
+    return res.status(401).json({
+      success: false,
+      message: 'Yetkilendirme hatası: Token bulunamadı'
+    });
+  }
+
+
+  
   console.log('Auth Header:', authHeader);
-  const token = authHeader && authHeader.split(' ')[1];
+  const token=authHeader.startsWith("Bearer ")?authHeader.split(" ")[1]:authHeader;
   console.log('Extracted Token:', token);
 
   if (!token) {
