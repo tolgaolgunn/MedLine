@@ -686,7 +686,8 @@ const DoctorAppointments: React.FC = () => {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm sm:text-base truncate">{app.date} - {app.time}</p>
                       <p className="text-xs sm:text-sm text-gray-700 truncate">{app.specialty}</p>
-                      <p className="text-xs text-gray-500 truncate">{app.type === 'online' ? 'Online' : 'Yüz Yüze'} • {app.status === 'confirmed' ? 'Onaylandı' : app.status === 'completed' ? 'Tamamlandı' : app.status === 'pending' ? 'Beklemede' : 'İptal'}</p>
+                      <p className="text-xs text-gray-500 truncate">{app.type === 'online' ? 'Online' : 'Yüz Yüze'} • {app.status === 'confirmed' ? 'Onaylandı' : app.status === 'completed' ? 'Tamamlandı' : app.status === 'pending' ? 'Beklemede' : 'İptal'}
+                      </p>
                     </div>
                   </div>
                 ))}

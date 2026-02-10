@@ -24,7 +24,6 @@ instance.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle token expiration
 instance.interceptors.response.use(
   (response) => {
     console.log('Response:', {

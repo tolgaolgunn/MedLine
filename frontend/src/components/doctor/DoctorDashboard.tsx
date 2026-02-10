@@ -20,7 +20,7 @@ import {
   Clock,
   Play
 } from 'lucide-react';
-import axios from '../../lib/axios';
+import axios from 'axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 
 type AppointmentStatus = 'confirmed' | 'pending' | 'completed' | 'cancelled';
@@ -119,10 +119,15 @@ const DoctorDashboard = () => {
 
   useEffect(() => {
     const fetchAppointments = async () => {
-      if (!doctorId) return;
+      const token = localStorage.getItem('token');
+      if (!doctorId || !token) return;
 
       try {
-        const response = await axios.get(`/api/doctor/appointments/${doctorId}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/${doctorId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
         // API yanıtını konsola yazdır
         console.log('API Response:', response.data);
@@ -273,14 +278,21 @@ const DoctorDashboard = () => {
 
   // Tüm istatistikleri yeniden çek
   const refreshStatistics = useCallback(async () => {
-    if (!doctorId) return;
+    const token = localStorage.getItem('token');
+    if (!doctorId || !token) return;
 
     try {
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
       // Tüm istatistikleri paralel olarak çek
       const [patientsRes, todayRes, prescriptionsRes] = await Promise.all([
-        axios.get(`/api/doctor/patients/count/${doctorId}`),
-        axios.get(`/api/doctor/appointments/today/count/${doctorId}`),
-        axios.get(`/api/doctor/prescriptions/count/${doctorId}`)
+        axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/patients/count/${doctorId}`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/today/count/${doctorId}`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/prescriptions/count/${doctorId}`, config)
       ]);
 
       if (patientsRes.data && typeof patientsRes.data.count === 'number') {
@@ -327,51 +339,24 @@ const DoctorDashboard = () => {
     return () => clearInterval(interval);
   }, [doctorId, refreshStatistics]);
 
-  // Doktora ait randevuları backend'den çek
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!doctorId) return;
 
-      try {
-        const response = await axios.get(`/api/doctor/appointments/${doctorId}`);
-
-        // API yanıtını konsola yazdır
-        console.log('API Response:', response.data);
-
-        const mapped = response.data.map((item: any) => {
-          const dateObj = new Date(item.datetime);
-
-          // Debug için item objesini konsola yazdır
-          console.log('Appointment item:', item);
-
-          return {
-            id: item.appointment_id || item.id,
-            patientName: item.patientName || item.patientname || 'İsimsiz Hasta', // Her iki varyasyonu da kontrol et
-            patientAge: item.patientAge || item.patientage || 0,
-            specialty: item.specialty || '',
-            date: dateObj.toLocaleDateString('tr-TR'),
-            time: dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-            type: (item.type === 'face_to_face' ? 'face_to_face' : 'online') as AppointmentType,
-            status: (item.status || 'pending') as AppointmentStatus,
-            symptoms: item.symptoms || '',
-          };
-        });
-
-        console.log('Mapped appointments:', mapped);
-        setAppointments(mapped);
-        // Randevular güncellendiğinde istatistikleri de güncelle
-        await refreshStatistics();
-      } catch (error) {
-        console.error('Randevular çekilirken hata oluştu:', error);
-      }
-    };
-
-    fetchAppointments();
-  }, [doctorId, refreshStatistics]);
 
   const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Oturum süreniz dolmuş olabilir. Lütfen tekrar giriş yapın.');
+      return;
+    }
+
     try {
-      await axios.patch(`/api/doctor/appointments/${appointmentId}/status`, { status: newStatus });
+      await axios.patch(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/${appointmentId}/status`,
+        { status: newStatus },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
       // Güncel randevuları tekrar çek veya local state'i güncelle
       setAppointments(prev =>
         prev.map(app =>
@@ -382,6 +367,7 @@ const DoctorDashboard = () => {
       await refreshStatistics();
       toast.success('Randevu durumu güncellendi!');
     } catch (e) {
+      console.error('Update status error:', e);
       toast.error('Durum güncellenemedi!');
     }
   };
