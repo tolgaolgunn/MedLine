@@ -343,20 +343,37 @@ const DoctorDashboard = () => {
 
   const handleUpdateStatus = async (appointmentId: number, newStatus: 'confirmed' | 'cancelled' | 'completed' | 'pending') => {
     const token = localStorage.getItem('token');
+    console.log('Update Status Triggered:', {
+      appointmentId,
+      newStatus,
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 10)}...` : 'No Token'
+    });
+
     if (!token) {
       toast.error('Oturum süreniz dolmuş olabilir. Lütfen tekrar giriş yapın.');
       return;
     }
 
     try {
-      await axios.patch(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/${appointmentId}/status`,
-        { status: newStatus },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+      const url = `${import.meta.env.VITE_API_URL}/api/doctor/appointments/${appointmentId}/status`;
+      console.log('Sending Patch Request to:', url);
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
+      };
+      console.log('Request Config Headers:', config.headers);
+
+      const response = await axios.patch(url,
+        { status: newStatus },
+        config
       );
+
+      console.log('Patch Response:', response.data);
+
       // Güncel randevuları tekrar çek veya local state'i güncelle
       setAppointments(prev =>
         prev.map(app =>
@@ -366,9 +383,15 @@ const DoctorDashboard = () => {
       // İstatistikleri güncelle
       await refreshStatistics();
       toast.success('Randevu durumu güncellendi!');
-    } catch (e) {
-      console.error('Update status error:', e);
-      toast.error('Durum güncellenemedi!');
+    } catch (e: any) {
+      console.error('Update status error Full object:', e);
+      console.error('Update status error Response:', e.response);
+      console.error('Update status error Data:', e.response?.data);
+      if (e.response?.data?.message) {
+        toast.error(`Hata: ${e.response.data.message}`);
+      } else {
+        toast.error('Durum güncellenemedi!');
+      }
     }
   };
 
