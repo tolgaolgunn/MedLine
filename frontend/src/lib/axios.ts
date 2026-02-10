@@ -12,7 +12,8 @@ instance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     } else {
-      console.log('No token found');
+      console.error('No token found in localStorage!');
+      alert('No token found in localStorage! Please login again.');
     }
     console.log('Making request:', {
       url: config.url,
