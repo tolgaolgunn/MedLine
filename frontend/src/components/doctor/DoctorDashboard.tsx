@@ -347,17 +347,21 @@ const DoctorDashboard = () => {
         { status: newStatus }
       );
 
-      console.log('Patch Response:', response.data);
+      console.log('Patch Response:', response);
 
-      // Güncel randevuları tekrar çek veya local state'i güncelle
-      setAppointments(prev =>
-        prev.map(app =>
-          app.id === appointmentId ? { ...app, status: newStatus } : app
-        )
-      );
-      // İstatistikleri güncelle
-      await refreshStatistics();
-      toast.success('Randevu durumu güncellendi!');
+      // 200, 201 ve 204 başarılı kabul edilir
+      if (response.status === 200 || response.status === 201 || response.status === 204) {
+        setAppointments(prev =>
+          prev.map(app =>
+            app.id === appointmentId ? { ...app, status: newStatus } : app
+          )
+        );
+        // İstatistikleri güncelle
+        await refreshStatistics();
+        toast.success('Randevu durumu güncellendi!');
+      } else {
+        throw new Error('Beklenmeyen yanıt kodu: ' + response.status);
+      }
     } catch (e: any) {
       console.error('Update status error Full object:', e);
       console.error('Update status error Response:', e.response);
