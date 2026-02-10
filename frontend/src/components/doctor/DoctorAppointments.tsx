@@ -20,7 +20,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import axios from 'axios';
+import axios from '../../lib/axios';
 
 // Interface for appointment data structure
 interface Appointment {
@@ -72,22 +72,13 @@ const DoctorAppointments: React.FC = () => {
     const userData = userDataStr ? JSON.parse(userDataStr) : null;
     const doctorId = userData?.user_id;
 
-    const token = localStorage.getItem('token');
     if (!doctorId) {
       console.error('Doktor ID bulunamadı');
       return;
     }
-    if (!token) {
-      console.error('Token bulunamadı');
-      return;
-    }
 
     if (doctorId) {
-      axios.get(`${import.meta.env.VITE_API_URL}/api/doctor/appointments/${doctorId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      axios.get(`/api/doctor/appointments/${doctorId}`)
         .then(res => {
           console.log('API Yanıtı:', res.data);
 
