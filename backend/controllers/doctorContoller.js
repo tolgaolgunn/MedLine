@@ -354,7 +354,7 @@ exports.getPatientsByDoctor = async (req, res) => {
     console.log('Getting patients for doctor ID:', doctorId);
     
     const result = await query(
-      `SELECT DISTINCT
+      `SELECT
               u.user_id AS patient_id,
               u.full_name AS patient_name,
               u.email,
