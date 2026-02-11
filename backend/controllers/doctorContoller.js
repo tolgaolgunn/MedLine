@@ -210,14 +210,13 @@ exports.updateAppointmentStatus = async (req, res) => {
       };
       
       try {
-        console.log(`DoctorController: Sending confirmation email to ${patient_email}`);
+        console.log(`DoctorController: Sending confirmation email to ${patient_email} for appointment ${appointmentId}`);
         await sendAppointmentConfirmation(patient_email, appointmentDetails);
         console.log('DoctorController: Confirmation email sent successfully');
       } catch (mailError) {
         console.error('DoctorController: Failed to send confirmation email:', mailError);
-        // Don't block the response, but log the error
-      }
-      
+        console.error('DoctorController: Mail error stack:', mailError.stack);
+      }  
       const notificationData = {
         userId: patient_id,
         title: 'Randevu Onaylandı',
@@ -226,9 +225,7 @@ exports.updateAppointmentStatus = async (req, res) => {
       };
 
       try {
-        const savedNotification = await NotificationModel.createNotification(notificationData);
-        
-        // Gerçek zamanlı bildirim gönder
+        const savedNotification = await NotificationModel.createNotification(notificationData)
         if (req.io) {
           console.log(`Emitting appointment confirmation notification to patient room: ${patient_id}`);
           req.io.to(String(patient_id)).emit('notification', {
@@ -242,7 +239,6 @@ exports.updateAppointmentStatus = async (req, res) => {
         }
       } catch (notifError) {
         console.error('Error saving/sending appointment notification:', notifError);
-        // Bildirim hatası ana işlemi durdurmamalı
       }
     } else if (status === 'cancelled') {
       const appointmentDetails = {
@@ -250,12 +246,12 @@ exports.updateAppointmentStatus = async (req, res) => {
         doctorSpecialty: doctor_specialty,
         date: formattedDate,
         time: formattedTime,
-        reason: req.body.reason // Eğer red sebebi gönderilmişse
+        reason: req.body.reason 
       };
       
       await sendAppointmentRejection(patient_email, appointmentDetails);
       
-      // Uygulama içi bildirim oluştur
+
       const notificationData = {
         userId: patient_id,
         title: 'Randevu İptal Edildi',
@@ -265,8 +261,7 @@ exports.updateAppointmentStatus = async (req, res) => {
 
       try {
         const savedNotification = await NotificationModel.createNotification(notificationData);
-        
-        // Gerçek zamanlı bildirim gönder
+
         if (req.io) {
           console.log(`Emitting appointment cancellation notification to patient room: ${patient_id}`);
           req.io.to(String(patient_id)).emit('notification', {
