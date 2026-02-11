@@ -132,7 +132,33 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
     setIncoming(false);
     setOpen(true);
 
-    const peer = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    const peer = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: "stun:stun.relay.metered.ca:80",
+        },
+        {
+          urls: "turn:global.relay.metered.ca:80",
+          username: "71b0ffcc2ddbdaea66f18a13",
+          credential: "nKRUR00WE2jnrzXv",
+        },
+        {
+          urls: "turn:global.relay.metered.ca:80?transport=tcp",
+          username: "71b0ffcc2ddbdaea66f18a13",
+          credential: "nKRUR00WE2jnrzXv",
+        },
+        {
+          urls: "turn:global.relay.metered.ca:443",
+          username: "71b0ffcc2ddbdaea66f18a13",
+          credential: "nKRUR00WE2jnrzXv",
+        },
+        {
+          urls: "turns:global.relay.metered.ca:443?transport=tcp",
+          username: "71b0ffcc2ddbdaea66f18a13",
+          credential: "nKRUR00WE2jnrzXv",
+        },
+      ],
+    });
     peerRef.current = peer;
 
     try {
