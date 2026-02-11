@@ -342,9 +342,16 @@ const DoctorDashboard = () => {
     try {
       const url = `/api/doctor/appointments/${appointmentId}/status`;
       console.log('Sending Patch Request to:', url);
-
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const token = user.token;
       const response = await axios.patch(url,
-        { status: newStatus }
+        { status: newStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          withCredentials: true
+        }
       );
 
       console.log('Patch Response:', response);

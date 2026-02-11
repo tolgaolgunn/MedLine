@@ -19,12 +19,11 @@
 ];
    app.use(cors({
     origin: function (origin, callback) {
-        // origin boşsa (örneğin mobil uygulamalar veya postman) izin ver
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
             callback(new Error('CORS policy violation'));
-        }
+        }   
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
