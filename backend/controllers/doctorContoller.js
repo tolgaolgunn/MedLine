@@ -151,7 +151,7 @@ exports.getActiveAppointments = async (req, res) => {
 exports.updateAppointmentStatus = async (req, res) => {
   try {
     const { appointmentId } = req.params;
-    const { status } = req.body;
+    const { status,reason } = req.body;
 
     if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
@@ -245,7 +245,7 @@ exports.updateAppointmentStatus = async (req, res) => {
         doctorSpecialty: doctor_specialty,
         date: formattedDate,
         time: formattedTime,
-        reason: req.body.reason 
+        reason: reason
       };
       
      await sendAppointmentRejection(patient_email, appointmentDetails);
