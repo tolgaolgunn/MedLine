@@ -24,7 +24,10 @@ app = FastAPI(title="MedLine AI Backend", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://med-line-dmze.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,7 +84,10 @@ def find_available_port(start_port=8000, max_attempts=10):
     return None
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
+    if is_render:
+        port = int(os.getenv("PORT", 10000))
+    else:
+        port = int(os.getenv("PORT", 8000)) 
     
     # Port kontrolü
     if is_port_in_use(port):
