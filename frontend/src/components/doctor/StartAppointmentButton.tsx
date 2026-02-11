@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../ui/dialog";
 import { Play, Mic, MicOff, Video, VideoOff, PhoneOff, Star } from "lucide-react";
@@ -36,8 +36,6 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [socketId, setSocketId] = useState<string | null>(null);
-  const [patientId, setPatientId] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<string>("Hazırlanıyor...");
 
   // Yeni state'ler
@@ -53,80 +51,70 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const iceCandidatesQueue = useRef<RTCIceCandidateInit[]>([]);
 
+  // Keep track of the patient ID we are currently calling
+  const currentPatientIdRef = useRef<string | null>(null);
+
   const socket = getSocket();
 
-  // ✅ Socket bağlantısı ve ID alma
-  useEffect(() => {
-    const handleConnect = () => {
-      setSocketId(socket.id || null);
-      console.log("Socket connected:", socket.id);
-    };
+  // --- Socket Event Handling ---
 
-    socket.on("connect", handleConnect);
+  const handleSignal = useCallback(async ({ from, data }: { from: string, data: any }) => {
+    console.log("Doctor received signal:", data.type, "from:", from);
 
-    // Eğer socket zaten bağlıysa ID'yi hemen al
-    if (socket.connected) {
-      setSocketId(socket.id || null);
+    // Filter out signals that aren't for the current call
+    if (!open || !peerRef.current) return;
+
+    try {
+      if (data.type === "answer") {
+        console.log("Doctor: Received answer, setting remote description");
+        await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+
+        // Process queued candidates now that remote description is set
+        if (iceCandidatesQueue.current.length > 0) {
+          console.log(`Doctor: Processing ${iceCandidatesQueue.current.length} queued candidates`);
+          for (const candidate of iceCandidatesQueue.current) {
+            try {
+              await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (e) {
+              console.error("Doctor: Error adding queued candidate:", e);
+            }
+          }
+          iceCandidatesQueue.current = [];
+        }
+      }
+
+      else if (data.type === "candidate") {
+        if (peerRef.current.remoteDescription) {
+          try {
+            await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+          } catch (e) {
+            console.error("Doctor: Error adding candidate:", e);
+          }
+        } else {
+          console.log("Doctor: Queueing candidate (remote description not set)");
+          iceCandidatesQueue.current.push(data.candidate);
+        }
+      }
+
+      else if (data.type === "reject" || data.type === "end_call") {
+        console.log("Doctor: Call rejected or ended by patient");
+        alert("Hasta görüşmeyi sonlandırdı veya reddetti.");
+        handleExit(); // Close the call cleanly
+      }
+    } catch (err) {
+      console.error("Doctor: Signal handling error:", err);
     }
+  }, [open]); // Depend on 'open' to filter signals when closed
+
+  useEffect(() => {
+    // Single registration of signal listener
+    socket.on("signal", handleSignal);
 
     return () => {
-      socket.off("connect", handleConnect);
+      socket.off("signal", handleSignal);
     };
-  }, []);
+  }, [handleSignal]);
 
-  // Çıkış işlemi
-  const handleExit = () => {
-    setShowExitConfirm(true);
-  };
-
-  // Çıkışı onayla
-  const confirmExit = () => {
-    setShowExitConfirm(false);
-    setOpen(false);
-    setShowRating(true);
-  };
-
-  // Çıkışı iptal et
-  const cancelExit = () => {
-    setShowExitConfirm(false);
-  };
-
-  // Değerlendirme modalından çıkış isteği
-  const handleRatingExit = () => {
-    setShowRatingExitConfirm(true);
-  };
-
-  // Değerlendirme çıkışını onayla
-  const confirmRatingExit = () => {
-    setShowRatingExitConfirm(false);
-    setShowRating(false);
-    setRating(0);
-    setComment("");
-  };
-
-  const cancelRatingExit = () => {
-    setShowRatingExitConfirm(false);
-  };
-
-  const submitRating = () => {
-    console.log("Değerlendirme gönderildi:", { rating, comment });
-    const feedback = {
-      type: 'değerlendirme' as const,
-      title: `Canlı Görüşme Değerlendirmesi - ${rating} Yıldız`,
-      message: comment || `Değerlendirme: ${rating} yıldız`,
-      status: 'Gönderildi' as const,
-      createdAt: new Date().toISOString()
-    };
-
-    // LocalStorage'dan mevcut geri bildirimleri al
-    const existingFeedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
-    existingFeedbacks.push(feedback);
-    localStorage.setItem('feedbacks', JSON.stringify(existingFeedbacks));
-
-    setShowRating(false);
-    setRating(0);
-    setComment("");
-  };
 
   // Remote stream geldiğinde video elementine bağla
   useEffect(() => {
@@ -135,33 +123,35 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
     }
   }, [remoteStream]);
 
-  const patientIdRef = useRef<string>("");
+
+  // --- Call Logic ---
 
   const startVideoCall = async () => {
-    setOpen(true);
     const current = appointments.find((app) => isCurrentAppointment(app));
     if (!current) return;
 
     // @ts-ignore
-    const pId = String(current.patient_id || current.patientId);
-    setPatientId(pId);
-    patientIdRef.current = pId;
+    const pId = String(current.patient_id || current.patientId).trim();
+    currentPatientIdRef.current = pId;
+
+    setOpen(true);
+    setConnectionStatus("Bağlanıyor...");
 
     try {
+      // 1. Get User Media
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.muted = true; // Local video muted to prevent echo
+        videoRef.current.muted = true; // IMPORTANT: Mute local video
       }
       setMicOn(true);
       setCamOn(true);
 
+      // 2. Create Peer Connection
       const peer = new RTCPeerConnection({
         iceServers: [
-          {
-            urls: "stun:stun.relay.metered.ca:80",
-          },
+          { urls: "stun:stun.relay.metered.ca:80" },
           {
             urls: "turn:global.relay.metered.ca:80",
             username: "71b0ffcc2ddbdaea66f18a13",
@@ -186,75 +176,146 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
       });
       peerRef.current = peer;
 
+      // 3. Add Tracks
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
+      // 4. Handle ICE Candidates
       peer.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit("signal", { to: pId, data: { type: "candidate", candidate: event.candidate } });
+        if (event.candidate && pId) {
+          socket.emit("signal", {
+            to: pId,
+            from: socket.id, // CRITICAL: Identify sender
+            data: {
+              type: "candidate",
+              candidate: event.candidate
+            }
+          });
         }
       };
 
+      // 5. Handle Remote Tracks
       peer.ontrack = (event) => {
+        console.log("Doctor: Received remote track");
         setRemoteStream(event.streams[0]);
       };
 
+      // 6. Connection State Monitoring
       peer.oniceconnectionstatechange = () => {
-        console.log("ICE Connection State Change:", peer.iceConnectionState);
+        console.log("Doctor ICE State:", peer.iceConnectionState);
         setConnectionStatus(peer.iceConnectionState);
       };
 
-      peer.onconnectionstatechange = () => {
-        console.log("Peer Connection State Change:", peer.connectionState);
-        if (peer.connectionState === 'connected') {
-          setConnectionStatus("Bağlandı");
-        }
-      };
-
+      // 7. Create and Send Offer
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
-      socket.emit("signal", { to: pId, data: { type: "offer", offer } });
 
-      socket.on("signal", async ({ data }) => {
-        if (!peerRef.current) return;
-        if (data.type === "answer") {
-          await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
-
-          // Process queued candidates
-          if (iceCandidatesQueue.current.length > 0) {
-            console.log(`Processing ${iceCandidatesQueue.current.length} queued candidates...`);
-            for (const candidate of iceCandidatesQueue.current) {
-              try {
-                await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-              } catch (e) {
-                console.error("Error adding queued ice candidate", e);
-              }
-            }
-            iceCandidatesQueue.current = [];
-          }
-
-        } else if (data.type === "candidate") {
-          try {
-            if (peerRef.current.remoteDescription) {
-              await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-            } else {
-              console.log("Queueing candidate (remote description not set yet)");
-              iceCandidatesQueue.current.push(data.candidate);
-            }
-          } catch (e) {
-            console.error("Error adding ice candidate", e);
-          }
-        } else if (data.type === "reject") {
-          alert("Hasta aramayı reddetti.");
-          handleExit();
+      console.log("Doctor: Sending offer to", pId);
+      socket.emit("signal", {
+        to: pId,
+        from: socket.id, // CRITICAL: Identify sender
+        data: {
+          type: "offer",
+          offer: offer,
         }
       });
+
     } catch (err) {
-      console.error(err);
+      console.error("Doctor: Error starting call:", err);
       setOpen(false);
+      setConnectionStatus("Hata oluştu");
     }
   };
 
-  // ✅ Mikrofon kapat/aç
+  // --- Cleanup Logic ---
+
+  const stopCall = useCallback(() => {
+    // 1. Send end call signal if connected
+    if (currentPatientIdRef.current && peerRef.current) {
+      // Only send if we actually had a peer connection attempt
+      socket.emit("signal", {
+        to: currentPatientIdRef.current,
+        from: socket.id,
+        data: { type: "end_call" }
+      });
+    }
+
+    // 2. Stop Tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    // 3. Close Peer Connection
+    if (peerRef.current) {
+      peerRef.current.close();
+      peerRef.current = null;
+    }
+
+    // 4. Reset State
+    setRemoteStream(null);
+    currentPatientIdRef.current = null;
+    iceCandidatesQueue.current = [];
+    setConnectionStatus("Hazırlanıyor...");
+  }, [socket]);
+
+  // Cleanup when dialog closes
+  useEffect(() => {
+    if (!open) {
+      stopCall();
+    }
+  }, [open, stopCall]);
+
+
+  // --- UI Handlers ---
+
+  const handleExit = () => {
+    setShowExitConfirm(true);
+  };
+
+  const confirmExit = () => {
+    setShowExitConfirm(false);
+    setOpen(false); // This triggers the useEffect cleanup
+    setShowRating(true);
+  };
+
+  const cancelExit = () => {
+    setShowExitConfirm(false);
+  };
+
+  const handleRatingExit = () => {
+    setShowRatingExitConfirm(true);
+  };
+
+  const confirmRatingExit = () => {
+    setShowRatingExitConfirm(false);
+    setShowRating(false);
+    setRating(0);
+    setComment("");
+  };
+
+  const cancelRatingExit = () => {
+    setShowRatingExitConfirm(false);
+  };
+
+  const submitRating = () => {
+    console.log("Değerlendirme gönderildi:", { rating, comment });
+    const feedback = {
+      type: 'değerlendirme' as const,
+      title: `Canlı Görüşme Değerlendirmesi - ${rating} Yıldız`,
+      message: comment || `Değerlendirme: ${rating} yıldız`,
+      status: 'Gönderildi' as const,
+      createdAt: new Date().toISOString()
+    };
+
+    const existingFeedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+    existingFeedbacks.push(feedback);
+    localStorage.setItem('feedbacks', JSON.stringify(existingFeedbacks));
+
+    setShowRating(false);
+    setRating(0);
+    setComment("");
+  };
+
   const toggleMic = () => {
     if (streamRef.current) {
       streamRef.current.getAudioTracks().forEach((track) => {
@@ -264,7 +325,6 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
     }
   };
 
-  // ✅ Kamera kapat/aç
   const toggleCam = () => {
     if (streamRef.current) {
       streamRef.current.getVideoTracks().forEach((track) => {
@@ -274,23 +334,6 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
     }
   };
 
-  // ✅ Dialog kapanınca video + peer temizle
-  useEffect(() => {
-    if (!open) {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
-      if (peerRef.current) {
-        peerRef.current.close();
-        peerRef.current = null;
-      }
-      setRemoteStream(null);
-
-      // Signal event listener'ını temizle
-      socket.off("signal");
-    }
-  }, [open]);
 
   return (
     <>
@@ -312,7 +355,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
         Online Randevuyu Başlat
       </Button>
 
-      <Dialog open={open} onOpenChange={() => { }}>
+      <Dialog open={open} onOpenChange={() => { /* Prevent closing on click outside */ }}>
         <DialogContent className="max-w-[95vw] md:max-w-4xl w-full p-6 [&>button]:hidden">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold border-b pb-2">Görüntülü Sohbet <span className="text-sm font-normal text-gray-500">({connectionStatus})</span></DialogTitle>
