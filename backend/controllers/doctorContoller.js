@@ -305,7 +305,7 @@ exports.getAppointmentsByDoctor = async (req, res) => {
               FLOOR(EXTRACT(YEAR FROM age(current_date, pp.birth_date))) -- FLOOR ekledik
             ELSE 0
           END as "patientAge",
-          TO_CHAR(a.datetime, 'YYYY-MM-DD"T"HH24:MI:SS') as datetime,
+          TO_CHAR(a.datetime AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') as datetime,
           a.type,
           a.status,
           d.specialty
@@ -354,7 +354,7 @@ exports.getPatientsByDoctor = async (req, res) => {
     console.log('Getting patients for doctor ID:', doctorId);
     
     const result = await query(
-      `SELECT DISTINCT
+      `SELECT
               u.user_id AS patient_id,
               u.full_name AS patient_name,
               u.email,
@@ -366,8 +366,8 @@ exports.getPatientsByDoctor = async (req, res) => {
               p.blood_type,
               a.doctor_id,
               COUNT(a.appointment_id) AS total_appointments,
-              TO_CHAR(MAX(a.datetime), 'YYYY-MM-DD"T"HH24:MI:SS') AS last_appointment_date,
-              TO_CHAR(MIN(a.datetime), 'YYYY-MM-DD"T"HH24:MI:SS') AS first_appointment_date
+              TO_CHAR(MAX(a.datetime) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') AS last_appointment_date,
+              TO_CHAR(MIN(a.datetime) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') AS first_appointment_date
        FROM appointments a
        JOIN users u ON a.patient_id = u.user_id
        LEFT JOIN patient_profiles p ON u.user_id = p.user_id
