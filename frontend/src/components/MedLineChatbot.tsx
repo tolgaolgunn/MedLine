@@ -45,7 +45,7 @@ const MedLineChatbot: React.FC = () => {
 
         try {
             const AI_API_URL = import.meta.env.VITE_AI_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://medline.onrender.com');
-            const response = await fetch(`${AI_API_URL}/api/ai/chat`, {
+            const response = await fetch(`${AI_API_URL}//api/ai/chat`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -118,7 +118,7 @@ const MedLineChatbot: React.FC = () => {
 
         try {
             const AI_API_URL = import.meta.env.VITE_AI_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://medline.onrender.com');
-            const response = await fetch(`${AI_API_URL}/api/speech_to_text`, {
+            const response = await fetch(`${AI_API_URL}//api/speech_to_text`, {
                 method: "POST",
                 body: formData,
             });
