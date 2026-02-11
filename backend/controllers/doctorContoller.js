@@ -208,14 +208,15 @@ exports.updateAppointmentStatus = async (req, res) => {
         appointmentType: type
       };
       
-      try {
-        console.log(`DoctorController: Sending confirmation email to ${patient_email} for appointment ${appointmentId}`);
-        await sendAppointmentConfirmation(patient_email, appointmentDetails);
-        console.log('DoctorController: Confirmation email sent successfully');
-      } catch (mailError) {
-        console.error('DoctorController: Failed to send confirmation email:', mailError);
-        console.error('DoctorController: Mail error stack:', mailError.stack);
-      }  
+      console.log(`DoctorController: Sending confirmation email to ${patient_email} for appointment ${appointmentId}`);
+      // Asynchronous email sending (Fire and Forget)
+      sendAppointmentConfirmation(patient_email, appointmentDetails)
+        .then(() => console.log('DoctorController: Confirmation email sent successfully'))
+        .catch(mailError => {
+          console.error('DoctorController: Failed to send confirmation email:', mailError);
+          console.error('DoctorController: Mail error stack:', mailError.stack);
+        });
+      
       // const notificationData = {
       //   userId: patient_id,
       //   title: 'Randevu Onaylandı',
@@ -248,7 +249,9 @@ exports.updateAppointmentStatus = async (req, res) => {
         reason: reason
       };
       
-     await sendAppointmentRejection(patient_email, appointmentDetails);
+      // Asynchronous email sending (Fire and Forget)
+      sendAppointmentRejection(patient_email, appointmentDetails)
+        .catch(err => console.error('DoctorController: Failed to send rejection email:', err));
       
 
       // const notificationData = {
