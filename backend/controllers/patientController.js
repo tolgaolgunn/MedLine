@@ -78,14 +78,7 @@ exports.getAppointmentsByUser = async (req, res) => {
     const userId = req.params.userId;
     const result = await db.query(
       `SELECT 
-        a.appointment_id,
-        a.patient_id,
-        a.doctor_id,
-        TO_CHAR(a.datetime AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') as datetime,
-        a.type,
-        a.status,
-        a.created_at,
-        a.updated_at,
+        a.*,
         u.full_name AS doctor_name,
         d.specialty AS doctor_specialty,
         d.hospital_name AS hospital_name
@@ -106,16 +99,7 @@ exports.getDoctorAppointmentsByDate = async (req, res) => {
   try {
     const { doctor_id, date } = req.params;
     const result = await db.query(
-      `SELECT 
-          a.appointment_id,
-          a.patient_id,
-          a.doctor_id,
-          TO_CHAR(a.datetime AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') as datetime,
-          a.type,
-          a.status,
-          a.created_at,
-          a.updated_at,
-          u.full_name AS patient_name
+      `SELECT a.*, u.full_name AS patient_name
        FROM appointments a
        JOIN users u ON a.patient_id = u.user_id
        WHERE a.doctor_id = $1 AND DATE(a.datetime) = $2
@@ -133,16 +117,7 @@ exports.getPatientAppointmentsByDate = async (req, res) => {
   try {
     const { patient_id, date } = req.params;
     const result = await db.query(
-      `SELECT 
-          a.appointment_id,
-          a.patient_id,
-          a.doctor_id,
-          TO_CHAR(a.datetime AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') as datetime,
-          a.type,
-          a.status,
-          a.created_at,
-          a.updated_at,
-          u.full_name AS doctor_name, d.specialty AS doctor_specialty
+      `SELECT a.*, u.full_name AS doctor_name, d.specialty AS doctor_specialty
        FROM appointments a
        JOIN users u ON a.doctor_id = u.user_id
        JOIN doctor_profiles d ON u.user_id = d.user_id
@@ -186,7 +161,7 @@ exports.getMyPrescriptions = async (req, res) => {
         dp.hospital_name,
         dp.city,
         dp.district,
-        TO_CHAR(a.datetime AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') as appointment_date,
+        a.datetime as appointment_date,
         a.type as appointment_type,
         json_agg(
           json_build_object(
@@ -276,7 +251,7 @@ exports.getPrescriptionDetail = async (req, res) => {
         pp.birth_date,
         pp.gender,
         
-        TO_CHAR(a.datetime AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') as appointment_date,
+        a.datetime as appointment_date,
         a.type as appointment_type,
         
         json_agg(
