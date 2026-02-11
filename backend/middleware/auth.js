@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 // Token authentication middleware
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'] || req.cookies.token || req.body.token || req.headers["Authorization"];
+  const authHeader = req.headers['authorization'] || req.cookies.token || req.headers["Authorization"];
   if(!authHeader){
     return res.status(401).json({
       success: false,
