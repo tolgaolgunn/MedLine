@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Phone, PhoneOff } from "lucide-react";
@@ -17,33 +17,56 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
-  const iceCandidatesQueue = useRef<RTCIceCandidateInit[]>([]);
+
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  /* 
-     Store the incoming offer in a ref so we can accept it 
-     later (when user clicks "Accept Call") 
-  */
+
+  // Store the incoming offer to accept later
   const pendingOfferRef = useRef<any>(null);
 
-  /* 
-     Store incoming candidates in a ref to add after remote description is set
-  */
+  // Store incoming candidates before remote description is set
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
 
-  // Remote stream geldiğinde video elementine bağla
-  useEffect(() => {
-    if (remoteStream && remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
+  // Keep track of the active socket to prevent closure issues
+  const socket = getSocket();
+
+  // --- Socket Logic ---
+
+  const handleSignal = useCallback((payload: { from: string, data: any }) => {
+    const { from, data } = payload;
+    console.log("Patient received signal:", data.type, "from:", from);
+
+    if (data.type === "offer") {
+      console.log("Patient: Received offer from doctor:", from);
+      pendingOfferRef.current = data.offer;
+      setFromId(from);
+      setIncoming(true);
+      pendingCandidatesRef.current = []; // Reset candidates for new call
     }
-  }, [remoteStream]);
 
-  // Keep track of active socket handlers to clean them up properly
-  const activeSocketRef = useRef<any>(null);
+    else if (data.type === "candidate") {
+      // Case 1: Active Connection
+      if (peerRef.current && peerRef.current.remoteDescription) {
+        peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate))
+          .catch(e => console.error("Patient: Error adding active candidate:", e));
+      }
+      // Case 2: Pending buffer (waiting to accept call)
+      else if (pendingOfferRef.current && from === fromId) {
+        console.log("Patient: Buffering candidate from doctor...");
+        pendingCandidatesRef.current.push(data.candidate);
+      }
+    }
+
+    else if (data.type === "end_call" || data.type === 'hangup') {
+      console.log("Patient: Call ended by doctor");
+      setIncoming(false);
+      setOpen(false); // Triggers cleanup via useEffect
+      setFromId(null);
+      pendingOfferRef.current = null;
+      pendingCandidatesRef.current = [];
+    }
+  }, [fromId]); // Depend on fromId to correctly buffer candidates for the specific caller
 
   useEffect(() => {
-    const socket = getSocket();
-    activeSocketRef.current = socket;
-
     console.log("PatientVideoCallButton mounted. userId:", userId);
 
     if (!userId) {
@@ -51,9 +74,7 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
       return;
     }
 
-    // Ensure we join with string ID, Trim to remove any accidental whitespace
     const roomID = String(userId).trim();
-    console.log("PatientVideoCallButton: Intended Room ID:", roomID);
 
     const emitJoin = () => {
       console.log(`Socket connected (${socket.id}). Emitting join for room: ${roomID}`);
@@ -64,79 +85,37 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
       emitJoin();
     }
 
-    // Always listen for connect/reconnect to join again
-    // Always listen for connect/reconnect to join again
+    // Register listeners
     socket.on("connect", emitJoin);
-
-    const handleSignal = ({ from, data }: any) => {
-      console.log("Patient received signal:", data.type, "from:", from, "data:", data);
-
-      if (data.type === "offer") {
-        console.log("Handling offer from doctor:", from);
-        pendingOfferRef.current = data.offer; // Buffer the offer
-        setFromId(from);
-        setIncoming(true);
-        // Clear previous candidates on new offer
-        pendingCandidatesRef.current = [];
-      }
-
-      else if (data.type === "candidate") {
-        // Case 1: Active Call - Add immediately
-        if (peerRef.current && peerRef.current.remoteDescription) {
-          peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate))
-            .catch(e => console.error("Error adding active candidate:", e));
-        }
-        // Case 2: Setting up - Queue
-        else if (pendingOfferRef.current && from === fromId) {
-          console.log("Buffering candidate from doctor...");
-          pendingCandidatesRef.current.push(data.candidate);
-        }
-      }
-
-      else if (data.type === "end_call" || data.type === 'hangup') {
-        console.log("Call ended/rejected");
-        setIncoming(false);
-        setFromId(null);
-        pendingOfferRef.current = null;
-        pendingCandidatesRef.current = [];
-        setOpen(false);
-      }
-    };
-
     socket.on("signal", handleSignal);
 
     return () => {
       socket.off("signal", handleSignal);
       socket.off("connect", emitJoin);
     };
-  }, [userId]);
+  }, [userId, handleSignal, socket]);
 
-  // Clean up media and peer when dialog closes
+
+  // --- Media & Peer Connection Logic ---
+
+  // Handle Remote Stream Display
   useEffect(() => {
-    if (!open) {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-        streamRef.current = null;
-      }
-      if (peerRef.current) {
-        peerRef.current.close();
-        peerRef.current = null;
-      }
-      setRemoteStream(null);
-      pendingCandidatesRef.current = [];
+    if (remoteStream && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
     }
-  }, [open]);
+  }, [remoteStream]);
+
 
   const acceptCall = async () => {
-    if (!pendingOfferRef.current) return;
+    if (!pendingOfferRef.current || !fromId) return;
+
     setIncoming(false);
     setOpen(true);
+    setConnectionStatus("Bağlanıyor...");
 
     const peer = new RTCPeerConnection({
       iceServers: [
-        {
-          urls: "stun:stun.relay.metered.ca:80",
-        },
+        { urls: "stun:stun.relay.metered.ca:80" },
         {
           urls: "turn:global.relay.metered.ca:80",
           username: "71b0ffcc2ddbdaea66f18a13",
@@ -164,17 +143,29 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.muted = true; // Local video must be muted
+      }
 
       stream.getTracks().forEach(track => peer.addTrack(track, stream));
 
       peer.onicecandidate = (event) => {
         if (event.candidate && fromId) {
-          getSocket().emit('signal', { to: fromId, data: { type: 'candidate', candidate: event.candidate } });
+          socket.emit('signal', {
+            to: fromId,
+            from: socket.id, // CRITICAL: Identify sender
+            data: {
+              type: 'candidate',
+              candidate: event.candidate
+            }
+          });
         }
       };
 
       peer.ontrack = (event) => {
+        console.log("Patient: Received remote track");
         setRemoteStream(event.streams[0]);
       };
 
@@ -183,23 +174,38 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
         setConnectionStatus(peer.iceConnectionState);
       };
 
+      // Set Remote Description (Offer)
       await peer.setRemoteDescription(new RTCSessionDescription(pendingOfferRef.current));
 
-      // Process buffered candidates
+      // Process buffered candidates immediately after remote description
       if (pendingCandidatesRef.current.length > 0) {
         console.log(`Processing ${pendingCandidatesRef.current.length} buffered candidates...`);
         for (const candidate of pendingCandidatesRef.current) {
-          await peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding buffered candidate:", e));
+          try {
+            await peer.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (e) {
+            console.error("Patient: Error adding buffered candidate:", e);
+          }
         }
         pendingCandidatesRef.current = [];
       }
 
+      // Create Answer
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
-      getSocket().emit('signal', { to: fromId, data: { type: 'answer', answer } });
+
+      // Send Answer
+      socket.emit('signal', {
+        to: fromId,
+        from: socket.id,
+        data: {
+          type: 'answer',
+          answer
+        }
+      });
 
     } catch (err) {
-      console.error(err);
+      console.error("Patient: Error accepting call:", err);
       setOpen(false);
     }
   };
@@ -207,18 +213,39 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
 
   const declineCall = () => {
     if (fromId) {
-      const socket = getSocket();
-      socket.emit('signal', { to: fromId, data: { type: 'reject' } });
+      socket.emit('signal', {
+        to: fromId,
+        from: socket.id,
+        data: { type: 'reject' }
+      });
     }
     setIncoming(false);
     setFromId(null);
     pendingOfferRef.current = null;
+    pendingCandidatesRef.current = [];
   };
+
+  // Cleanup when dialog closes
+  useEffect(() => {
+    if (!open) {
+      // Cleanup tracks
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      // Close Peer
+      if (peerRef.current) {
+        peerRef.current.close();
+        peerRef.current = null;
+      }
+      setRemoteStream(null);
+      pendingCandidatesRef.current = [];
+    }
+  }, [open]);
 
   return (
     <>
       <Dialog open={incoming} onOpenChange={(val) => {
-        // If dialog is closed by user clicking outside/escape without answering
         if (!val) declineCall();
         else setIncoming(val);
       }}>
