@@ -195,9 +195,28 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
         if (!peerRef.current) return;
         if (data.type === "answer") {
           await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+
+          // Process queued candidates
+          if (iceCandidatesQueue.current.length > 0) {
+            console.log(`Processing ${iceCandidatesQueue.current.length} queued candidates...`);
+            for (const candidate of iceCandidatesQueue.current) {
+              try {
+                await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (e) {
+                console.error("Error adding queued ice candidate", e);
+              }
+            }
+            iceCandidatesQueue.current = [];
+          }
+
         } else if (data.type === "candidate") {
           try {
-            await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+            if (peerRef.current.remoteDescription) {
+              await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } else {
+              console.log("Queueing candidate (remote description not set yet)");
+              iceCandidatesQueue.current.push(data.candidate);
+            }
           } catch (e) {
             console.error("Error adding ice candidate", e);
           }

@@ -25,6 +25,11 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
   */
   const pendingOfferRef = useRef<any>(null);
 
+  /* 
+     Store incoming candidates in a ref to add after remote description is set
+  */
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
+
   // Remote stream geldiğinde video elementine bağla
   useEffect(() => {
     if (remoteStream && remoteVideoRef.current) {
@@ -70,12 +75,20 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
         pendingOfferRef.current = data.offer; // Buffer the offer
         setFromId(from);
         setIncoming(true);
+        // Clear previous candidates on new offer
+        pendingCandidatesRef.current = [];
+      } else if (data.type === "candidate") {
+        if (pendingOfferRef.current && from === fromId) {
+          console.log("Buffering candidate from doctor before accept...");
+          pendingCandidatesRef.current.push(data.candidate);
+        }
       } else if (data.type === "end_call") {
         console.log("Doctor ended call (ringing stage)");
         // Doctor cancelled ringing
         setIncoming(false);
         setFromId(null);
         pendingOfferRef.current = null;
+        pendingCandidatesRef.current = [];
       }
     };
 
@@ -99,6 +112,7 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
         peerRef.current = null;
       }
       setRemoteStream(null);
+      pendingCandidatesRef.current = [];
     }
   }, [open]);
 
@@ -133,6 +147,16 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
       };
 
       await peer.setRemoteDescription(new RTCSessionDescription(pendingOfferRef.current));
+
+      // Process buffered candidates
+      if (pendingCandidatesRef.current.length > 0) {
+        console.log(`Processing ${pendingCandidatesRef.current.length} buffered candidates...`);
+        for (const candidate of pendingCandidatesRef.current) {
+          await peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error("Error adding buffered candidate:", e));
+        }
+        pendingCandidatesRef.current = [];
+      }
+
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
       getSocket().emit('signal', { to: fromId, data: { type: 'answer', answer } });
@@ -140,7 +164,9 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
       // Gelen adayları dinle
       getSocket().on('signal', async ({ data }) => {
         if (data.type === 'candidate' && peerRef.current) {
-          try { await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) { }
+          try {
+            await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+          } catch (e) { console.error("Error adding candidate during call:", e); }
         } else if (data.type === 'hangup') {
           console.log("Call ended by signal");
           setOpen(false);
