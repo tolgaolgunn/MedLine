@@ -16,7 +16,11 @@ exports.createAppointment = async (req, res) => {
 
     // ISO string'i PostgreSQL timestamp'ine çevir ve geçmiş kontrolü yap
     const parsedDate = new Date(datetime);
+
+    parsedDate.setHours(parsedDate.getHours() - 3);
+
     const now = new Date();
+
     if (parsedDate.getTime() <= now.getTime()) {
       return res.status(409).json({
         message: 'Geçmiş bir saat için randevu alamazsınız.'
@@ -56,8 +60,6 @@ exports.createAppointment = async (req, res) => {
       });
     }
 
-    // Randevuyu beklemede (pending) durumunda oluştur
-    // Randevuyu oluştur
     const result = await db.query(
       `INSERT INTO appointments (patient_id, doctor_id, datetime, type, status) 
        VALUES ($1, $2, $3::timestamp, $4, 'pending') RETURNING *`,
@@ -91,6 +93,7 @@ exports.getAppointmentsByUser = async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
+    console.error("Veritabanı hatası:", err);
     res.status(500).json({ message: err.message });
   }
 };
