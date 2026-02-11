@@ -104,15 +104,12 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
     setComment("");
   };
 
-  // Değerlendirme çıkışını iptal et
   const cancelRatingExit = () => {
     setShowRatingExitConfirm(false);
   };
 
-  // Değerlendirmeyi gönder
   const submitRating = () => {
     console.log("Değerlendirme gönderildi:", { rating, comment });
-    // Geri bildirim kısmına değerlendirme gönder
     const feedback = {
       type: 'değerlendirme' as const,
       title: `Canlı Görüşme Değerlendirmesi - ${rating} Yıldız`,
@@ -160,7 +157,33 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
       setMicOn(true);
       setCamOn(true);
 
-      const peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+      const peer = new RTCPeerConnection({
+        iceServers: [
+          {
+            urls: "stun:stun.relay.metered.ca:80",
+          },
+          {
+            urls: "turn:global.relay.metered.ca:80",
+            username: "71b0ffcc2ddbdaea66f18a13",
+            credential: "nKRUR00WE2jnrzXv",
+          },
+          {
+            urls: "turn:global.relay.metered.ca:80?transport=tcp",
+            username: "71b0ffcc2ddbdaea66f18a13",
+            credential: "nKRUR00WE2jnrzXv",
+          },
+          {
+            urls: "turn:global.relay.metered.ca:443",
+            username: "71b0ffcc2ddbdaea66f18a13",
+            credential: "nKRUR00WE2jnrzXv",
+          },
+          {
+            urls: "turns:global.relay.metered.ca:443?transport=tcp",
+            username: "71b0ffcc2ddbdaea66f18a13",
+            credential: "nKRUR00WE2jnrzXv",
+          },
+        ],
+      });
       peerRef.current = peer;
 
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
