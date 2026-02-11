@@ -133,6 +133,8 @@ const DoctorDashboard = () => {
 
         const mapped = response.data.map((item: any) => {
           const dateObj = new Date(item.datetime);
+          // Timezone düzeltmesi: UTC+3 görünümünü düzeltmek için 3 saat geri al
+          dateObj.setHours(dateObj.getHours() - 3);
 
           // Debug için item objesini konsola yazdır
           console.log('Appointment item:', item);

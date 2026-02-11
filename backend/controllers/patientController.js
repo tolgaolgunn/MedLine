@@ -17,10 +17,9 @@ exports.createAppointment = async (req, res) => {
     // ISO string'i PostgreSQL timestamp'ine çevir ve geçmiş kontrolü yap
     const parsedDate = new Date(datetime);
 
-    parsedDate.setHours(parsedDate.getHours() - 3);
-
     const now = new Date();
-
+    
+    // Geçmiş zaman kontrolü (parsedDate artık gerçek UTC olduğu için now ile kıyaslanabilir)
     if (parsedDate.getTime() <= now.getTime()) {
       return res.status(409).json({
         message: 'Geçmiş bir saat için randevu alamazsınız.'
