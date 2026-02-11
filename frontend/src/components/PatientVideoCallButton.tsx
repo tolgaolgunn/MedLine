@@ -65,6 +65,7 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
     }
 
     // Always listen for connect/reconnect to join again
+    // Always listen for connect/reconnect to join again
     socket.on("connect", emitJoin);
 
     const handleSignal = ({ from, data }: any) => {
@@ -77,18 +78,28 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
         setIncoming(true);
         // Clear previous candidates on new offer
         pendingCandidatesRef.current = [];
-      } else if (data.type === "candidate") {
-        if (pendingOfferRef.current && from === fromId) {
-          console.log("Buffering candidate from doctor before accept...");
+      }
+
+      else if (data.type === "candidate") {
+        // Case 1: Active Call - Add immediately
+        if (peerRef.current && peerRef.current.remoteDescription) {
+          peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate))
+            .catch(e => console.error("Error adding active candidate:", e));
+        }
+        // Case 2: Setting up - Queue
+        else if (pendingOfferRef.current && from === fromId) {
+          console.log("Buffering candidate from doctor...");
           pendingCandidatesRef.current.push(data.candidate);
         }
-      } else if (data.type === "end_call") {
-        console.log("Doctor ended call (ringing stage)");
-        // Doctor cancelled ringing
+      }
+
+      else if (data.type === "end_call" || data.type === 'hangup') {
+        console.log("Call ended/rejected");
         setIncoming(false);
         setFromId(null);
         pendingOfferRef.current = null;
         pendingCandidatesRef.current = [];
+        setOpen(false);
       }
     };
 
@@ -161,25 +172,12 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
       await peer.setLocalDescription(answer);
       getSocket().emit('signal', { to: fromId, data: { type: 'answer', answer } });
 
-      // Gelen adayları dinle
-      getSocket().on('signal', async ({ data }) => {
-        if (data.type === 'candidate' && peerRef.current) {
-          try {
-            await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-          } catch (e) { console.error("Error adding candidate during call:", e); }
-        } else if (data.type === 'hangup') {
-          console.log("Call ended by signal");
-          setOpen(false);
-          setIncoming(false);
-          setFromId(null);
-          pendingOfferRef.current = null;
-        }
-      });
     } catch (err) {
       console.error(err);
       setOpen(false);
     }
   };
+
 
   const declineCall = () => {
     if (fromId) {
