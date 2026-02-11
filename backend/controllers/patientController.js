@@ -115,7 +115,6 @@ exports.getDoctorAppointmentsByDate = async (req, res) => {
           a.status,
           a.created_at,
           a.updated_at,
-          a.symptoms,
           u.full_name AS patient_name
        FROM appointments a
        JOIN users u ON a.patient_id = u.user_id
@@ -143,7 +142,6 @@ exports.getPatientAppointmentsByDate = async (req, res) => {
           a.status,
           a.created_at,
           a.updated_at,
-          a.symptoms,
           u.full_name AS doctor_name, d.specialty AS doctor_specialty
        FROM appointments a
        JOIN users u ON a.doctor_id = u.user_id
