@@ -27,12 +27,18 @@ transporter.verify(function (error, success) {
 });
 
 async function sendResetMail(to, subject, html) {
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to,
-    subject,
-    html,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      html,
+    });
+    console.log('MailService: Reset email sent. MessageId:', info.messageId);
+  } catch (error) {
+    console.error('MailService: Error sending reset email:', error);
+    throw error;
+  }
 }
 
 async function sendAppointmentRejection(to, appointmentDetails) {
@@ -63,12 +69,18 @@ async function sendAppointmentRejection(to, appointmentDetails) {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to,
-    subject: 'Randevu Red Bildirimi',
-    html,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject: 'Randevu Red Bildirimi',
+      html,
+    });
+    console.log('MailService: Rejection email sent. MessageId:', info.messageId);
+  } catch (error) {
+    console.error('MailService: Error sending rejection email:', error);
+    // Don't throw here to avoid crashing the status update flow, just log it
+  }
 }
 
 async function sendAppointmentConfirmation(to, appointmentDetails) {

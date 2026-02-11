@@ -142,6 +142,24 @@ cron.schedule('*/10 * * * *', () => {
             });
         });
 
+        // Test Email Endpoint
+        app.get('/test-email', async (req, res) => {
+            const { sendResetMail } = require('./services/mailService');
+            try {
+                // Send to self or a hardcoded email for testing
+                // Assuming process.env.MY_GMAIL is set
+                if (!process.env.MY_GMAIL) {
+                    throw new Error('MY_GMAIL environment variable is not set');
+                }
+                
+                await sendResetMail(process.env.MY_GMAIL, 'Test Email from Backend', '<h1>It Works!</h1><p>This is a test email from the backend.</p>');
+                res.send(`Email sent successfully to ${process.env.MY_GMAIL}`);
+            } catch (error) {
+                console.error('Test email error:', error);
+                res.status(500).send(`Failed to send email: ${error.message}`);
+            }
+        });
+
         // Export io if needed in other modules
         module.exports.io = io;
     });
