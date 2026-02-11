@@ -360,9 +360,17 @@ const DoctorDashboard = () => {
       if (response.status === 200 || response.status === 201 || response.status === 204) {
         setAppointments(prev =>
           prev.map(app =>
-            app.id === appointmentId ? { ...app, status: newStatus } : app
+            String(app.id) === String(appointmentId) ? { ...app, status: newStatus } : app
           )
         );
+
+        // Modal açıksa kapat
+        if (showDetail && selectedAppointment && String(selectedAppointment.id) === String(appointmentId)) {
+          setSelectedAppointment(prev => prev ? { ...prev, status: newStatus } : null);
+          // İsteğe bağlı: Modalı kapatmak isterseniz aşağıdakini açın
+          // setShowDetail(false); 
+        }
+
         // İstatistikleri güncelle
         await refreshStatistics();
         toast.success('Randevu durumu güncellendi!');

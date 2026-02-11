@@ -17,13 +17,10 @@ const transporter = nodemailer.createTransport({
 transporter.verify(function (error, success) {
   if (error) {
     console.log('MailService Error: Transporter connection failed:', error);
+    console.error('MailService: Check your EMAIL_USER and EMAIL_PASS (or App Password) in .env');
   } else {
     console.log('MailService: Server is ready to take our messages');
-    console.log('MailService Config:', {
-      host: process.env.EMAIL_HOST,
-      user: process.env.MY_GMAIL ? '***Defined***' : '***Undefined***',
-      fromUser: process.env.EMAIL_USER ? '***Defined***' : '***Undefined***'
-    });
+    console.log('MailService Config loaded for:', process.env.EMAIL_USER);
   }
 });
 
@@ -73,6 +70,7 @@ async function sendAppointmentRejection(to, appointmentDetails) {
 }
 
 async function sendAppointmentConfirmation(to, appointmentDetails) {
+  console.log('MailService: sendAppointmentConfirmation called for:', to);
   const { doctorName, doctorSpecialty, date, time, location, appointmentType } = appointmentDetails;
   
   const html = `
@@ -102,12 +100,18 @@ async function sendAppointmentConfirmation(to, appointmentDetails) {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to,
-    subject: 'Randevu Onayı - MedLine',
-    html,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject: 'Randevu Onayı - MedLine',
+      html,
+    });
+    console.log('MailService: Email sent. MessageId:', info.messageId);
+  } catch (error) {
+    console.error('MailService: Error sending email in sendAppointmentConfirmation:', error);
+    throw error;
+  }
 }
 
 async function sendAppointmentRejection(to, appointmentDetails) {
