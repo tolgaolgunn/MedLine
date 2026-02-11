@@ -114,41 +114,5 @@ async function sendAppointmentConfirmation(to, appointmentDetails) {
   }
 }
 
-async function sendAppointmentRejection(to, appointmentDetails) {
-  const { doctorName, doctorSpecialty, date, time, rejectReason } = appointmentDetails;
-  
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #991b1b;">Randevu Talebi Reddedildi</h2>
-      <p>Sayın Hastamız,</p>
-      <p>Aşağıdaki randevu talebiniz doktorumuz tarafından reddedilmiştir:</p>
-      
-      <div style="background-color: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <p><strong>Doktor:</strong> ${doctorName}</p>
-        <p><strong>Uzmanlık Alanı:</strong> ${doctorSpecialty}</p>
-        <p><strong>Talep Edilen Tarih:</strong> ${date}</p>
-        <p><strong>Talep Edilen Saat:</strong> ${time}</p>
-        ${rejectReason ? `<p><strong>Red Nedeni:</strong> ${rejectReason}</p>` : ''}
-      </div>
-      
-      <p>Yeni bir randevu talebi oluşturmak için aşağıdaki seçenekleri kullanabilirsiniz:</p>
-      <ul>
-        <li>MedLine web sitesi üzerinden yeni bir randevu talep edebilirsiniz.</li>
-        <li>Farklı bir tarih veya saat seçebilirsiniz.</li>
-        <li>Aynı uzmanlık alanında başka bir doktordan randevu talep edebilirsiniz.</li>
-      </ul>
-      
-      <p>İlginiz için teşekkür ederiz.</p>
-      <p style="color: #475569;">MedLine Sağlık</p>
-    </div>
-  `;
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to,
-    subject: 'Randevu Talebi Reddedildi - MedLine',
-    html,
-  });
-}
 
 module.exports = { sendResetMail, sendAppointmentConfirmation, sendAppointmentRejection };
