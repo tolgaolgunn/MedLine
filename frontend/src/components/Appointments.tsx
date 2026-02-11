@@ -105,14 +105,22 @@ const Appointments: React.FC = () => {
       const data = await response.json();
 
       // API'den gelen veriyi işle
-      const formattedAppointments = data.map((apt: any) => ({
-        ...apt,
-        date: new Date(apt.datetime).toLocaleDateString('tr-TR'),
-        time: new Date(apt.datetime).toLocaleTimeString('tr-TR', {
-          hour: '2-digit',
-          minute: '2-digit'
-        })
-      }));
+      const formattedAppointments = data.map((apt: any) => {
+        // Gelen format: '2026-02-27T15:30:00.000Z'
+        // Tarayıcı bunu yerel saate (UTC+3) çevirip 18:30 yapıyor.
+        // Bizim 15:30 göstermemiz lazım, o yüzden 3 saat çıkarıyoruz.
+        const dateObj = new Date(apt.datetime);
+        dateObj.setHours(dateObj.getHours() - 3);
+
+        return {
+          ...apt,
+          date: dateObj.toLocaleDateString('tr-TR'),
+          time: dateObj.toLocaleTimeString('tr-TR', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        };
+      });
 
       setAppointments(formattedAppointments);
     } catch (err) {
