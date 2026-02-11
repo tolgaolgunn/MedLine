@@ -222,16 +222,18 @@ exports.updateAppointmentStatus = async (req, res) => {
 
       try {
         console.log(
-          `Sending confirmation mail → ${patient_email}`
+          `[MAIL][RANDEVU_ONAY] Onay maili hazırlanıyor → Hasta: ${patient_email} | Doktor: ${doctor_name} | Tarih: ${formattedDate} ${formattedTime}`
         );
         await sendAppointmentConfirmation(
           patient_email,
           appointmentDetails
         );
-        console.log("Confirmation mail sent successfully");
+        console.log(
+          `[MAIL][RANDEVU_ONAY] Onay maili başarıyla gönderildi → ${patient_email}`
+        );
       } catch (mailError) {
         console.error(
-          "Confirmation mail failed:",
+          "[MAIL][RANDEVU_ONAY] Onay maili gönderilirken hata oluştu:",
           mailError
         );
       }
