@@ -1,25 +1,35 @@
 const nodemailer = require("nodemailer");
 
-// SendGrid transporter
+/**
+ * Genel SMTP transporter
+ * 
+ * .env'de aşağıdaki değişkenleri tanımlayacaksın:
+ *  SMTP_HOST=...
+ *  SMTP_PORT=587
+ *  SMTP_SECURE=false        # 465 için true, 587/25 için genelde false
+ *  SMTP_USER=...
+ *  SMTP_PASS=...
+ *  EMAIL_FROM=Ad Soyad <noreply@domain.com>
+ */
 const transporter = nodemailer.createTransport({
-  host: "smtp.sendgrid.net",
-  port: 587,
-  secure: false,
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || "587", 10),
+  secure: String(process.env.SMTP_SECURE || "false").toLowerCase() === "true",
   auth: {
-    user: "apikey", // SABİT
-    pass: process.env.SENDGRID_API_KEY,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
   connectionTimeout: 10000,
   greetingTimeout: 10000,
   socketTimeout: 10000,
 });
 
-// Verify transporter
-transporter.verify((error) => {
+// Bağlantı testi
+transporter.verify((error, success) => {
   if (error) {
-    console.error("MailService: SendGrid connection failed:", error);
+    console.error("MailService: SMTP connection failed:", error.message || error);
   } else {
-    console.log("MailService: SendGrid SMTP ready");
+    console.log("MailService: SMTP ready");
   }
 });
 
@@ -33,7 +43,7 @@ async function sendResetMail(to, subject, html) {
     });
     console.log("MailService: Reset email sent:", info.messageId);
   } catch (error) {
-    console.error("MailService: Error sending reset email:", error);
+    console.error("MailService: Error sending reset email:", error.message || error);
     throw error;
   }
 }
@@ -69,7 +79,7 @@ async function sendAppointmentRejection(to, appointmentDetails) {
     });
     console.log("MailService: Rejection email sent:", info.messageId);
   } catch (error) {
-    console.error("MailService: Error sending rejection email:", error);
+    console.error("MailService: Error sending rejection email:", error.message || error);
   }
 }
 
@@ -105,7 +115,7 @@ async function sendAppointmentConfirmation(to, appointmentDetails) {
     });
     console.log("MailService: Confirmation email sent:", info.messageId);
   } catch (error) {
-    console.error("MailService: Error sending confirmation email:", error);
+    console.error("MailService: Error sending confirmation email:", error.message || error);
     throw error;
   }
 }
