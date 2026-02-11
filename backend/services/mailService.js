@@ -13,6 +13,20 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Verify transporter connection
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log('MailService Error: Transporter connection failed:', error);
+  } else {
+    console.log('MailService: Server is ready to take our messages');
+    console.log('MailService Config:', {
+      host: process.env.EMAIL_HOST,
+      user: process.env.MY_GMAIL ? '***Defined***' : '***Undefined***',
+      fromUser: process.env.EMAIL_USER ? '***Defined***' : '***Undefined***'
+    });
+  }
+});
+
 async function sendResetMail(to, subject, html) {
   await transporter.sendMail({
     from: process.env.EMAIL_USER,

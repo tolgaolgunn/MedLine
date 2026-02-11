@@ -209,7 +209,14 @@ exports.updateAppointmentStatus = async (req, res) => {
         appointmentType: type
       };
       
-      await sendAppointmentConfirmation(patient_email, appointmentDetails);
+      try {
+        console.log(`DoctorController: Sending confirmation email to ${patient_email}`);
+        await sendAppointmentConfirmation(patient_email, appointmentDetails);
+        console.log('DoctorController: Confirmation email sent successfully');
+      } catch (mailError) {
+        console.error('DoctorController: Failed to send confirmation email:', mailError);
+        // Don't block the response, but log the error
+      }
       
       const notificationData = {
         userId: patient_id,
@@ -539,7 +546,7 @@ exports.addMedicalResultWithFiles = async (req, res) => {
       });
     }
 
-    // Önce medical_results tablosuna kaydet
+
     const resultInsert = await client.query(
       `INSERT INTO medical_results (doctor_id, patient_id, title, details, record_type)
        VALUES ($1, $2, $3, $4, $5)
