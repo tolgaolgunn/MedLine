@@ -1,7 +1,7 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const { sendAppointmentConfirmation } = require('../services/mailService');
+const { sendAppointmentConfirmation, sendAppointmentRejection } = require('../services/mailService');
 const MedicalResultModel = require('../models/medicalResultModel');
 const NotificationModel = require('../models/notificationModel');
 const { getUserByEmail, getUserByNationalId, createUser } = require('../models/userModel');
@@ -186,7 +186,7 @@ exports.updateAppointmentStatus = async (req, res) => {
     );
 
     // Mail servisi modülünü import et
-    const { sendAppointmentConfirmation, sendAppointmentRejection } = require('../services/mailService');
+    
 
     // Randevu durumuna göre mail gönder
     const appointmentData = appointmentResult.rows[0];
