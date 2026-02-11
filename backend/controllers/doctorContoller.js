@@ -151,15 +151,16 @@ exports.getActiveAppointments = async (req, res) => {
 exports.updateAppointmentStatus = async (req, res) => {
   try {
     const { appointmentId } = req.params;
-    const { status,reason } = req.body;
+    const { status, reason } = req.body;
 
-    if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
+    if (!["pending", "confirmed", "cancelled", "completed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
     }
 
-    // Randevu, hasta ve doktor bilgilerini al
+    // Randevu + kullanıcı bilgileri
     const appointmentResult = await query(
-      `SELECT 
+      `
+      SELECT 
         a.*,
         u.email AS patient_email,
         u.full_name AS patient_name,
@@ -169,124 +170,153 @@ exports.updateAppointmentStatus = async (req, res) => {
       JOIN users u ON a.patient_id = u.user_id
       JOIN users d ON a.doctor_id = d.user_id
       JOIN doctor_profiles dp ON a.doctor_id = dp.user_id
-      WHERE a.appointment_id = $1`,
+      WHERE a.appointment_id = $1
+      `,
       [appointmentId]
     );
 
     if (appointmentResult.rowCount === 0) {
-      return res.status(404).json({ message: 'Appointment not found' });
+      return res.status(404).json({ message: "Appointment not found" });
     }
 
     const result = await query(
-      `UPDATE appointments 
-       SET status = $1, updated_at = NOW() 
-       WHERE appointment_id = $2 
-       RETURNING *`,
+      `
+      UPDATE appointments 
+      SET status = $1, updated_at = NOW() 
+      WHERE appointment_id = $2 
+      RETURNING *
+      `,
       [status, appointmentId]
     );
 
-    
-
-    // Randevu durumuna göre mail gönder
     const appointmentData = appointmentResult.rows[0];
-    const { patient_id, patient_email, doctor_name, doctor_specialty, datetime, type } = appointmentData;
-    
-    const formattedDate = new Date(datetime).toLocaleDateString('tr-TR');
-    const formattedTime = new Date(datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    const {
+      patient_id,
+      patient_email,
+      doctor_name,
+      doctor_specialty,
+      datetime,
+      type,
+    } = appointmentData;
 
-    
-    console.log(`Debug: updateAppointmentStatus called. Status: ${status}, AppointmentId: ${appointmentId}`);
-    
-    // Randevu durumu 'confirmed' ise mail gönder
-    if (status === 'confirmed') {
+    const formattedDate = new Date(datetime).toLocaleDateString("tr-TR");
+    const formattedTime = new Date(datetime).toLocaleTimeString("tr-TR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    console.log(
+      `updateAppointmentStatus → status:${status}, appointment:${appointmentId}`
+    );
+
+    // ================= CONFIRMED =================
+    if (status === "confirmed") {
       const appointmentDetails = {
         doctorName: doctor_name,
         doctorSpecialty: doctor_specialty,
         date: formattedDate,
         time: formattedTime,
-        location: 'MedLine Hastanesi',
-        appointmentType: type
-      };
-      
-      console.log('Debug: Status is confirmed. Preparing to send email...');
-      console.log(`DoctorController: Sending confirmation email to ${patient_email} for appointment ${appointmentId}`);
-     
-      sendAppointmentConfirmation(patient_email, appointmentDetails)
-        .then(() => console.log('DoctorController: Confirmation email sent successfully'))
-        .catch(mailError => {
-          console.error('DoctorController: Failed to send confirmation email:', mailError);
-          console.error('DoctorController: Mail error stack:', mailError.stack);
-        });
-      
-      const notificationData = {
-        userId: patient_id,
-        title: 'Randevu Onaylandı',
-        message: `Dr. ${doctor_name} ile ${formattedDate} tarihinde saat ${formattedTime} için randevunuz onaylandı.`,
-        type: 'appointment'
+        location: "MedLine Hastanesi",
+        appointmentType: type,
       };
 
       try {
-        const savedNotification = await NotificationModel.createNotification(notificationData)
-        if (req.io) {
-          console.log(`Emitting appointment confirmation notification to patient room: ${patient_id}`);
-          req.io.to(String(patient_id)).emit('notification', {
-            id: savedNotification ? savedNotification.notification_id : Date.now(),
-            title: notificationData.title,
-            message: notificationData.message,
-            type: notificationData.type,
-            read: false,
-            timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
-          });
-        }
-      } catch (notifError) {
-        console.error('Error saving/sending appointment notification:', notifError);
+        console.log(
+          `Sending confirmation mail → ${patient_email}`
+        );
+        await sendAppointmentConfirmation(
+          patient_email,
+          appointmentDetails
+        );
+        console.log("Confirmation mail sent successfully");
+      } catch (mailError) {
+        console.error(
+          "Confirmation mail failed:",
+          mailError
+        );
       }
-    } else if (status === 'cancelled') {
+
+      const notificationData = {
+        userId: patient_id,
+        title: "Randevu Onaylandı",
+        message: `Dr. ${doctor_name} ile ${formattedDate} tarihinde saat ${formattedTime} için randevunuz onaylandı.`,
+        type: "appointment",
+      };
+
+      try {
+        const savedNotification =
+          await NotificationModel.createNotification(notificationData);
+
+        if (req.io) {
+          req.io.to(String(patient_id)).emit("notification", {
+            id: savedNotification.notification_id,
+            title: notificationData.title,
+            message: notificationData.message,
+            type: notificationData.type,
+            read: false,
+            timestamp: savedNotification.created_at,
+          });
+        }
+      } catch (notifError) {
+        console.error("Notification error:", notifError);
+      }
+    }
+
+    // ================= CANCELLED =================
+    if (status === "cancelled") {
       const appointmentDetails = {
         doctorName: doctor_name,
         doctorSpecialty: doctor_specialty,
         date: formattedDate,
         time: formattedTime,
-        reason: reason
-      };
-      
-      sendAppointmentRejection(patient_email, appointmentDetails)
-        .catch(err => console.error('DoctorController: Failed to send rejection email:', err));
-      
-
-      const notificationData = {
-        userId: patient_id,
-        title: 'Randevu İptal Edildi',
-        message: `Dr. ${doctor_name} ile ${formattedDate} tarihinde saat ${formattedTime} için randevunuz iptal edildi.${req.body.reason ? ' Sebep: ' + req.body.reason : ''}`,
-        type: 'appointment'
+        reason,
       };
 
       try {
-        const savedNotification = await NotificationModel.createNotification(notificationData);
+        await sendAppointmentRejection(
+          patient_email,
+          appointmentDetails
+        );
+        console.log("Rejection mail sent");
+      } catch (err) {
+        console.error("Rejection mail failed:", err);
+      }
+
+      const notificationData = {
+        userId: patient_id,
+        title: "Randevu İptal Edildi",
+        message: `Dr. ${doctor_name} ile ${formattedDate} tarihinde saat ${formattedTime} için randevunuz iptal edildi${
+          reason ? " | Sebep: " + reason : ""
+        }`,
+        type: "appointment",
+      };
+
+      try {
+        const savedNotification =
+          await NotificationModel.createNotification(notificationData);
 
         if (req.io) {
-          console.log(`Emitting appointment cancellation notification to patient room: ${patient_id}`);
-          req.io.to(String(patient_id)).emit('notification', {
-            id: savedNotification ? savedNotification.notification_id : Date.now(),
+          req.io.to(String(patient_id)).emit("notification", {
+            id: savedNotification.notification_id,
             title: notificationData.title,
             message: notificationData.message,
             type: notificationData.type,
             read: false,
-            timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
+            timestamp: savedNotification.created_at,
           });
         }
       } catch (notifError) {
-        console.error('Error saving/sending appointment notification:', notifError);
-        // Bildirim hatası ana işlemi durdurmamalı
+        console.error("Notification error:", notifError);
       }
     }
 
     res.json(result.rows[0]);
   } catch (err) {
-    console.log('Error updating appointment status:', err);
-    res.status(500).json({ message: 'Failed to update appointment status' });
+    console.error("updateAppointmentStatus error:", err);
+    res.status(500).json({ message: "Failed to update appointment status" });
   }
 };
+
 
 // Patient Management
 exports.getAppointmentsByDoctor = async (req, res) => {
