@@ -127,7 +127,7 @@ exports.getActiveAppointments = async (req, res) => {
       `SELECT a.appointment_id AS id,
               a.patient_id,
               u.full_name AS patientName,
-              a.datetime,
+              TO_CHAR(a.datetime, 'YYYY-MM-DD"T"HH24:MI:SS') as datetime,
               a.type,
               a.status,
               d.specialty
@@ -147,67 +147,7 @@ exports.getActiveAppointments = async (req, res) => {
   }
 };
 
-exports.getAppointmentsByDoctor = async (req, res) => {
-  try {
-    const { doctorId } = req.params;
-    console.log('Fetching appointments for doctor:', doctorId);
-    
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
 
-    const result = await query(
-      `SELECT 
-          a.appointment_id,
-          a.patient_id,
-          u.full_name AS "patientName",  // Çift tırnak içinde büyük harfle
-          pp.birth_date,
-          CASE 
-            WHEN pp.birth_date IS NOT NULL THEN
-              FLOOR(EXTRACT(YEAR FROM age(current_date, pp.birth_date)))
-            ELSE 0
-          END as "patientAge",  // Çift tırnak içinde büyük harfle
-          a.datetime,
-          a.type,
-          a.status,
-          d.specialty
-       FROM appointments a
-       JOIN users u ON a.patient_id = u.user_id
-       JOIN doctor_profiles d ON a.doctor_id = d.user_id
-       LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id
-       WHERE a.doctor_id = $1
-         AND a.datetime >= $2
-         AND a.status != 'cancelled'
-       ORDER BY a.datetime ASC`,
-      [doctorId, today.toISOString()]
-    );
-    
-    console.log('Raw SQL result:', JSON.stringify(result.rows, null, 2));
-
-    // Format the response data
-    const formattedAppointments = result.rows.map(appointment => {
-      return {
-        appointment_id: appointment.appointment_id,
-        patient_id: appointment.patient_id,
-        patientName: appointment.patientName || 'İsimsiz Hasta', // Büyük harfle
-        patientAge: Math.floor(appointment.patientAge) || 0,
-        datetime: appointment.datetime,
-        type: appointment.type,
-        status: appointment.status,
-        specialty: appointment.specialty,
-        symptoms: appointment.symptoms || ''
-      };
-    });
-
-    res.json(formattedAppointments);
-  } catch (err) {
-    console.error('Error getting doctor appointments:', err);
-    res.status(500).json({ 
-      message: 'Randevular alınırken bir hata oluştu',
-      error: err.message 
-    });
-  }
-};
 exports.updateAppointmentStatus = async (req, res) => {
   try {
     const { appointmentId } = req.params;
@@ -271,7 +211,6 @@ exports.updateAppointmentStatus = async (req, res) => {
       
       await sendAppointmentConfirmation(patient_email, appointmentDetails);
       
-      // Uygulama içi bildirim oluştur
       const notificationData = {
         userId: patient_id,
         title: 'Randevu Onaylandı',
@@ -366,7 +305,7 @@ exports.getAppointmentsByDoctor = async (req, res) => {
               FLOOR(EXTRACT(YEAR FROM age(current_date, pp.birth_date))) -- FLOOR ekledik
             ELSE 0
           END as "patientAge",
-          a.datetime,
+          TO_CHAR(a.datetime, 'YYYY-MM-DD"T"HH24:MI:SS') as datetime,
           a.type,
           a.status,
           d.specialty
@@ -427,8 +366,8 @@ exports.getPatientsByDoctor = async (req, res) => {
               p.blood_type,
               a.doctor_id,
               COUNT(a.appointment_id) AS total_appointments,
-              MAX(a.datetime) AS last_appointment_date,
-              MIN(a.datetime) AS first_appointment_date
+              TO_CHAR(MAX(a.datetime), 'YYYY-MM-DD"T"HH24:MI:SS') AS last_appointment_date,
+              TO_CHAR(MIN(a.datetime), 'YYYY-MM-DD"T"HH24:MI:SS') AS first_appointment_date
        FROM appointments a
        JOIN users u ON a.patient_id = u.user_id
        LEFT JOIN patient_profiles p ON u.user_id = p.user_id
