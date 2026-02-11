@@ -185,7 +185,6 @@ exports.updateAppointmentStatus = async (req, res) => {
       [status, appointmentId]
     );
 
-    // Mail servisi modülünü import et
     
 
     // Randevu durumuna göre mail gönder
@@ -217,29 +216,29 @@ exports.updateAppointmentStatus = async (req, res) => {
         console.error('DoctorController: Failed to send confirmation email:', mailError);
         console.error('DoctorController: Mail error stack:', mailError.stack);
       }  
-      const notificationData = {
-        userId: patient_id,
-        title: 'Randevu Onaylandı',
-        message: `Dr. ${doctor_name} ile ${formattedDate} tarihinde saat ${formattedTime} için randevunuz onaylandı.`,
-        type: 'appointment'
-      };
+      // const notificationData = {
+      //   userId: patient_id,
+      //   title: 'Randevu Onaylandı',
+      //   message: `Dr. ${doctor_name} ile ${formattedDate} tarihinde saat ${formattedTime} için randevunuz onaylandı.`,
+      //   type: 'appointment'
+      // };
 
-      try {
-        const savedNotification = await NotificationModel.createNotification(notificationData)
-        if (req.io) {
-          console.log(`Emitting appointment confirmation notification to patient room: ${patient_id}`);
-          req.io.to(String(patient_id)).emit('notification', {
-            id: savedNotification ? savedNotification.notification_id : Date.now(),
-            title: notificationData.title,
-            message: notificationData.message,
-            type: notificationData.type,
-            read: false,
-            timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
-          });
-        }
-      } catch (notifError) {
-        console.error('Error saving/sending appointment notification:', notifError);
-      }
+      // try {
+      //   const savedNotification = await NotificationModel.createNotification(notificationData)
+      //   if (req.io) {
+      //     console.log(`Emitting appointment confirmation notification to patient room: ${patient_id}`);
+      //     req.io.to(String(patient_id)).emit('notification', {
+      //       id: savedNotification ? savedNotification.notification_id : Date.now(),
+      //       title: notificationData.title,
+      //       message: notificationData.message,
+      //       type: notificationData.type,
+      //       read: false,
+      //       timestamp: savedNotification ? savedNotification.created_at : new Date().toISOString()
+      //     });
+      //   }
+      // } catch (notifError) {
+      //   console.error('Error saving/sending appointment notification:', notifError);
+      // }
     } else if (status === 'cancelled') {
       const appointmentDetails = {
         doctorName: doctor_name,
