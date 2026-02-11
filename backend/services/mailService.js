@@ -1,132 +1,117 @@
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
 
+// SendGrid transporter
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  auth: {
-    user: process.env.MY_GMAIL,
-    pass: process.env.MY_PASSWORD,
-  },
+  host: "smtp.sendgrid.net",
+  port: 587,
   secure: false,
-  tls: {
-    rejectUnauthorized: false,
+  auth: {
+    user: "apikey", // SABİT
+    pass: process.env.SENDGRID_API_KEY,
   },
-  debug: true, // show debug output
-  logger: true // log information in console
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
-// Verify transporter connection
-transporter.verify(function (error, success) {
+// Verify transporter
+transporter.verify((error) => {
   if (error) {
-    console.log('MailService Error: Transporter connection failed:', error);
-    console.error('MailService: Check your EMAIL_USER and EMAIL_PASS (or App Password) in .env');
+    console.error("MailService: SendGrid connection failed:", error);
   } else {
-    console.log('MailService: Server is ready to take our messages');
-    console.log('MailService Config loaded for:', process.env.EMAIL_USER);
+    console.log("MailService: SendGrid SMTP ready");
   }
 });
 
 async function sendResetMail(to, subject, html) {
   try {
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM,
       to,
       subject,
       html,
     });
-    console.log('MailService: Reset email sent. MessageId:', info.messageId);
+    console.log("MailService: Reset email sent:", info.messageId);
   } catch (error) {
-    console.error('MailService: Error sending reset email:', error);
+    console.error("MailService: Error sending reset email:", error);
     throw error;
   }
 }
 
 async function sendAppointmentRejection(to, appointmentDetails) {
   const { doctorName, doctorSpecialty, date, time, reason } = appointmentDetails;
-  
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #dc2626;">Randevu Red Bildirimi</h2>
       <p>Sayın Hastamız,</p>
       <p>Randevunuz aşağıdaki sebepten dolayı reddedilmiştir:</p>
-      
-      <div style="background-color: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <p><strong>Red Sebebi:</strong> ${reason || 'Doktor tarafından uygun görülmedi.'}</p>
+
+      <div style="background-color: #fee2e2; padding: 20px; border-radius: 8px;">
+        <strong>Red Sebebi:</strong> ${reason || "Doktor tarafından uygun görülmedi."}
       </div>
-      
-      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <p><strong>Randevu Detayları:</strong></p>
+
+      <div style="margin-top:20px">
         <p><strong>Doktor:</strong> ${doctorName}</p>
-        <p><strong>Uzmanlık Alanı:</strong> ${doctorSpecialty}</p>
+        <p><strong>Uzmanlık:</strong> ${doctorSpecialty}</p>
         <p><strong>Tarih:</strong> ${date}</p>
         <p><strong>Saat:</strong> ${time}</p>
       </div>
-      
-      <p>Yeni bir randevu oluşturmak için lütfen sistemimizi kullanınız.</p>
-      <p>Anlayışınız için teşekkür ederiz.</p>
-      
-      <p>Sağlıklı günler dileriz.</p>
     </div>
   `;
 
   try {
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM,
       to,
-      subject: 'Randevu Red Bildirimi',
+      subject: "Randevu Red Bildirimi",
       html,
     });
-    console.log('MailService: Rejection email sent. MessageId:', info.messageId);
+    console.log("MailService: Rejection email sent:", info.messageId);
   } catch (error) {
-    console.error('MailService: Error sending rejection email:', error);
-    // Don't throw here to avoid crashing the status update flow, just log it
+    console.error("MailService: Error sending rejection email:", error);
   }
 }
 
 async function sendAppointmentConfirmation(to, appointmentDetails) {
-  console.log('MailService: sendAppointmentConfirmation called for:', to);
-  const { doctorName, doctorSpecialty, date, time, location, appointmentType } = appointmentDetails;
-  
+  const { doctorName, doctorSpecialty, date, time, location, appointmentType } =
+    appointmentDetails;
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #1e3a8a;">Randevu Onayı</h2>
       <p>Sayın Hastamız,</p>
-      <p>Randevunuz başarıyla oluşturulmuştur. Randevu detayları aşağıdadır:</p>
-      
-      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px;">
         <p><strong>Doktor:</strong> ${doctorName}</p>
-        <p><strong>Uzmanlık Alanı:</strong> ${doctorSpecialty}</p>
+        <p><strong>Uzmanlık:</strong> ${doctorSpecialty}</p>
         <p><strong>Tarih:</strong> ${date}</p>
         <p><strong>Saat:</strong> ${time}</p>
         <p><strong>Konum:</strong> ${location}</p>
-        <p><strong>Randevu Türü:</strong> ${appointmentType}</p>
+        <p><strong>Tür:</strong> ${appointmentType}</p>
       </div>
-      
-      <p>Randevunuza gelmeden önce lütfen aşağıdaki hususlara dikkat ediniz:</p>
-      <ul>
-        <li>Randevunuzdan 10 dakika önce hazır bulununuz.</li>
-        <li>Gerekli sağlık belgelerinizi yanınızda getiriniz.</li>
-        <li>Randevunuzu iptal etmek veya değiştirmek için lütfen en az 24 saat öncesinden bildiriniz.</li>
-      </ul>
-      
+
       <p>Sağlıklı günler dileriz.</p>
-      <p style="color: #475569;">MedLine Sağlık</p>
+      <p><strong>MedLine Sağlık</strong></p>
     </div>
   `;
 
   try {
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM,
       to,
-      subject: 'Randevu Onayı - MedLine',
+      subject: "Randevu Onayı - MedLine",
       html,
     });
-    console.log('MailService: Email sent. MessageId:', info.messageId);
+    console.log("MailService: Confirmation email sent:", info.messageId);
   } catch (error) {
-    console.error('MailService: Error sending email in sendAppointmentConfirmation:', error);
+    console.error("MailService: Error sending confirmation email:", error);
     throw error;
   }
 }
 
-
-module.exports = { sendResetMail, sendAppointmentConfirmation, sendAppointmentRejection };
+module.exports = {
+  sendResetMail,
+  sendAppointmentConfirmation,
+  sendAppointmentRejection,
+};
