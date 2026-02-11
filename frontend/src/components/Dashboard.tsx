@@ -496,7 +496,7 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
                       <div className="flex items-center gap-2 mt-1">
                         <Clock className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">
-                          {new Date(appointment.datetime).toLocaleDateString('tr-TR')} - {new Date(appointment.datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(appointment.datetime).toLocaleDateString('tr-TR', { timeZone: 'UTC' })} - {new Date(appointment.datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}
                         </span>
                       </div>
                     </div>
@@ -524,8 +524,8 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
               <div className="space-y-2">
                 <div><b>Doktor:</b> {selectedAppointment.doctor_name || 'Doktor'}</div>
                 <div><b>Hastane:</b> {selectedAppointment.hospital_name || '-'}</div>
-                <div><b>Tarih:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleDateString('tr-TR') : '-'}</div>
-                <div><b>Saat:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '-'}</div>
+                <div><b>Tarih:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleDateString('tr-TR', { timeZone: 'UTC' }) : '-'}</div>
+                <div><b>Saat:</b> {selectedAppointment.datetime ? new Date(selectedAppointment.datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-'}</div>
                 <div><b>Tip:</b> {selectedAppointment.type === 'online' ? 'Online' : 'Yüz Yüze'}</div>
                 <div><b>Branş:</b> {selectedAppointment.specialty || selectedAppointment.doctor_specialty || '-'}</div>
                 <div><b>Durum:</b> {selectedAppointment.status === 'confirmed' ? 'Onaylandı' : selectedAppointment.status === 'pending' ? 'Beklemede' : selectedAppointment.status === 'cancelled' ? 'İptal Edildi' : selectedAppointment.status === 'completed' ? 'Tamamlandı' : '-'}</div>
