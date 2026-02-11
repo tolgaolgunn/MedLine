@@ -254,6 +254,10 @@ exports.updateAppointmentStatus = async (req, res) => {
     
     const formattedDate = new Date(datetime).toLocaleDateString('tr-TR');
     const formattedTime = new Date(datetime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+    if(!datetime){
+      return res.status(400).json({ message: 'Appointment date not found' });
+    }
     
     if (status === 'confirmed') {
       const appointmentDetails = {
@@ -336,7 +340,7 @@ exports.updateAppointmentStatus = async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('Error updating appointment status:', err);
+    console.log('Error updating appointment status:', err);
     res.status(500).json({ message: 'Failed to update appointment status' });
   }
 };
