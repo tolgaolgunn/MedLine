@@ -1,30 +1,18 @@
 const nodemailer = require("nodemailer");
 
-/**
- * Genel SMTP transporter
- * 
- * .env'de aşağıdaki değişkenleri tanımlayacaksın:
- *  SMTP_HOST=...
- *  SMTP_PORT=587
- *  SMTP_SECURE=false        # 465 için true, 587/25 için genelde false
- *  SMTP_USER=...
- *  SMTP_PASS=...
- *  EMAIL_FROM=Ad Soyad <noreply@domain.com>
- */
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || "587", 10),
-  secure: String(process.env.SMTP_SECURE || "false").toLowerCase() === "true",
+  host: process.env.EMAIL_HOST,
+  port: parseInt(process.env.EMAIL_PORT || "465", 10),
+  secure: true,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: "apikey",
+    pass: process.env.SENDGRID_API_KEY,
   },
   connectionTimeout: 10000,
   greetingTimeout: 10000,
   socketTimeout: 10000,
 });
 
-// Bağlantı testi
 transporter.verify((error, success) => {
   if (error) {
     console.error("MailService: SMTP connection failed:", error.message || error);
