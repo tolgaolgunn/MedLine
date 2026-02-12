@@ -205,7 +205,8 @@ exports.updateAppointmentStatus = async (req, res) => {
       minute: "2-digit",
     });
 
-    if (status === 'confirmed') {
+    console.log("status", status);
+    if (status === "confirmed") {
       const appointmentDetails = {
         doctorName: doctor_name,
         doctorSpecialty: doctor_specialty,
@@ -258,7 +259,7 @@ exports.updateAppointmentStatus = async (req, res) => {
       }
     }
 
-    if (status === 'cancelled') {
+    if (status === "cancelled") {
       const appointmentDetails = {
         doctorName: doctor_name,
         doctorSpecialty: doctor_specialty,
