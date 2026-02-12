@@ -1,18 +1,27 @@
-const sgMail = require("@sendgrid/mail");
+const nodemailer = require("nodemailer");
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  secure: false,
+  auth: {
+    user: process.env.MY_GMAIL,
+    pass: process.env.MY_PASSWORD,
+  },
+});
+
 
 
 async function sendResetMail(to, subject, html) {
   try {
-    const info = await sgMail.send({
-      to,
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,
+      to,
       subject,
       html,
     });
 
-    console.log("MailService: Reset email sent:", info[0]?.headers["x-message-id"]);
+    console.log("MailService: Reset email sent:", info.messageId);
   } catch (error) {
     console.error("MailService: Error sending reset email:", error.message || error);
     throw error;
@@ -42,9 +51,9 @@ async function sendAppointmentRejection(to, appointmentDetails) {
   `;
 
   try {
-    await sgMail.send({
-      to,
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,
+      to,
       subject: "Randevu Red Bildirimi",
       html,
     });
@@ -54,7 +63,6 @@ async function sendAppointmentRejection(to, appointmentDetails) {
     console.error("MailService: Error sending rejection email:", error.message || error);
   }
 }
-
 
 async function sendAppointmentConfirmation(to, appointmentDetails) {
   const { doctorName, doctorSpecialty, date, time, location, appointmentType } =
@@ -80,9 +88,9 @@ async function sendAppointmentConfirmation(to, appointmentDetails) {
   `;
 
   try {
-    await sgMail.send({
-      to,
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,
+      to,
       subject: "Randevu Onayı - MedLine",
       html,
     });
