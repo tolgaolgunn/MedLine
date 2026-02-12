@@ -17,9 +17,9 @@
     'http://localhost:5173',
     'https://med-line-dmze.vercel.app'
 ];
-   app.use(cors({
+
+    const corsOptions = {
   origin: function (origin, callback) {
-    // Postman / server-to-server istekler için
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
@@ -31,10 +31,9 @@
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.options('*', cors());
-app.options('*', cors());
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
     app.use(express.json()); 
     // Yüklenen dosyaları statik olarak servis et
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
