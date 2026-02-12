@@ -197,6 +197,7 @@ exports.updateAppointmentStatus = async (req, res) => {
       datetime,
       type,
     } = appointmentData;
+    console.log("appointmentData", appointmentData);
 
     const formattedDate = new Date(datetime).toLocaleDateString("tr-TR");
     const formattedTime = new Date(datetime).toLocaleTimeString("tr-TR", {
