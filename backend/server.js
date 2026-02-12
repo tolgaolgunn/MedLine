@@ -29,6 +29,7 @@
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
+app.options('*', cors());
     app.use(express.json()); 
     // Yüklenen dosyaları statik olarak servis et
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
