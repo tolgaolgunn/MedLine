@@ -304,15 +304,15 @@ exports.updateAppointmentStatus = async (req, res) => {
       }
     }
 
+    console.log(
+      `updateAppointmentStatus → status:${status}, appointment:${appointmentId}`
+    );
     res.json(result.rows[0]);
   } catch (err) {
     console.error("updateAppointmentStatus error:", err);
     res.status(500).json({ message: "Failed to update appointment status" });
   }
 
-    console.log(
-      `updateAppointmentStatus → status:${status}, appointment:${appointmentId}`
-    );
 
 };
 
