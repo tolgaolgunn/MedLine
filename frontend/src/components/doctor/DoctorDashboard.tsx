@@ -350,7 +350,6 @@ const DoctorDashboard = () => {
           headers: {
             Authorization: `Bearer ${token}`
           },
-          withCredentials: true
         }
       );
 
