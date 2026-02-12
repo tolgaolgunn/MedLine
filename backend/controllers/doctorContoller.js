@@ -205,11 +205,7 @@ exports.updateAppointmentStatus = async (req, res) => {
       minute: "2-digit",
     });
 
-    console.log(
-      `updateAppointmentStatus → status:${status}, appointment:${appointmentId}`
-    );
-
-    if (status === "confirmed") {
+    if (status === 'confirmed') {
       const appointmentDetails = {
         doctorName: doctor_name,
         doctorSpecialty: doctor_specialty,
@@ -262,7 +258,7 @@ exports.updateAppointmentStatus = async (req, res) => {
       }
     }
 
-    if (status === "cancelled") {
+    if (status === 'cancelled') {
       const appointmentDetails = {
         doctorName: doctor_name,
         doctorSpecialty: doctor_specialty,
@@ -313,6 +309,11 @@ exports.updateAppointmentStatus = async (req, res) => {
     console.error("updateAppointmentStatus error:", err);
     res.status(500).json({ message: "Failed to update appointment status" });
   }
+
+    console.log(
+      `updateAppointmentStatus → status:${status}, appointment:${appointmentId}`
+    );
+
 };
 
 
