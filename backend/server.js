@@ -18,16 +18,9 @@
     'https://med-line-dmze.vercel.app'
 ];
    app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('CORS policy violation'));
-        }   
-    },
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    allowedOrigin: allowedOrigins,
     exposedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
