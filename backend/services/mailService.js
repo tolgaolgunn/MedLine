@@ -1,35 +1,18 @@
-const nodemailer = require("nodemailer");
+const sgMail = require("@sendgrid/mail");
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT || "587", 10),
-  secure: false,
-  auth: {
-    user: "apikey",
-    pass: process.env.SENDGRID_API_KEY,
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-});
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("MailService: SMTP connection failed:", error.message || error);
-  } else {
-    console.log("MailService: SMTP ready");
-  }
-});
 
 async function sendResetMail(to, subject, html) {
   try {
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+    const info = await sgMail.send({
       to,
+      from: process.env.EMAIL_FROM,
       subject,
       html,
     });
-    console.log("MailService: Reset email sent:", info.messageId);
+
+    console.log("MailService: Reset email sent:", info[0]?.headers["x-message-id"]);
   } catch (error) {
     console.error("MailService: Error sending reset email:", error.message || error);
     throw error;
@@ -59,17 +42,19 @@ async function sendAppointmentRejection(to, appointmentDetails) {
   `;
 
   try {
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+    await sgMail.send({
       to,
+      from: process.env.EMAIL_FROM,
       subject: "Randevu Red Bildirimi",
       html,
     });
-    console.log("MailService: Rejection email sent:", info.messageId);
+
+    console.log("MailService: Rejection email sent →", to);
   } catch (error) {
     console.error("MailService: Error sending rejection email:", error.message || error);
   }
 }
+
 
 async function sendAppointmentConfirmation(to, appointmentDetails) {
   const { doctorName, doctorSpecialty, date, time, location, appointmentType } =
@@ -95,15 +80,19 @@ async function sendAppointmentConfirmation(to, appointmentDetails) {
   `;
 
   try {
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+    await sgMail.send({
       to,
+      from: process.env.EMAIL_FROM,
       subject: "Randevu Onayı - MedLine",
       html,
     });
-    console.log("MailService: Confirmation email sent:", info.messageId);
+
+    console.log("MailService: Confirmation email sent →", to);
   } catch (error) {
-    console.error("MailService: Error sending confirmation email:", error.message || error);
+    console.error(
+      "MailService: Error sending confirmation email:",
+      error.message || error
+    );
     throw error;
   }
 }
