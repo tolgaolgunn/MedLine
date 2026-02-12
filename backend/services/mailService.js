@@ -1,4 +1,6 @@
-const sgMail = require("@sendgrid/mail");
+import sgMail from "@sendgrid/mail";
+import dotenv from "dotenv";
+dotenv.config();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
@@ -20,7 +22,7 @@ async function sendResetMail(to, subject, html) {
 }
 
 async function sendAppointmentRejection(to, appointmentDetails) {
-  const { doctorName, doctorSpecialty, date, time, reason } = appointmentDetails;
+  const { doctorName, doctorSpecialty, date, time, location, appointmentType, reason } = appointmentDetails;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -37,6 +39,8 @@ async function sendAppointmentRejection(to, appointmentDetails) {
         <p><strong>Uzmanlık:</strong> ${doctorSpecialty}</p>
         <p><strong>Tarih:</strong> ${date}</p>
         <p><strong>Saat:</strong> ${time}</p>
+        <p><strong>Konum:</strong> ${location}</p>
+        <p><strong>Tür:</strong> ${appointmentType}</p>
       </div>
     </div>
   `;

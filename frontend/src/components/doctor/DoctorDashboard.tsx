@@ -344,7 +344,7 @@ const DoctorDashboard = () => {
       console.log('Sending Patch Request to:', url);
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = user.token;
-      const response = await axios.put(url,
+      const response = await axios.patch(url,
         { status: newStatus },
         {
           headers: {
