@@ -15,7 +15,7 @@ router.get('/prescriptions/count/:doctorId', doctorController.getPrescriptionCou
 // Randevu işlemleri
 router.get('/appointments/active/:doctorId', doctorController.getActiveAppointments);
 router.get('/appointments/:doctorId', doctorController.getAppointmentsByDoctor);
-router.patch('/appointments/:appointmentId/status', doctorController.updateAppointmentStatus);
+router.put('/appointments/:appointmentId/status', doctorController.updateAppointmentStatus);
 
 // Hasta bilgileri
 router.get('/patients/:doctorId', doctorController.getPatientsByDoctor);
