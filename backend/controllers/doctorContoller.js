@@ -157,7 +157,6 @@ exports.updateAppointmentStatus = async (req, res) => {
       return res.status(400).json({ message: "Invalid status" });
     }
 
-    // Randevu + kullanıcı bilgileri
     const appointmentResult = await query(
       `
       SELECT 
@@ -209,7 +208,6 @@ exports.updateAppointmentStatus = async (req, res) => {
       `updateAppointmentStatus → status:${status}, appointment:${appointmentId}`
     );
 
-    // ================= CONFIRMED =================
     if (status === "confirmed") {
       const appointmentDetails = {
         doctorName: doctor_name,
@@ -220,23 +218,22 @@ exports.updateAppointmentStatus = async (req, res) => {
         appointmentType: type,
       };
 
-      try {
-        console.log(
+      console.log(
           `[MAIL][RANDEVU_ONAY] Onay maili hazırlanıyor → Hasta: ${patient_email} | Doktor: ${doctor_name} | Tarih: ${formattedDate} ${formattedTime}`
         );
-        await sendAppointmentConfirmation(
+        sendAppointmentConfirmation(
           patient_email,
           appointmentDetails
-        );
-        console.log(
-          `[MAIL][RANDEVU_ONAY] Onay maili başarıyla gönderildi → ${patient_email}`
-        );
-      } catch (mailError) {
-        console.error(
-          "[MAIL][RANDEVU_ONAY] Onay maili gönderilirken hata oluştu:",
-          mailError
-        );
-      }
+        ).then(() => {
+          console.log(
+            `[MAIL][RANDEVU_ONAY] Onay maili başarıyla gönderildi → ${patient_email}`
+          );
+        }).catch (mailError => {
+          console.error(
+            "[MAIL][RANDEVU_ONAY] Onay maili gönderilirken hata oluştu:",
+            mailError
+          );
+        });
 
       const notificationData = {
         userId: patient_id,
@@ -264,7 +261,6 @@ exports.updateAppointmentStatus = async (req, res) => {
       }
     }
 
-    // ================= CANCELLED =================
     if (status === "cancelled") {
       const appointmentDetails = {
         doctorName: doctor_name,
@@ -274,15 +270,14 @@ exports.updateAppointmentStatus = async (req, res) => {
         reason,
       };
 
-      try {
-        await sendAppointmentRejection(
+      sendAppointmentRejection(
           patient_email,
           appointmentDetails
-        );
+      ).then(() => {
         console.log("Rejection mail sent");
-      } catch (err) {
+      }).catch (err => {
         console.error("Rejection mail failed:", err);
-      }
+      });
 
       const notificationData = {
         userId: patient_id,
