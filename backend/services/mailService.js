@@ -101,8 +101,4 @@ async function sendAppointmentConfirmation(to, appointmentDetails) {
   }
 }
 
-module.exports = {
-  sendResetMail,
-  sendAppointmentConfirmation,
-  sendAppointmentRejection,
-};
+export { sendResetMail, sendAppointmentConfirmation, sendAppointmentRejection };
