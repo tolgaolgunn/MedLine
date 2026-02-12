@@ -150,8 +150,10 @@ exports.getActiveAppointments = async (req, res) => {
 
 exports.updateAppointmentStatus = async (req, res) => {
   try {
+    console.log("[DEBUG] req.body:", req.body);
     const { appointmentId } = req.params;
     const { status, reason } = req.body;
+    console.log("[DEBUG] status (raw):", status, typeof status);
 
     if (!["pending", "confirmed", "cancelled", "completed"].includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
