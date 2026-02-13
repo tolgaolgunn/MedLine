@@ -14,13 +14,11 @@ load_dotenv()
 class RAGService:
     def __init__(self):
         self.vector_store = None
-        # PDF işleme için API tabanlı embedding modeli (RAM kullanımı ~0MB)
+
         self.embedding_model = HuggingFaceInferenceAPIEmbeddings(
             api_key=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
             model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
         )
-        
-        # Base path'i dosyanin oldugu yer yapalim
         self.base_path = os.path.dirname(os.path.abspath(__file__))
         self.persist_directory = os.path.join(self.base_path, "vector_store")
         self.knowledge_base_dir = os.path.join(self.base_path, "knowledge_base")
@@ -29,6 +27,8 @@ class RAGService:
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.model_name = "llama-3.3-70b-versatile"
 
+        if os.path.exists(self.persist_directory):
+            self.vector_store = Chroma(persist_directory=self.persist_directory, embedding_function=self.embedding_model)
     def ingest_documents(self):
         """Knowledge Base klasöründeki PDF'leri okur ve vektör yapar."""
         if not os.path.exists(self.knowledge_base_dir):
