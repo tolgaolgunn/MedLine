@@ -18,7 +18,7 @@ rag_service = RAGService()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print(">>> [SERVER] MedLine Başlatılıyor...")
-    rag_service.ingest_documents()
+    # rag_service.ingest_documents()
     print(">>> [SERVER] RAG ve Groq Sistemi Hazır.")
     yield
 
