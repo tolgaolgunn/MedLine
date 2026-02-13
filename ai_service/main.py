@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     print(">>> [SERVER] RAG ve Groq Sistemi Hazır.")
     yield
 
-app = FastAPI(title="MedLine AI Backend", lifespan=lifespan)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,

@@ -147,7 +147,13 @@ const Appointments: React.FC = () => {
     return diff <= 10 && diff >= -30;
   };
 
-  // Tarih filtre seçenekleri
+  const openHospitalMap = (hospitalName: string) => {
+    const fullQuery = `${hospitalName}`;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullQuery)}`;
+
+    window.open(mapsUrl, '_blank');
+  };
+
   const filterOptions = [
     { value: 'all', label: 'Tüm Randevular' },
     { value: 'today', label: 'Bugün' },
@@ -577,7 +583,16 @@ const Appointments: React.FC = () => {
                 <div className="space-y-2">
                   <p><strong>Ad Soyad:</strong> {selectedAppointment.doctor_name}</p>
                   <p><strong>Uzmanlık:</strong> {selectedAppointment.doctor_specialty}</p>
-                  <p><strong>Hastane:</strong> {selectedAppointment.hospital_name}</p>
+                  <div className="flex items-center gap-2">
+                    <p><strong>Hastane:</strong> {selectedAppointment.hospital_name}</p>
+                    <button
+                      onClick={() => openHospitalMap(selectedAppointment.hospital_name)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors"
+                      title="Haritada Göster"
+                    >
+                      📍 Konumu Göster
+                    </button>
+                  </div>
                   {selectedAppointment.doctorPhone && (
                     <p className="flex items-center gap-2">
                       <Phone className="w-4 h-4" />
