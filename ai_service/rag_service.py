@@ -4,7 +4,7 @@ import glob
 from groq import Groq
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_chroma import Chroma
 from dotenv import load_dotenv
 
@@ -13,8 +13,8 @@ load_dotenv()
 class RAGService:
     def __init__(self):
         self.vector_store = None
-        # PDF işleme için embedding modeli (Aynı kalıyor)
-        self.embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+        # PDF işleme için hafif embedding modeli (FastEmbed)
+        self.embedding_model = FastEmbedEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
         
         # Base path'i dosyanin oldugu yer yapalim
         self.base_path = os.path.dirname(os.path.abspath(__file__))
