@@ -9,6 +9,6 @@ langchain-huggingface
 langchain-chroma
 pypdf
 chromadb
-fastembed
+huggingface_hub
 groq
 gunicorn==21.2.0
