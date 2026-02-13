@@ -13,10 +13,14 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Sadece ai_service içindeki gerekli dosyaları kopyala
-COPY . .
+WORKDIR /app
+RUN mkdir -p ai_service
+COPY . ./ai_service
 
+# PYTHONPATH ayarla ki hem 'ai_service.main' hem de icindeki importlar calissin
+ENV PYTHONPATH=/app/ai_service
 ENV PORT=8080
 EXPOSE 8080
 
-# Uygulamayı başlat (app.py kullandığını varsayıyorum)
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT main:app"]
+# Uygulamayı başlat
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT ai_service.main:app"]
