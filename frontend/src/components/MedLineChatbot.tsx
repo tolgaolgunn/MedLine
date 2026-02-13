@@ -46,7 +46,7 @@ const MedLineChatbot: React.FC = () => {
         try {
             const AI_API_URL = import.meta.env.VITE_AI_API_URL;
             console.log(AI_API_URL);
-            const response = await fetch(`${AI_API_URL}/api/chat`, {
+            const response = await fetch(`${AI_API_URL}/api/rag_chat`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
