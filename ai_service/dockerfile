@@ -23,4 +23,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Uygulamayı başlat
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT ai_service.main:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT -k uvicorn.workers.UvicornWorker ai_service.main:app"]
