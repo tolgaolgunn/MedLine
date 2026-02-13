@@ -44,7 +44,8 @@ const MedLineChatbot: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const AI_API_URL = import.meta.env.VITE_AI_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://medline.onrender.com');
+            const AI_API_URL = import.meta.env.VITE_AI_API_URL;
+            console.log(AI_API_URL);
             const response = await fetch(`${AI_API_URL}/api/ai/chat/`, {
                 method: "POST",
                 headers: {
@@ -117,7 +118,7 @@ const MedLineChatbot: React.FC = () => {
         formData.append("file", audioBlob, "recording.webm");
 
         try {
-            const AI_API_URL = import.meta.env.VITE_AI_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://medline.onrender.com');
+            const AI_API_URL = import.meta.env.VITE_AI_API_URL;
             const response = await fetch(`${AI_API_URL}/api/speech_to_text/`, {
                 method: "POST",
                 body: formData,
