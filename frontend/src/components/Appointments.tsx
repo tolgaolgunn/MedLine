@@ -39,6 +39,8 @@ interface Appointment {
   doctorPhone?: string;
   doctorEmail?: string;
   doctorAddress?: string;
+  doctor_city?: string;
+  doctor_district?: string;
   complaint?: string;
   notes?: string;
 }
@@ -147,8 +149,8 @@ const Appointments: React.FC = () => {
     return diff <= 10 && diff >= -30;
   };
 
-  const openHospitalMap = (hospitalName: string) => {
-    const fullQuery = `${hospitalName}`;
+  const openHospitalMap = (hospitalName: string, district?: string, city?: string) => {
+    const fullQuery = `${hospitalName} ${district || ''} ${city || ''}`.trim();
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullQuery)}`;
 
     window.open(mapsUrl, '_blank');
@@ -583,15 +585,26 @@ const Appointments: React.FC = () => {
                 <div className="space-y-2">
                   <p><strong>Ad Soyad:</strong> {selectedAppointment.doctor_name}</p>
                   <p><strong>Uzmanlık:</strong> {selectedAppointment.doctor_specialty}</p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2 mt-2">
                     <p><strong>Hastane:</strong> {selectedAppointment.hospital_name}</p>
-                    <button
-                      onClick={() => openHospitalMap(selectedAppointment.hospital_name)}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors"
-                      title="Haritada Göster"
+                    {(selectedAppointment.doctor_city || selectedAppointment.doctor_district) && (
+                      <p className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        <strong>Adres:</strong> {selectedAppointment.hospital_name}, {selectedAppointment.doctor_district}/{selectedAppointment.doctor_city}
+                      </p>
+                    )}
+
+                    <Button
+                      onClick={() => openHospitalMap(
+                        selectedAppointment.hospital_name,
+                        selectedAppointment.doctor_district,
+                        selectedAppointment.doctor_city
+                      )}
+                      className="w-full border-2 border-gray-300 shadow-sm"
+                      variant="default"
                     >
-                      📍 Konumu Göster
-                    </button>
+                      Konumu Göster
+                    </Button>
                   </div>
                   {selectedAppointment.doctorPhone && (
                     <p className="flex items-center gap-2">

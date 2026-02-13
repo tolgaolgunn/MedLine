@@ -82,7 +82,9 @@ exports.getAppointmentsByUser = async (req, res) => {
         a.*,
         u.full_name AS doctor_name,
         d.specialty AS doctor_specialty,
-        d.hospital_name AS hospital_name
+        d.hospital_name AS hospital_name,
+        d.city AS doctor_city,
+        d.district AS doctor_district
        FROM appointments a
        JOIN users u ON a.doctor_id = u.user_id
        JOIN doctor_profiles d ON u.user_id = d.user_id
