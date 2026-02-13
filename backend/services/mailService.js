@@ -1,35 +1,35 @@
-import sgMail from "@sendgrid/mail";
+import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
 dotenv.config();
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const FROM_EMAIL = "no-reply@sendgrid.net";
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.MY_PASSWORD,
+  },
+});
 
-// RESET MAIL
+const FROM_EMAIL = `"MedLine Sağlık" <${process.env.EMAIL_USER}>`;
+
 async function sendResetMail(to, subject, html) {
   try {
-    const info = await sgMail.send({
-      to,
+    const info = await transporter.sendMail({
       from: FROM_EMAIL,
+      to,
       subject,
       html,
     });
 
-    console.log(
-      "MailService: Reset email sent:",
-      info[0]?.headers["x-message-id"]
-    );
+    console.log("MailService: Reset email sent:", info.messageId);
+    return info;
   } catch (error) {
-    console.error(
-      "MailService: Error sending reset email:",
-      error.response?.body || error.message
-    );
+    console.error("MailService: Error sending reset email:", error.message);
     throw error;
   }
 }
 
-// APPOINTMENT REJECTION
 async function sendAppointmentRejection(to, appointmentDetails) {
   const {
     doctorName,
@@ -63,23 +63,20 @@ async function sendAppointmentRejection(to, appointmentDetails) {
   `;
 
   try {
-    await sgMail.send({
-      to,
+    const info = await transporter.sendMail({
       from: FROM_EMAIL,
+      to,
       subject: "Randevu Red Bildirimi",
       html,
     });
 
     console.log("MailService: Rejection email sent →", to);
+    return info;
   } catch (error) {
-    console.error(
-      "MailService: Error sending rejection email:",
-      error.response?.body || error.message
-    );
+    console.error("MailService: Error sending rejection email:", error.message);
   }
 }
 
-// APPOINTMENT CONFIRMATION
 async function sendAppointmentConfirmation(to, appointmentDetails) {
   const { doctorName, doctorSpecialty, date, time, location, appointmentType } =
     appointmentDetails;
@@ -104,19 +101,17 @@ async function sendAppointmentConfirmation(to, appointmentDetails) {
   `;
 
   try {
-    await sgMail.send({
-      to,
+    const info = await transporter.sendMail({
       from: FROM_EMAIL,
+      to,
       subject: "Randevu Onayı - MedLine",
       html,
     });
 
     console.log("MailService: Confirmation email sent →", to);
+    return info;
   } catch (error) {
-    console.error(
-      "MailService: Error sending confirmation email:",
-      error.response?.body || error.message
-    );
+    console.error("MailService: Error sending confirmation email:", error.message);
     throw error;
   }
 }
