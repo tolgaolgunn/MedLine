@@ -11,7 +11,6 @@ from contextlib import asynccontextmanager
 
 load_dotenv()
 
-# Render ortamında mıyız? (RENDER/RENDER_ENV gibi bir env değişkeni ile kontrol edilebilir)
 is_render = os.getenv("RENDER", "false").lower() == "true"
 
 rag_service = RAGService()
