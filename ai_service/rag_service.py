@@ -15,7 +15,11 @@ class RAGService:
         self.vector_store = None
         # PDF işleme için embedding modeli (Aynı kalıyor)
         self.embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
-        self.persist_directory = "./vector_store"
+        
+        # Base path'i dosyanin oldugu yer yapalim
+        self.base_path = os.path.dirname(os.path.abspath(__file__))
+        self.persist_directory = os.path.join(self.base_path, "vector_store")
+        self.knowledge_base_dir = os.path.join(self.base_path, "knowledge_base")
         
         # Groq Başlatma
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -23,11 +27,11 @@ class RAGService:
 
     def ingest_documents(self):
         """Knowledge Base klasöründeki PDF'leri okur ve vektör yapar."""
-        if not os.path.exists("./knowledge_base"):
-            os.makedirs("./knowledge_base")
+        if not os.path.exists(self.knowledge_base_dir):
+            os.makedirs(self.knowledge_base_dir)
             return
 
-        pdf_files = glob.glob("./knowledge_base/*.pdf")
+        pdf_files = glob.glob(os.path.join(self.knowledge_base_dir, "*.pdf"))
         current_file_count = len(pdf_files)
         
         count_file_path = os.path.join(self.persist_directory, "file_count.txt")
@@ -49,7 +53,7 @@ class RAGService:
             shutil.rmtree(self.persist_directory)
 
         try:
-            loader = PyPDFDirectoryLoader("./knowledge_base")
+            loader = PyPDFDirectoryLoader(self.knowledge_base_dir)
             docs = loader.load()
             if not docs: return
 
