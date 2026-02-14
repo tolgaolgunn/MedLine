@@ -11,7 +11,6 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Plus, Search, FileText, Calendar, User, Pill, Printer, Edit, Trash2, Eye, Users } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { useNotifications } from '../../contexts/NotificationContext';
 
 interface Patient {
   patient_id: number;
@@ -38,8 +37,10 @@ interface Prescription {
   diagnosis: string;
   medications: Medication[];
   instructions: string;
-  status: 'active' | 'completed' | 'cancelled';
+  status: 'active' | 'completed' | 'cancelled' | 'used';
   nextVisit?: string;
+  validUntilDate?: string;
+  usageDurationDays?: string;
 }
 
 interface Medication {
@@ -65,9 +66,9 @@ const PrescriptionManagement: React.FC = () => {
   const [isEditPrescriptionOpen, setIsEditPrescriptionOpen] = useState(false);
   const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const [isAddingPrescription, setIsAddingPrescription] = useState(false);
 
   const [editFormKey, setEditFormKey] = useState(0);
-  // const { addNotification } = useNotifications();
 
   const currentDoctorId = useMemo(() => {
     try {
@@ -120,7 +121,13 @@ const PrescriptionManagement: React.FC = () => {
 
         const fixedPrescriptions = fetchedPrescriptions.map(prescription => ({
           ...prescription,
-          doctorName: prescription.doctorName && prescription.doctorName.trim() !== '' ? prescription.doctorName : currentDoctorName
+          doctorName: prescription.doctorName && prescription.doctorName.trim() !== '' 
+            ? prescription.doctorName 
+            : currentDoctorName,
+          // Ensure status is set correctly (backend maps 'used' to 'completed')
+          status: prescription.status || 'active',
+          // Ensure usageDurationDays is properly set from database
+          usageDurationDays: prescription.usageDurationDays || '30'
         }));
 
         setPrescriptions(fixedPrescriptions);
@@ -163,7 +170,7 @@ const PrescriptionManagement: React.FC = () => {
 
       const patientsData = response.data?.data || response.data;
       if (!Array.isArray(patientsData)) {
-        throw new Error('API did not return patient data in expected format');
+        throw new TypeError('API did not return patient data in expected format');
       }
 
       setPatients(patientsData);
@@ -186,21 +193,44 @@ const PrescriptionManagement: React.FC = () => {
     return prescriptions.filter(prescription => {
       const matchesSearch = prescription.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = filterStatus === 'all' || prescription.status === filterStatus;
+      // Filter logic: 'completed' filter should show both 'completed' and 'used' status
+      // Backend maps 'used' to 'completed', but we also check for 'used' in case
+      let matchesStatus = true;
+      if (filterStatus !== 'all') {
+        if (filterStatus === 'completed') {
+          matchesStatus = prescription.status === 'completed' || (prescription.status as string) === 'used';
+        } else {
+          matchesStatus = prescription.status === filterStatus;
+        }
+      }
       return matchesSearch && matchesStatus;
     });
   }, [prescriptions, searchTerm, filterStatus]);
 
   const handleAddPrescription = async (newPrescription: Omit<Prescription, 'id'>) => {
+    // Prevent multiple submissions
+    if (isAddingPrescription) {
+      return;
+    }
+
     try {
+      setIsAddingPrescription(true);
+      
       if (!newPrescription.patientId || !newPrescription.patientName.trim()) {
         toast.error('Lütfen geçerli bir hasta seçin');
+        setIsAddingPrescription(false);
         return;
       }
 
-      const timestamp = new Date().getTime().toString(36);
+      const timestamp = Date.now().toString(36);
       const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase();
       const prescriptionCode = `RX-${timestamp}-${randomStr}`;
+
+      // Get usageDurationDays from newPrescription, default to '30' if not provided
+      const usageDays = (newPrescription as any).usageDurationDays;
+      const usageDurationDaysValue = (usageDays !== undefined && usageDays !== null && usageDays !== '') 
+        ? String(usageDays) 
+        : '30';
 
       const prescriptionData = {
         ...newPrescription,
@@ -210,7 +240,8 @@ const PrescriptionManagement: React.FC = () => {
         doctorName: currentDoctorName,
         prescriptionCode: prescriptionCode,
         date: new Date().toISOString().split('T')[0],
-        status: 'active' as const,
+        status: (newPrescription as any).status || 'active',
+        usageDurationDays: usageDurationDaysValue,
         medications: newPrescription.medications.map(med => ({
           name: med.name.trim(),
           dosage: med.dosage.trim(),
@@ -220,6 +251,7 @@ const PrescriptionManagement: React.FC = () => {
         }))
       };
 
+
       const token = localStorage.getItem('token');
       const response = await axios.post(`${API_BASE_URL}/prescriptions`, prescriptionData, {
         headers: {
@@ -228,7 +260,15 @@ const PrescriptionManagement: React.FC = () => {
       });
 
       if (response.data) {
-        setPrescriptions(prev => [response.data, ...prev]);
+        // Ensure response data has correct format with usageDurationDays
+        const newPrescriptionData = {
+          ...response.data,
+          id: String(response.data.id || response.data.prescription_id),
+          patientId: String(response.data.patientId || response.data.patient_id),
+          usageDurationDays: response.data.usageDurationDays || usageDurationDaysValue,
+          validUntilDate: response.data.validUntilDate || response.data.valid_until_date
+        };
+        setPrescriptions(prev => [newPrescriptionData, ...prev]);
         setIsAddPrescriptionOpen(false);
         toast.success('Reçete başarıyla oluşturuldu');
       }
@@ -236,6 +276,8 @@ const PrescriptionManagement: React.FC = () => {
       const error = err as any;
       console.error('Error creating prescription:', error);
       toast.error(`Reçete oluşturulurken hata: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsAddingPrescription(false);
     }
   };
 
@@ -250,11 +292,20 @@ const PrescriptionManagement: React.FC = () => {
         return;
       }
 
+      // Get usageDurationDays from updatedPrescription, default to '30' if not provided
+      const usageDays = updatedPrescription.usageDurationDays;
+      const usageDurationDaysValue = (usageDays !== undefined && usageDays !== null && usageDays !== '') 
+        ? String(usageDays) 
+        : '30';
+
       // Format the prescription data properly
+      // Ensure status is valid - map 'used' to 'completed' if needed
+      const statusToSend = updatedPrescription.status === 'used' ? 'completed' : updatedPrescription.status;
+      
       const prescriptionData = {
         id: updatedPrescription.id,
         patientId: String(updatedPrescription.patientId),
-        patientName: selectedPatient.patient_name, // Bu satırı düzeltin
+        patientName: selectedPatient.patient_name,
         doctorId: currentDoctorId,
         doctorName: currentDoctorName,
         prescriptionCode: updatedPrescription.prescriptionCode,
@@ -268,9 +319,11 @@ const PrescriptionManagement: React.FC = () => {
           instructions: med.instructions?.trim() || ''
         })),
         instructions: updatedPrescription.instructions,
-        status: updatedPrescription.status,
-        nextVisit: updatedPrescription.nextVisit
+        status: statusToSend,
+        nextVisit: updatedPrescription.nextVisit,
+        usageDurationDays: usageDurationDaysValue
       };
+
 
       const response = await axios.put(
         `${API_BASE_URL}/prescriptions/${updatedPrescription.id}`,
@@ -282,12 +335,24 @@ const PrescriptionManagement: React.FC = () => {
         }
       );
 
-      if (response.data) {
-        // API'den gelen veriyi kullanmak yerine, gönderdiğimiz veriyi kullanıyoruz
+      // Check if response is successful and has valid data
+      if (response.status >= 200 && response.status < 300 && response.data) {
+        // Check if backend returned an error response (with success: false)
+        if (response.data.success === false) {
+          toast.error(`Reçete güncellenirken hata: ${response.data.message || 'Bilinmeyen hata'}`);
+          return;
+        }
+
+        // API'den gelen veriyi kullan (usageDurationDays ve validUntilDate backend'den geliyor)
         const updatedData = {
           ...response.data,
-          patientId: prescriptionData.patientId,
-          patientName: prescriptionData.patientName // Bu satırı ekleyin
+          id: String(response.data.id || updatedPrescription.id),
+          patientId: String(response.data.patientId || prescriptionData.patientId),
+          patientName: response.data.patientName || prescriptionData.patientName,
+          usageDurationDays: response.data.usageDurationDays || usageDurationDaysValue,
+          validUntilDate: response.data.validUntilDate || response.data.valid_until_date,
+          // Ensure status is properly set from response
+          status: response.data.status || statusToSend
         };
 
         setPrescriptions(prevPrescriptions =>
@@ -299,11 +364,22 @@ const PrescriptionManagement: React.FC = () => {
         setIsEditPrescriptionOpen(false);
         setEditingPrescription(null);
         toast.success('Reçete başarıyla güncellendi');
+      } else {
+        toast.error('Reçete güncellenirken hata: Geçersiz yanıt alındı');
       }
     } catch (err) {
       const error = err as any;
       console.error('Error updating prescription:', error);
-      toast.error(`Reçete güncellenirken hata: ${error.response?.data?.message || error.message}`);
+      
+      // Check if it's an axios error with response data
+      if (error.response) {
+        const errorMessage = error.response.data?.message || error.response.data?.error || 'Bilinmeyen hata';
+        toast.error(`Reçete güncellenirken hata: ${errorMessage}`);
+      } else if (error.request) {
+        toast.error('Reçete güncellenirken hata: Sunucuya bağlanılamadı');
+      } else {
+        toast.error(`Reçete güncellenirken hata: ${error.message || 'Bilinmeyen hata'}`);
+      }
     }
   };
 
@@ -312,6 +388,7 @@ const PrescriptionManagement: React.FC = () => {
       case 'active': return 'bg-green-100 text-green-800';
       case 'completed': return 'bg-blue-100 text-blue-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'used': return 'bg-blue-100 text-blue-800'; // 'used' should show as 'completed' (blue)
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -338,7 +415,7 @@ const PrescriptionManagement: React.FC = () => {
   };
 
   const printPrescription = (prescription: Prescription) => {
-    const printWindow = window.open('', '_blank');
+    const printWindow = globalThis.open('', '_blank');
     if (!printWindow) {
       toast.error('Pop-up engelleyiciyi kapatıp tekrar deneyin.');
       return;
@@ -471,6 +548,8 @@ const PrescriptionManagement: React.FC = () => {
       diagnosis: '',
       instructions: '',
       nextVisit: '',
+      usageDurationDays: '30', // Varsayılan 30 gün
+      status: 'active' as 'active' | 'completed' | 'cancelled',
       medications: [{ name: '', dosage: '', frequency: '', duration: '', instructions: '' }]
     });
 
@@ -550,8 +629,9 @@ const PrescriptionManagement: React.FC = () => {
         diagnosis: formData.diagnosis,
         instructions: formData.instructions,
         nextVisit: formData.nextVisit,
+        usageDurationDays: formData.usageDurationDays,
         medications: validMedications,
-        status: 'active' as const,
+        status: formData.status,
         date: new Date().toISOString().split('T')[0],
         prescriptionCode: `RX-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         doctorName: currentDoctorName
@@ -578,7 +658,7 @@ const PrescriptionManagement: React.FC = () => {
                   type="button"
                   variant="link"
                   className="p-0 h-auto text-yellow-700 font-medium text-xs sm:text-sm"
-                  onClick={() => window.open('/patients', '_blank')}
+                  onClick={() => globalThis.open('/patients', '_blank')}
                 >
                   Hasta eklemek için tıklayın
                 </Button>
@@ -639,15 +719,71 @@ const PrescriptionManagement: React.FC = () => {
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="nextVisit" className="text-xs sm:text-sm">Sonraki Kontrol (Opsiyonel)</Label>
-          <Input
-            id="nextVisit"
-            type="date"
-            className="border border-gray-300 rounded-md shadow-sm w-full sm:w-1/3 h-9 sm:h-10 text-xs sm:text-sm"
-            value={formData.nextVisit}
-            onChange={(e) => setFormData({ ...formData, nextVisit: e.target.value })}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+          <div>
+            <Label htmlFor="nextVisit" className="text-xs sm:text-sm">Sonraki Kontrol (Opsiyonel)</Label>
+            <Input
+              id="nextVisit"
+              type="date"
+              min={new Date().toISOString().split('T')[0]}
+              className="border border-gray-300 rounded-md shadow-sm w-full h-9 sm:h-10 text-xs sm:text-sm"
+              value={formData.nextVisit}
+              onChange={(e) => {
+                const selectedDate = e.target.value;
+                const today = new Date().toISOString().split('T')[0];
+                if (selectedDate >= today) {
+                  setFormData({ ...formData, nextVisit: selectedDate });
+                } else if (selectedDate) {
+                  toast.error('Geçmiş tarih seçilemez. Lütfen bugünden sonraki bir tarih seçin.');
+                  setFormData({ ...formData, nextVisit: '' });
+                }
+              }}
+            />
+          </div>
+          <div>
+            <Label htmlFor="usageDurationDays" className="text-xs sm:text-sm">Kullanım Süresi (Gün) *</Label>
+            <Input
+              id="usageDurationDays"
+              type="number"
+              min="1"
+              max="365"
+              className="border border-gray-300 rounded-md shadow-sm w-full text-xs sm:text-sm"
+              value={formData.usageDurationDays}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Sadece sayı girişine izin ver
+                if (value === '' || (/^\d+$/.test(value) && Number.parseInt(value, 10) >= 1 && Number.parseInt(value, 10) <= 365)) {
+                  setFormData({ ...formData, usageDurationDays: value });
+                }
+              }}
+              onKeyDown={(e) => {
+                // Sadece sayı tuşlarına izin ver
+                if (!/\d/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Tab') {
+                  e.preventDefault();
+                }
+              }}
+              placeholder="30"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">Reçetenin kaç gün geçerli olacağını belirtin (1-365 gün)</p>
+            <p className="text-xs text-gray-500 mt-1">Varsayılan: 30 gün</p>
+          </div>
+          <div>
+            <Label htmlFor="status" className="text-xs sm:text-sm">Durum</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => setFormData({ ...formData, status: value as 'active' | 'completed' | 'cancelled' })}
+            >
+              <SelectTrigger className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm">
+                <SelectValue placeholder="Durum seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Aktif</SelectItem>
+                <SelectItem value="completed">Tamamlandı</SelectItem>
+                <SelectItem value="cancelled">İptal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div>
@@ -660,7 +796,7 @@ const PrescriptionManagement: React.FC = () => {
 
           <div className="space-y-3 sm:space-y-4">
             {formData.medications.map((medication, index) => (
-              <Card key={index}>
+              <Card key={`add-med-${index}-${medication.name || ''}-${medication.dosage || ''}`}>
                 <CardContent className="p-3 sm:p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div>
@@ -758,24 +894,67 @@ const PrescriptionManagement: React.FC = () => {
     onSubmit: (prescription: Prescription) => void;
     onClose: () => void;
   }) => {
+    // Calculate usage duration days from validUntilDate if usageDurationDays is not provided
+    const calculateUsageDays = (validUntilDate?: string, createdDate?: string) => {
+      if (!validUntilDate) return '30';
+      const validDate = new Date(validUntilDate);
+      const created = createdDate ? new Date(createdDate) : new Date();
+      const diffTime = validDate.getTime() - created.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays > 0 ? diffDays.toString() : '30';
+    };
+
+    // Use usageDurationDays from prescription if available, otherwise calculate from dates
+    const getInitialUsageDays = () => {
+      if (prescription.usageDurationDays) {
+        return prescription.usageDurationDays;
+      }
+      return calculateUsageDays(prescription.validUntilDate, prescription.date);
+    };
+
     const [formData, setFormData] = useState({
-      patientId: prescription.patientId,
-      patientName: prescription.patientName,
+      patientId: String(prescription.patientId || ''),
+      patientName: prescription.patientName || '',
       diagnosis: prescription.diagnosis,
       instructions: prescription.instructions,
       nextVisit: prescription.nextVisit || '',
+      usageDurationDays: getInitialUsageDays(),
       medications: prescription.medications,
-      status: prescription.status
+      // Map 'used' to 'completed' for form display
+      status: (prescription.status === 'used' ? 'completed' : prescription.status) as 'active' | 'completed' | 'cancelled'
     });
 
+    // Update formData when prescription changes
+    useEffect(() => {
+      const calculatedDays = prescription.usageDurationDays || calculateUsageDays(prescription.validUntilDate, prescription.date);
+      setFormData({
+        patientId: String(prescription.patientId || ''),
+        patientName: prescription.patientName || '',
+        diagnosis: prescription.diagnosis,
+        instructions: prescription.instructions,
+        nextVisit: prescription.nextVisit || '',
+        usageDurationDays: calculatedDays,
+        medications: prescription.medications,
+        // Map 'used' to 'completed' for form display
+        status: (prescription.status === 'used' ? 'completed' : prescription.status) as 'active' | 'completed' | 'cancelled'
+      });
+    }, [prescription]);
+
     const hasChanges = useMemo(() => {
+      // Get original usage days for comparison (use usageDurationDays if available, otherwise calculate)
+      const originalUsageDays = prescription.usageDurationDays || calculateUsageDays(prescription.validUntilDate, prescription.date);
+      
+      // Map prescription status for comparison (used -> completed)
+      const originalStatus = prescription.status === 'used' ? 'completed' : prescription.status;
+      
       return (
-        formData.patientId !== prescription.patientId ||
-        formData.patientName !== prescription.patientName ||
+        formData.patientId !== String(prescription.patientId || '') ||
+        formData.patientName !== (prescription.patientName || '') ||
         formData.diagnosis !== prescription.diagnosis ||
         formData.instructions !== prescription.instructions ||
         formData.nextVisit !== (prescription.nextVisit || '') ||
-        formData.status !== prescription.status ||
+        formData.status !== originalStatus ||
+        formData.usageDurationDays !== originalUsageDays ||
         JSON.stringify(formData.medications) !== JSON.stringify(prescription.medications)
       );
     }, [formData, prescription]);
@@ -839,6 +1018,7 @@ const PrescriptionManagement: React.FC = () => {
         medications: validMedications,
         instructions: formData.instructions,
         nextVisit: formData.nextVisit || undefined,
+        usageDurationDays: formData.usageDurationDays,
         status: formData.status
       });
     };
@@ -918,16 +1098,53 @@ const PrescriptionManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
           <div>
             <Label htmlFor="edit-nextVisit" className="text-xs sm:text-sm">Sonraki Kontrol (Opsiyonel)</Label>
             <Input
               id="edit-nextVisit"
               type="date"
+              min={new Date().toISOString().split('T')[0]}
               value={formData.nextVisit}
-              onChange={(e) => setFormData({ ...formData, nextVisit: e.target.value })}
+              onChange={(e) => {
+                const selectedDate = e.target.value;
+                const today = new Date().toISOString().split('T')[0];
+                if (selectedDate >= today) {
+                  setFormData({ ...formData, nextVisit: selectedDate });
+                } else if (selectedDate) {
+                  toast.error('Geçmiş tarih seçilemez. Lütfen bugünden sonraki bir tarih seçin.');
+                  setFormData({ ...formData, nextVisit: '' });
+                }
+              }}
               className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
             />
+          </div>
+          <div>
+            <Label htmlFor="edit-usageDurationDays" className="text-xs sm:text-sm">Kullanım Süresi (Gün) *</Label>
+            <Input
+              id="edit-usageDurationDays"
+              type="number"
+              min="1"
+              max="365"
+              className="border border-gray-300 rounded-md h-9 sm:h-10 text-xs sm:text-sm"
+              value={formData.usageDurationDays}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Sadece sayı girişine izin ver
+                if (value === '' || (/^\d+$/.test(value) && Number.parseInt(value, 10) >= 1 && Number.parseInt(value, 10) <= 365)) {
+                  setFormData({ ...formData, usageDurationDays: value });
+                }
+              }}
+              onKeyDown={(e) => {
+                // Sadece sayı tuşlarına izin ver
+                if (!/\d/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Tab') {
+                  e.preventDefault();
+                }
+              }}
+              placeholder="30"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">Reçetenin kaç gün geçerli olacağını belirtin (1-365 gün)</p>
           </div>
           <div>
             <Label htmlFor="edit-status" className="text-xs sm:text-sm">Durum</Label>
@@ -957,7 +1174,7 @@ const PrescriptionManagement: React.FC = () => {
 
           <div className="space-y-3 sm:space-y-4">
             {formData.medications.map((medication, index) => (
-              <Card key={index}>
+              <Card key={`edit-med-${index}-${medication.name || ''}-${medication.dosage || ''}`}>
                 <CardContent className="p-3 sm:p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div>
@@ -1060,16 +1277,28 @@ const PrescriptionManagement: React.FC = () => {
         />
         <Dialog open={isAddPrescriptionOpen} onOpenChange={setIsAddPrescriptionOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsAddPrescriptionOpen(true)} className="w-full sm:w-auto text-xs sm:text-sm">
+            <Button 
+              onClick={() => setIsAddPrescriptionOpen(true)} 
+              disabled={isAddingPrescription}
+              className="w-full sm:w-auto text-xs sm:text-sm"
+            >
               <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Yeni Reçete</span>
               <span className="sm:hidden">Yeni</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto [&>button[data-slot='dialog-close']]:hidden" onInteractOutside={(e) => isAddingPrescription && e.preventDefault()} onEscapeKeyDown={(e) => isAddingPrescription && e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Yeni Reçete Oluştur</DialogTitle>
             </DialogHeader>
+            {isAddingPrescription && (
+              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 rounded-lg">
+                <div className="bg-white p-4 rounded-lg">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <p className="mt-2 text-sm">Reçete oluşturuluyor...</p>
+                </div>
+              </div>
+            )}
             <AddPrescriptionForm
               key={formKey}
               onSubmit={handleAddPrescription}
@@ -1125,7 +1354,7 @@ const PrescriptionManagement: React.FC = () => {
                 <p className="text-gray-600 mt-2">{error}</p>
               </div>
               <Button
-                onClick={() => window.location.reload()}
+                onClick={() => globalThis.location.reload()}
                 className="mt-4"
                 variant="outline"
               >
@@ -1172,7 +1401,8 @@ const PrescriptionManagement: React.FC = () => {
                   </div>
                   <Badge className={`${getStatusColor(prescription.status)} text-xs whitespace-nowrap`}>
                     {prescription.status === 'active' ? 'Aktif' :
-                      prescription.status === 'completed' ? 'Tamamlandı' : 'İptal'}
+                      prescription.status === 'completed' || (prescription.status as string) === 'used' ? 'Tamamlandı' : 
+                      prescription.status === 'cancelled' ? 'İptal' : 'Bilinmeyen'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -1192,7 +1422,7 @@ const PrescriptionManagement: React.FC = () => {
                   <span className="font-medium text-xs sm:text-sm">İlaçlar:</span>
                   <div className="mt-1 space-y-1">
                     {prescription.medications.map((med, index) => (
-                      <div key={index} className="flex items-center space-x-2 text-xs sm:text-sm min-w-0">
+                      <div key={`prescription-med-${prescription.id}-${index}-${med.name || ''}-${med.dosage || ''}`} className="flex items-center space-x-2 text-xs sm:text-sm min-w-0">
                         <Pill className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
                         <span className="font-medium truncate">{med.name}</span>
                         <span className="text-gray-600 truncate">- {med.dosage}</span>
@@ -1205,6 +1435,18 @@ const PrescriptionManagement: React.FC = () => {
                   <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
                     <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
                     <span className="truncate">Sonraki kontrol: {prescription.nextVisit}</span>
+                  </div>
+                )}
+
+                {prescription.validUntilDate && (
+                  <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400 flex-shrink-0" />
+                    <span className="truncate">
+                      Kullanım süresi: {new Date(prescription.validUntilDate).toLocaleDateString('tr-TR')}
+                      {new Date(prescription.validUntilDate) < new Date() && (
+                        <span className="text-red-600 font-semibold ml-1">(Süresi Doldu)</span>
+                      )}
+                    </span>
                   </div>
                 )}
 
@@ -1288,7 +1530,7 @@ const PrescriptionManagement: React.FC = () => {
                 <Label className="font-semibold text-xs sm:text-sm">İlaçlar</Label>
                 <div className="mt-2 space-y-2 sm:space-y-3">
                   {selectedPrescription.medications.map((medication, index) => (
-                    <Card key={index}>
+                    <Card key={`detail-med-${selectedPrescription.id}-${index}-${medication.name || ''}-${medication.dosage || ''}`}>
                       <CardContent className="p-3 sm:p-4 bg-gray-50 rounded-lg">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                           <div className="min-w-0">
@@ -1320,6 +1562,16 @@ const PrescriptionManagement: React.FC = () => {
                 <div>
                   <Label className="font-semibold text-xs sm:text-sm">Sonraki Kontrol</Label>
                   <p className="mt-2 p-3 bg-gray-50 rounded-lg text-xs sm:text-sm">{selectedPrescription.nextVisit}</p>
+                </div>
+              )}
+
+              {selectedPrescription.validUntilDate && (
+                <div>
+                  <Label className="font-semibold text-xs sm:text-sm">Kullanım Süresi</Label>
+                  <p className={`mt-2 p-3 bg-gray-50 rounded-lg text-xs sm:text-sm ${new Date(selectedPrescription.validUntilDate) < new Date() ? 'text-red-600 font-semibold' : ''}`}>
+                    {new Date(selectedPrescription.validUntilDate).toLocaleDateString('tr-TR')}
+                    {new Date(selectedPrescription.validUntilDate) < new Date() && ' (Süresi Doldu)'}
+                  </p>
                 </div>
               )}
             </div>

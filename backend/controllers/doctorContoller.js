@@ -988,7 +988,8 @@ exports.addPrescription = async (req, res) => {
       status,
       nextVisit,
       appointmentId,
-      doctorId
+      doctorId,
+      usageDurationDays // Kullanım süresi (gün cinsinden)
     } = req.body;
 
     // Validate required fields
@@ -1018,6 +1019,25 @@ exports.addPrescription = async (req, res) => {
       });
     }
 
+    // Calculate valid_until_date based on usageDurationDays (default: 30 days)
+    // Check if usageDurationDays is provided and is a valid number
+    let usageDays = 30; // default
+    if (usageDurationDays !== undefined && usageDurationDays !== null && usageDurationDays !== '') {
+      const parsed = Number.parseInt(String(usageDurationDays), 10);
+      if (!Number.isNaN(parsed) && parsed > 0 && parsed <= 365) {
+        usageDays = parsed;
+      } else if (parsed > 365) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Kullanım süresi en fazla 365 gün olabilir'
+        });
+      }
+    }
+    const createdDate = date ? new Date(date) : new Date();
+    const validUntilDate = new Date(createdDate);
+    validUntilDate.setDate(validUntilDate.getDate() + usageDays);
+
     // Create prescription record
     const prescriptionData = {
       appointmentId: appointmentId || null,
@@ -1028,15 +1048,16 @@ exports.addPrescription = async (req, res) => {
       generalInstructions: instructions?.trim() || '',
       usageInstructions: instructions?.trim() || 'Use as directed by your doctor',
       nextVisitDate: nextVisit || null,
-      status: status || 'active'
+      status: status || 'active',
+      validUntilDate: validUntilDate.toISOString().split('T')[0]
     };
 
     const prescription = await client.query(
       `INSERT INTO prescriptions (
         appointment_id, doctor_id, patient_id, prescription_code,
         diagnosis, general_instructions, usage_instructions,
-        next_visit_date, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        next_visit_date, status, valid_until_date, usage_duration_days
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *`,
       [
         prescriptionData.appointmentId,
@@ -1047,7 +1068,9 @@ exports.addPrescription = async (req, res) => {
         prescriptionData.generalInstructions,
         prescriptionData.usageInstructions,
         prescriptionData.nextVisitDate,
-        prescriptionData.status
+        prescriptionData.status,
+        prescriptionData.validUntilDate,
+        usageDays // usage_duration_days value
       ]
     );
 
@@ -1092,10 +1115,33 @@ exports.addPrescription = async (req, res) => {
       return new Date(date).toISOString().split('T')[0];
     };
 
+    // Get usageDurationDays from database, or use the value we just saved
+    let responseUsageDurationDays = '30'; // default
+    if (prescription.rows[0].usage_duration_days !== null && prescription.rows[0].usage_duration_days !== undefined) {
+      // Use the value from database
+      responseUsageDurationDays = String(prescription.rows[0].usage_duration_days);
+    } else if (usageDays) {
+      // Use the value we calculated and saved
+      responseUsageDurationDays = String(usageDays);
+    } else if (prescription.rows[0].valid_until_date && prescription.rows[0].created_at) {
+      // Fallback: Calculate from dates if database value is not available
+      try {
+        const validDate = new Date(prescription.rows[0].valid_until_date);
+        const createdDate = new Date(prescription.rows[0].created_at);
+        const diffTime = validDate.getTime() - createdDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > 0 && diffDays <= 365) {
+          responseUsageDurationDays = diffDays.toString();
+        }
+      } catch (e) {
+        console.error('Error calculating usageDurationDays:', e);
+      }
+    }
+
     // Format response
     const responseData = {
-      id: prescription.rows[0].prescription_id,
-      patientId: prescription.rows[0].patient_id,
+      id: String(prescription.rows[0].prescription_id),
+      patientId: String(prescription.rows[0].patient_id),
       patientName: patientName,
       doctorName: doctorName || 'Dr. Unknown',
       date: formatDate(prescription.rows[0].created_at) || date || formatDate(new Date()),
@@ -1109,7 +1155,9 @@ exports.addPrescription = async (req, res) => {
       })),
       instructions: prescription.rows[0].general_instructions || '',
       status: prescription.rows[0].status || 'active',
-      nextVisit: formatDate(prescription.rows[0].next_visit_date)
+      nextVisit: formatDate(prescription.rows[0].next_visit_date),
+      validUntilDate: formatDate(prescription.rows[0].valid_until_date),
+      usageDurationDays: responseUsageDurationDays
     };
 
     // Create notification message
@@ -1180,8 +1228,12 @@ exports.getAllPrescriptions = async (req, res) => {
       queryParams.push(doctorId);
     }
     
-    // Cancelled reçeteleri hariç tut
+    // Sadece cancelled reçeteleri hariç tut (used reçeteler completed olarak gösterilecek)
     queryText += ` AND (p.status IS NULL OR p.status != 'cancelled')`;
+    
+    // Kullanım süresi dolan reçeteleri hariç tut (valid_until_date bugünden önce olanlar)
+    queryText += ` AND (p.valid_until_date IS NULL OR p.valid_until_date >= CURRENT_DATE)`;
+    
     queryText += ` ORDER BY p.created_at DESC`;
     
     const result = await db.query(queryText, queryParams);
@@ -1203,10 +1255,36 @@ exports.getAllPrescriptions = async (req, res) => {
     for (const prescription of prescriptions) {
       const items = await db.query('SELECT * FROM prescription_items WHERE prescription_id = $1', [prescription.prescription_id]);
       
+      // Map 'used' status to 'completed' for doctor view
+      let mappedStatus = prescription.status || 'active';
+      if (mappedStatus === 'used') {
+        mappedStatus = 'completed';
+      }
+      
+      // Get usageDurationDays from database, or calculate from validUntilDate and created_at if not available
+      let usageDurationDays = '30'; // default
+      if (prescription.usage_duration_days !== null && prescription.usage_duration_days !== undefined) {
+        // Use the value from database
+        usageDurationDays = String(prescription.usage_duration_days);
+      } else if (prescription.valid_until_date && prescription.created_at) {
+        // Fallback: Calculate from dates if database value is not available
+        try {
+          const validDate = new Date(prescription.valid_until_date);
+          const createdDate = new Date(prescription.created_at);
+          const diffTime = validDate.getTime() - createdDate.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays > 0 && diffDays <= 365) {
+            usageDurationDays = diffDays.toString();
+          }
+        } catch (e) {
+          console.error('Error calculating usageDurationDays:', e);
+        }
+      }
+      
       formattedPrescriptions.push({
-        id: prescription.prescription_id,
-        patientId: prescription.patient_id,
-        patientName: prescription.patient_name,
+        id: String(prescription.prescription_id),
+        patientId: String(prescription.patient_id),
+        patientName: prescription.patient_name || '',
         prescriptionCode: prescription.prescription_code,
         doctorName: prescription.doctor_name,
         date: formatDate(prescription.created_at) || new Date().toISOString().split('T')[0],
@@ -1219,8 +1297,10 @@ exports.getAllPrescriptions = async (req, res) => {
           instructions: item.usage_instructions
         })),
         instructions: prescription.general_instructions || '',
-        status: prescription.status || 'active',
-        nextVisit: formatDate(prescription.next_visit_date)
+        status: mappedStatus,
+        nextVisit: formatDate(prescription.next_visit_date),
+        validUntilDate: formatDate(prescription.valid_until_date),
+        usageDurationDays: usageDurationDays
       });
     }
 
@@ -1237,8 +1317,11 @@ exports.getPrescriptionById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Ana reçete bilgisini getir
-    const prescription = await db.query('SELECT * FROM prescriptions WHERE prescription_id = $1', [id]);
+    // Ana reçete bilgisini getir (cancelled ve used reçeteleri hariç tut)
+    const prescription = await db.query(
+      'SELECT * FROM prescriptions WHERE prescription_id = $1 AND (status IS NULL OR (status != \'cancelled\' AND status != \'used\'))', 
+      [id]
+    );
     if (prescription.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -1265,13 +1348,53 @@ exports.getPrescriptionById = async (req, res) => {
     const fullPrescription = result.rows[0];
 
     // Frontend formatına dönüştür
+    const formatDate = (date) => {
+      if (!date) return null;
+      try {
+        if (typeof date === 'string') {
+          return date.split('T')[0];
+        } else if (date instanceof Date) {
+          return date.toISOString().split('T')[0];
+        }
+        return null;
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // Map 'used' status to 'completed' for doctor view
+    let mappedStatus = prescription.rows[0].status;
+    if (mappedStatus === 'used') {
+      mappedStatus = 'completed';
+    }
+    
+    // Get usageDurationDays from database, or calculate from validUntilDate and created_at if not available
+    let usageDurationDays = '30'; // default
+    if (prescription.rows[0].usage_duration_days !== null && prescription.rows[0].usage_duration_days !== undefined) {
+      // Use the value from database
+      usageDurationDays = String(prescription.rows[0].usage_duration_days);
+    } else if (prescription.rows[0].valid_until_date && prescription.rows[0].created_at) {
+      // Fallback: Calculate from dates if database value is not available
+      try {
+        const validDate = new Date(prescription.rows[0].valid_until_date);
+        const createdDate = new Date(prescription.rows[0].created_at);
+        const diffTime = validDate.getTime() - createdDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > 0 && diffDays <= 365) {
+          usageDurationDays = diffDays.toString();
+        }
+      } catch (e) {
+        console.error('Error calculating usageDurationDays:', e);
+      }
+    }
+    
     const formattedPrescription = {
-      id: prescription.rows[0].prescription_id,
-      prescriptionCode: prescription.rows[0].prescription_code, // Bu satırı ekledik
-      patientId: prescription.rows[0].patient_id,
+      id: String(prescription.rows[0].prescription_id),
+      prescriptionCode: prescription.rows[0].prescription_code,
+      patientId: String(prescription.rows[0].patient_id),
       patientName: fullPrescription?.patient_name || 'Bilinmeyen Hasta',
-      doctorName: prescription.doctorName,
-      date: prescription.rows[0].created_at?.split('T')[0],
+      doctorName: fullPrescription?.doctor_name || 'Dr. Bilinmeyen',
+      date: formatDate(prescription.rows[0].created_at),
       diagnosis: prescription.rows[0].diagnosis,
       medications: items.rows.map(item => ({
         name: item.medicine_name,
@@ -1281,8 +1404,10 @@ exports.getPrescriptionById = async (req, res) => {
         instructions: item.usage_instructions
       })),
       instructions: prescription.rows[0].general_instructions || '',
-      status: prescription.rows[0].status,
-      nextVisit: prescription.rows[0].next_visit_date
+      status: mappedStatus,
+      nextVisit: formatDate(prescription.rows[0].next_visit_date),
+      validUntilDate: formatDate(prescription.rows[0].valid_until_date),
+      usageDurationDays: usageDurationDays
     };
 
     res.status(200).json(formattedPrescription);
@@ -1310,30 +1435,132 @@ exports.updatePrescription = async (req, res) => {
       instructions,
       nextVisit,
       status,
-      doctorName
+      doctorName,
+      usageDurationDays // Kullanım süresi (gün cinsinden)
     } = req.body;
 
+    // Validate status if provided
+    if (status !== undefined && status !== null && status !== '') {
+      const validStatuses = ['active', 'completed', 'cancelled', 'used'];
+      if (!validStatuses.includes(status)) {
+        await client.query('ROLLBACK');
+        client.release();
+        return res.status(400).json({
+          success: false,
+          message: 'Geçersiz durum değeri. Geçerli değerler: active, completed, cancelled, used'
+        });
+      }
+    }
+
+    // Calculate valid_until_date if usageDurationDays is provided
+    let validUntilDate = null;
+    // Check if usageDurationDays is provided and is a valid number
+    if (usageDurationDays !== undefined && usageDurationDays !== null && usageDurationDays !== '') {
+      const parsed = Number.parseInt(String(usageDurationDays), 10);
+      if (!Number.isNaN(parsed) && parsed > 0 && parsed <= 365) {
+        const usageDays = parsed;
+        // Get current prescription creation date or use today
+        const currentPrescription = await client.query(
+          'SELECT created_at FROM prescriptions WHERE prescription_id = $1',
+          [id]
+        );
+        const baseDate = currentPrescription.rows[0]?.created_at 
+          ? new Date(currentPrescription.rows[0].created_at)
+          : new Date();
+        const calculatedDate = new Date(baseDate);
+        calculatedDate.setDate(calculatedDate.getDate() + usageDays);
+        validUntilDate = calculatedDate.toISOString().split('T')[0];
+      } else if (parsed > 365) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Kullanım süresi en fazla 365 gün olabilir'
+        });
+      }
+    }
+
     // Update main prescription info - patient_id'yi de güncelle
+    // Build dynamic update query based on provided fields
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    if (patientId !== undefined && patientId !== null) {
+      updateFields.push(`patient_id = $${paramIndex}`);
+      updateValues.push(patientId);
+      paramIndex++;
+    }
+
+    if (diagnosis !== undefined && diagnosis !== null) {
+      updateFields.push(`diagnosis = $${paramIndex}`);
+      updateValues.push(diagnosis);
+      paramIndex++;
+    }
+
+    if (instructions !== undefined && instructions !== null) {
+      updateFields.push(`general_instructions = $${paramIndex}`);
+      updateValues.push(instructions);
+      paramIndex++;
+    }
+
+    if (nextVisit !== undefined && nextVisit !== null) {
+      updateFields.push(`next_visit_date = $${paramIndex}`);
+      updateValues.push(nextVisit);
+      paramIndex++;
+    } else if (nextVisit === null) {
+      // Explicitly set to null if null is provided
+      updateFields.push(`next_visit_date = $${paramIndex}`);
+      updateValues.push(null);
+      paramIndex++;
+    }
+
+    // Status is important - always update if provided
+    if (status !== undefined && status !== null && status !== '') {
+      updateFields.push(`status = $${paramIndex}`);
+      updateValues.push(status);
+      paramIndex++;
+    }
+
+    if (validUntilDate !== undefined && validUntilDate !== null) {
+      updateFields.push(`valid_until_date = $${paramIndex}`);
+      updateValues.push(validUntilDate);
+      paramIndex++;
+    }
+
+    // Update usage_duration_days if usageDurationDays is provided
+    if (usageDurationDays !== undefined && usageDurationDays !== null && usageDurationDays !== '') {
+      const parsed = Number.parseInt(String(usageDurationDays), 10);
+      if (!Number.isNaN(parsed) && parsed > 0 && parsed <= 365) {
+        updateFields.push(`usage_duration_days = $${paramIndex}`);
+        updateValues.push(parsed);
+        paramIndex++;
+      }
+    }
+
+    // Always update updated_at
+    updateFields.push(`updated_at = NOW()`);
+
+    if (updateFields.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(400).json({
+        success: false,
+        message: 'Güncellenecek alan bulunamadı'
+      });
+    }
+
+    // Add prescription_id for WHERE clause
+    updateValues.push(id);
+    const whereParamIndex = updateValues.length; // This is the index for WHERE clause (after adding id)
+    
     const updateQuery = `
       UPDATE prescriptions 
-      SET patient_id = COALESCE($1, patient_id),
-          diagnosis = COALESCE($2, diagnosis),
-          general_instructions = COALESCE($3, general_instructions),
-          next_visit_date = $4,
-          status = COALESCE($5, status),
-          updated_at = NOW()
-      WHERE prescription_id = $6 
+      SET ${updateFields.join(', ')}
+      WHERE prescription_id = $${whereParamIndex}
       RETURNING *
     `;
     
-    const prescriptionResult = await client.query(updateQuery, [
-      patientId, // patient_id'yi güncelle
-      diagnosis,
-      instructions,
-      nextVisit || null,
-      status,
-      id
-    ]);
+    const prescriptionResult = await client.query(updateQuery, updateValues);
 
     if (prescriptionResult.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -1424,10 +1651,42 @@ exports.updatePrescription = async (req, res) => {
       doctorNameToUse = doctorInfo.rows[0]?.full_name || 'Dr. Bilinmeyen';
     }
 
+    // Map 'used' status to 'completed' for doctor view
+    let mappedStatus = prescriptionResult.rows[0].status;
+    if (mappedStatus === 'used') {
+      mappedStatus = 'completed';
+    }
+    
+    // Get usageDurationDays from database, or use the value we just updated
+    let responseUsageDurationDays = '30'; // default
+    if (prescriptionResult.rows[0].usage_duration_days !== null && prescriptionResult.rows[0].usage_duration_days !== undefined) {
+      // Use the value from database
+      responseUsageDurationDays = String(prescriptionResult.rows[0].usage_duration_days);
+    } else if (usageDurationDays && usageDurationDays !== '' && usageDurationDays !== null) {
+      // Use the value we just updated
+      const parsed = Number.parseInt(String(usageDurationDays), 10);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        responseUsageDurationDays = String(parsed);
+      }
+    } else if (prescriptionResult.rows[0].valid_until_date && prescriptionResult.rows[0].created_at) {
+      // Fallback: Calculate from dates if database value is not available
+      try {
+        const validDate = new Date(prescriptionResult.rows[0].valid_until_date);
+        const createdDate = new Date(prescriptionResult.rows[0].created_at);
+        const diffTime = validDate.getTime() - createdDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > 0 && diffDays <= 365) {
+          responseUsageDurationDays = diffDays.toString();
+        }
+      } catch (e) {
+        console.error('Error calculating usageDurationDays:', e);
+      }
+    }
+    
     const responseData = {
-      id: prescriptionResult.rows[0].prescription_id,
-      patientId: prescriptionResult.rows[0].patient_id,
-      patientName: patientNameToUse, // Database'den gelen doğru hasta adını kullan
+      id: String(prescriptionResult.rows[0].prescription_id),
+      patientId: String(prescriptionResult.rows[0].patient_id),
+      patientName: patientNameToUse || '', // Database'den gelen doğru hasta adını kullan
       prescriptionCode: prescriptionResult.rows[0].prescription_code,
       doctorName: doctorNameToUse,
       date: formatDate(prescriptionResult.rows[0].created_at),
@@ -1440,17 +1699,24 @@ exports.updatePrescription = async (req, res) => {
         instructions: item.usage_instructions
       })),
       instructions: prescriptionResult.rows[0].general_instructions || '',
-      status: prescriptionResult.rows[0].status,
-      nextVisit: formatDate(prescriptionResult.rows[0].next_visit_date)
+      status: mappedStatus,
+      nextVisit: formatDate(prescriptionResult.rows[0].next_visit_date),
+      validUntilDate: formatDate(prescriptionResult.rows[0].valid_until_date),
+      usageDurationDays: responseUsageDurationDays
     };
 
     res.status(200).json(responseData);
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Reçete güncelleme hatası:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
     res.status(500).json({
       success: false,
-      message: 'Reçete güncellenirken hata oluştu'
+      message: `Reçete güncellenirken hata oluştu: ${error.message || 'Bilinmeyen hata'}`
     });
   } finally {
     client.release();
