@@ -158,6 +158,7 @@ exports.getMyPrescriptions = async (req, res) => {
         p.general_instructions,
         p.usage_instructions,
         p.next_visit_date,
+        p.valid_until_date,
         p.status as prescription_status,
         p.created_at as prescription_date,
         u.full_name as doctor_name,
@@ -185,6 +186,8 @@ exports.getMyPrescriptions = async (req, res) => {
       LEFT JOIN appointments a ON p.appointment_id = a.appointment_id
       LEFT JOIN prescription_items pi ON p.prescription_id = pi.prescription_id
       WHERE p.patient_id = $1
+        AND (p.status IS NULL OR (p.status != 'cancelled' AND p.status != 'used'))
+        AND (p.valid_until_date IS NULL OR p.valid_until_date >= CURRENT_DATE)
       GROUP BY 
         p.prescription_id,
         p.prescription_code,
@@ -192,6 +195,7 @@ exports.getMyPrescriptions = async (req, res) => {
         p.general_instructions,
         p.usage_instructions,
         p.next_visit_date,
+        p.valid_until_date,
         p.status,
         p.created_at,
         u.full_name,
@@ -240,6 +244,7 @@ exports.getPrescriptionDetail = async (req, res) => {
         p.general_instructions,
         p.usage_instructions,
         p.next_visit_date,
+        p.valid_until_date,
         p.status as prescription_status,
         p.created_at as prescription_date,
         
@@ -279,6 +284,7 @@ exports.getPrescriptionDetail = async (req, res) => {
       LEFT JOIN appointments a ON p.appointment_id = a.appointment_id
       LEFT JOIN prescription_items pi ON p.prescription_id = pi.prescription_id
       WHERE p.prescription_id = $1 AND p.patient_id = $2
+        AND (p.status IS NULL OR (p.status != 'cancelled' AND p.status != 'used'))
       GROUP BY 
         p.prescription_id,
         p.prescription_code,
@@ -286,6 +292,7 @@ exports.getPrescriptionDetail = async (req, res) => {
         p.general_instructions,
         p.usage_instructions,
         p.next_visit_date,
+        p.valid_until_date,
         p.status,
         p.created_at,
         u_doc.full_name,

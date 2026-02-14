@@ -28,6 +28,7 @@ interface Prescription {
   general_instructions?: string;
   usage_instructions?: string;
   next_visit_date?: string;
+  valid_until_date?: string;
   prescription_status: 'active' | 'used' | 'expired' | 'cancelled';
   prescription_date: string;
   doctor_name: string;
@@ -66,7 +67,7 @@ export function Prescriptions() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [selected, setSelected] = useState<PrescriptionDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState<number | null>(null); // Hangi reçetenin detayı yükleniyor
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -147,7 +148,7 @@ export function Prescriptions() {
   // Reçete detayını yükle
   const fetchPrescriptionDetail = async (prescriptionId: number) => {
     try {
-      setDetailLoading(true);
+      setDetailLoading(prescriptionId); // Hangi reçetenin yüklendiğini kaydet
       setError(null);
 
       const userStr = localStorage.getItem('user');
@@ -156,6 +157,7 @@ export function Prescriptions() {
 
       if (!userId) {
         setError('Kullanıcı bilgisi bulunamadı');
+        setDetailLoading(null);
         return;
       }
 
@@ -170,7 +172,7 @@ export function Prescriptions() {
       console.error('Reçete detay yükleme hatası:', err);
       setError(err.response?.data?.message || 'Reçete detayı yüklenirken bir hata oluştu');
     } finally {
-      setDetailLoading(false);
+      setDetailLoading(null);
     }
   };
 
@@ -486,6 +488,28 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-orange-500" />
+                    <span className="font-medium">Kullanım Süresi:</span>
+                    {rx.valid_until_date ? (() => {
+                      const validUntilDate = new Date(rx.valid_until_date);
+                      const prescriptionDate = new Date(rx.prescription_date);
+                      const diffTime = validUntilDate.getTime() - prescriptionDate.getTime();
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      const isExpired = validUntilDate < new Date();
+                      
+                      return (
+                        <span className={isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+                          <span className="font-semibold">{diffDays} gün</span>
+                          {' '}({validUntilDate.toLocaleDateString('tr-TR')})
+                          {isExpired && <span className="ml-1">(Süresi Doldu)</span>}
+                        </span>
+                      );
+                    })() : (
+                      <span className="text-gray-500">Belirtilmemiş</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <Stethoscope className="w-4 h-4 text-gray-500" />
                     <span className="font-medium">Uzmanlık:</span>
                     <span>{rx.doctor_specialty}</span>
@@ -521,9 +545,9 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                       variant="outline"
                       onClick={() => fetchPrescriptionDetail(rx.prescription_id)}
                       className="flex items-center gap-2 !border !border-black"
-                      disabled={detailLoading}
+                      disabled={detailLoading === rx.prescription_id}
                     >
-                      {detailLoading ? (
+                      {detailLoading === rx.prescription_id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : null}
                       Detayları Gör
@@ -579,6 +603,27 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                 <div>
                   <span className="font-medium text-gray-700">Tarih:</span>
                   <p className="mt-1">{new Date(selected.prescription_date).toLocaleDateString('tr-TR')}</p>
+                </div>
+
+                <div>
+                  <span className="font-medium text-gray-700">Kullanım Süresi:</span>
+                  {selected.valid_until_date ? (() => {
+                    const validUntilDate = new Date(selected.valid_until_date);
+                    const prescriptionDate = new Date(selected.prescription_date);
+                    const diffTime = validUntilDate.getTime() - prescriptionDate.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const isExpired = validUntilDate < new Date();
+                    
+                    return (
+                      <p className={`mt-1 ${isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                        <span className="font-semibold">{diffDays} gün</span>
+                        {' '}(Geçerlilik: {validUntilDate.toLocaleDateString('tr-TR')})
+                        {isExpired && <span className="ml-2 text-red-600 font-semibold">(Süresi Doldu)</span>}
+                      </p>
+                    );
+                  })() : (
+                    <p className="mt-1 text-gray-500">Belirtilmemiş</p>
+                  )}
                 </div>
 
                 {selected.next_visit_date && (
