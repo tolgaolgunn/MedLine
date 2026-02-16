@@ -718,7 +718,7 @@ exports.getMedicalResultDetail = async (req, res) => {
 exports.addReview = async (req, res) => {
   try {
     const { doctorId, rating, comment, appointmentId } = req.body;
-    console.log("addReview Request Body:", req.body); // Debug log
+    console.log("addReview Request Body:", req.body);
     const patientId = req.user.user_id;
 
     if (!doctorId || !rating || !appointmentId) {
@@ -738,6 +738,7 @@ exports.addReview = async (req, res) => {
       review,
       stats 
     });
+    toast.success('Review added successfully');
   } catch (error) {
     res.status(500).json({ message: 'Error adding review', error: error.message });
   }
