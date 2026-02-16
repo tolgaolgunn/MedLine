@@ -3,6 +3,7 @@ const db = require('../config/db');
 const { body, validationResult, param } = require('express-validator');
 const { sendAppointmentConfirmation } = require('../services/mailService');
 const MedicalResultModel = require('../models/medicalResultModel');
+const DoctorReviewModel = require('../models/doctorReviewModel');
 
 // Randevu oluşturma
 exports.createAppointment = async (req, res) => {
@@ -711,10 +712,13 @@ exports.getMedicalResultDetail = async (req, res) => {
     });
   }
 };
+
+
+
 exports.addReview = async (req, res) => {
   try {
     const { doctorId, rating, comment, appointmentId } = req.body;
-    const patientId = req.user.user_id; // Assumes authenticateToken middleware is used
+    const patientId = req.user.user_id;
 
     if (!doctorId || !rating || !appointmentId) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -726,7 +730,6 @@ exports.addReview = async (req, res) => {
 
     const review = await DoctorReviewModel.createReview(doctorId, patientId, rating, comment, appointmentId);
 
-    // Get updated stats to send back (optional but good for UI)
     const stats = await DoctorReviewModel.getDoctorStats(doctorId);
 
     res.status(201).json({ 
@@ -735,7 +738,28 @@ exports.addReview = async (req, res) => {
       stats 
     });
   } catch (error) {
-    console.error('Error adding review:', error);
     res.status(500).json({ message: 'Error adding review', error: error.message });
+  }
+};
+
+exports.getDoctorReviews = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const result = await db.query(`
+      SELECT 
+        r.rating,
+        r.comment,
+        r.created_at,
+        u.full_name as patient_name
+      FROM doctor_ratings r
+      JOIN users u ON r.patient_id = u.user_id
+        WHERE r.doctor_id = $1
+      ORDER BY r.created_at DESC
+    `, [doctorId]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    res.status(500).json({ message: 'Error fetching reviews', error: error.message });
   }
 };
