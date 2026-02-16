@@ -446,7 +446,7 @@ const DoctorReports: React.FC = () => {
         <div class="header">
           <h1>MEDLINE SAĞLIK MERKEZİ</h1>
           <p>Tıbbi Rapor</p>
-          <p>Tel: (0212) 555 00 00 | Web: www.medline.com</p>
+          <p>Tel: (0212) 555 00 00 | Web: med-line-dmze.vercel.app</p>
         </div>
 
         <div class="report-info">

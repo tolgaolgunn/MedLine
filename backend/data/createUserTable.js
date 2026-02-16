@@ -167,6 +167,30 @@ async function initializeDatabase() {
             )
         `);
 
+        // DOCTOR_RATINGS TABLOSU
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS doctor_ratings (
+                rating_id SERIAL PRIMARY KEY,
+                appointment_id INTEGER REFERENCES appointments(appointment_id) ON DELETE CASCADE,
+                doctor_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+                patient_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+                rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // DOCTOR_RATINGS_VIEW
+        await client.query(`
+            CREATE OR REPLACE VIEW doctor_ratings_view AS
+            SELECT 
+              r.doctor_id,
+              COUNT(*) AS total_ratings,
+              AVG(r.rating) AS average_rating
+            FROM doctor_ratings r
+            GROUP BY r.doctor_id
+        `);
+
         // Admin kullanıcı ekleme
         const email = 'admin1@healthcare.com';
         const password = 'Admin1234';
@@ -190,7 +214,7 @@ async function initializeDatabase() {
         }
 
         client.release();
-        console.log('All tables ensured: users, patient_profiles, doctor_profiles, prescriptions, prescription_items, appointments, feedbacks, medical_results, medical_result_files, notifications');
+        console.log('All tables ensured: users, patient_profiles, doctor_profiles, prescriptions, prescription_items, appointments, feedbacks, medical_results, medical_result_files, notifications,doctor_ratings');
     } catch (error) {
         console.error('Database initialization error:', error);
         process.exit(1);

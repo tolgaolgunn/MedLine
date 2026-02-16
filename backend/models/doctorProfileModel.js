@@ -88,9 +88,12 @@ const getAllDoctorsWithUser = async () => {
       u.created_at AS member_since,
       u.last_login,
       u.is_approved,
-      d.approved_by_admin
+      d.approved_by_admin,
+      COALESCE(drv.total_ratings, 0) as total_ratings,
+      COALESCE(drv.average_rating, 0) as average_rating
     FROM users u
     JOIN doctor_profiles d ON u.user_id = d.user_id
+    LEFT JOIN doctor_ratings_view drv ON u.user_id = drv.doctor_id
     WHERE u.role = 'doctor' AND u.is_approved = TRUE AND d.approved_by_admin = TRUE
   `);
   return result.rows;

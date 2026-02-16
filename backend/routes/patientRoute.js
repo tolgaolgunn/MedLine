@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const patientController = require('../controllers/patientController');
+const doctorReviewController = require('../controllers/doctorReviewController');
+const { authenticateToken } = require('../middleware/auth');
+
+router.use(authenticateToken); // Ensure all patient routes are protected or be selective
 
 // Appointment routes
 router.post('/appointments', patientController.createAppointment);
@@ -27,5 +31,8 @@ router.get('/feedback/:userId', patientController.getUserFeedbacks);
 router.post('/feedback', patientController.createFeedback);
 router.put('/feedback/:feedbackId', patientController.updateFeedback);
 router.delete('/feedback/:feedbackId', patientController.deleteFeedback);
+
+// Doctor Rating
+router.post('/rate-doctor', doctorReviewController.addReview);
 
 module.exports = router;

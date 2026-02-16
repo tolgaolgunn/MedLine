@@ -216,6 +216,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
         data: {
           type: "offer",
           offer: offer,
+          appointmentId: current.appointment_id || current.id
         }
       });
 
@@ -274,7 +275,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
 
   const confirmExit = () => {
     setShowExitConfirm(false);
-    setOpen(false); // This triggers the useEffect cleanup
+    setOpen(false);
     setShowRating(true);
   };
 
