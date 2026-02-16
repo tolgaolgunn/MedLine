@@ -273,11 +273,10 @@ exports.getAllDoctors = async (req, res) => {
   try {
     const doctors = await getAllDoctorsWithUser();
     
-    // Get all future appointments to check availability
     const appointmentsResult = await db.query(
-      `SELECT doctor_id, datetime FROM appointments 
-       WHERE datetime >= CURRENT_TIMESTAMP 
-       AND status != 'cancelled'`
+        `SELECT doctor_id, datetime FROM appointments 
+        WHERE datetime >= CURRENT_TIMESTAMP 
+        AND status != 'cancelled'`
     );
     const allAppointments = appointmentsResult.rows;
 
@@ -294,46 +293,52 @@ exports.getAllDoctors = async (req, res) => {
 };
 
 function calculateNextAvailable(appointments) {
-  const noteDate = (date) => {
-    return date.toISOString().split('T')[0];
-  };
-
   const now = new Date();
   
+  const nowTR_TakingUTCComponents = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+  
+  const startYear = nowTR_TakingUTCComponents.getUTCFullYear();
+  const startMonth = nowTR_TakingUTCComponents.getUTCMonth();
+  const startDay = nowTR_TakingUTCComponents.getUTCDate();
+
   // Check next 14 days
   for (let i = 0; i < 14; i++) {
-    const currentDate = new Date(now);
-    currentDate.setDate(now.getDate() + i);
-    
-    // Skip weekends
-    const day = currentDate.getDay();
-    if (day === 0 || day === 6) continue;
+    // Determine the day in TR
+    const trDateVector = new Date(Date.UTC(startYear, startMonth, startDay + i));
+    const year = trDateVector.getUTCFullYear();
+    const month = trDateVector.getUTCMonth(); // 0-indexed
+    const day = trDateVector.getUTCDate();
+    const dayOfWeek = trDateVector.getUTCDay();
 
-    // Working hours 09:00 - 17:00
+    // Skip weekends (Sunday=0, Saturday=6)
+    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+    // Working hours 09:00 - 17:00 (TR Time)
     const startHour = 9;
-    const endHour = 17;
+    const endHour = 17; 
 
     for (let hour = startHour; hour < endHour; hour++) {
       for (let min of [0, 30]) {
-        const slotDate = new Date(currentDate);
-        slotDate.setHours(hour, min, 0, 0);
+        // Calculate the actual UTC timestamp for this slot
+        // 09:00 TR = 06:00 UTC. So subtract 3 hours from the TR hour.
+        const slotRealUTC = new Date(Date.UTC(year, month, day, hour - 3, min));
 
         // If slot is in the past, skip
-        if (slotDate <= now) continue;
+        if (slotRealUTC <= now) continue;
 
         // Check if slot is taken
         const isTaken = appointments.some(app => {
           const appDate = new Date(app.datetime);
-          return appDate.getTime() === slotDate.getTime();
+          return appDate.getTime() === slotRealUTC.getTime();
         });
 
         if (!isTaken) {
-            // Format: "DD.MM.YYYY HH:mm"
-          const dayStr = String(slotDate.getDate()).padStart(2, '0');
-          const monthStr = String(slotDate.getMonth() + 1).padStart(2, '0');
-          const yearStr = slotDate.getFullYear();
-          const hourStr = String(slotDate.getHours()).padStart(2, '0');
-          const minStr = String(slotDate.getMinutes()).padStart(2, '0');
+          // Format: "DD.MM.YYYY HH:mm" (TR Time)
+          const dayStr = String(day).padStart(2, '0');
+          const monthStr = String(month + 1).padStart(2, '0');
+          const yearStr = year;
+          const hourStr = String(hour).padStart(2, '0');
+          const minStr = String(min).padStart(2, '0');
           
           return `${dayStr}.${monthStr}.${yearStr} ${hourStr}:${minStr}`;
         }
