@@ -8,6 +8,8 @@ interface Appointment {
   appointmentId?: number;
   id: number;
   appointment_id: number;
+  doctorId?: number;
+  doctor_id: number;
   patientId?: number;
   patient_id: number;
   patientName?: string;
@@ -25,12 +27,14 @@ interface StartAppointmentButtonProps {
   appointments: Appointment[];
   handleStartAppointment: (id: number) => void;
   isCurrentAppointment: (app: Appointment) => boolean;
+  currentDoctorId?: number;
 }
 
 const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
   appointments,
   handleStartAppointment,
   isCurrentAppointment,
+  currentDoctorId
 }) => {
   const [open, setOpen] = useState(false);
   const [micOn, setMicOn] = useState(true);
@@ -210,6 +214,12 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
       await peer.setLocalDescription(offer);
 
       console.log("Doctor: Sending offer to", pId);
+
+      const docIdToSend = currentDoctorId || (() => {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        return u.user_id || u.id;
+      })();
+
       socket.emit("signal", {
         to: pId,
         from: socket.id, // CRITICAL: Identify sender
@@ -217,10 +227,7 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
           type: "offer",
           offer: offer,
           appointmentId: current.appointment_id || current.id,
-          doctorId: (() => {
-            const u = JSON.parse(localStorage.getItem('user') || '{}');
-            return u.user_id || u.id;
-          })()
+          doctorId: docIdToSend
         }
       });
 

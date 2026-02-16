@@ -22,12 +22,12 @@ import {
 } from 'lucide-react';
 import axios from '../../lib/axios';
 
-// Interface for appointment data structure
 interface Appointment {
   id: number;
   appointment_id: number;
   patient_id: number;
-  patientname: string; // Backend'den gelen property adı
+  doctor_id: number;
+  patientname: string;
   patientAge: string;
   specialty: string;
   date: string;
@@ -96,6 +96,7 @@ const DoctorAppointments: React.FC = () => {
               id: item.appointment_id,
               appointment_id: item.appointment_id,
               patient_id: item.patient_id,
+              doctor_id: doctorId,
               patientname: item.patientName || 'İsimsiz Hasta',
               patientAge: Math.floor(parseFloat(item.patientage || item.patientAge || '0')), // Yaşı tam sayıya yuvarla
               specialty: item.specialty,
@@ -576,6 +577,7 @@ const DoctorAppointments: React.FC = () => {
                     appointments={appointments}
                     handleStartAppointment={handleStartAppointment}
                     isCurrentAppointment={isCurrentAppointment}
+                    currentDoctorId={JSON.parse(localStorage.getItem('user') || '{}').user_id}
                   />
                 )}
 

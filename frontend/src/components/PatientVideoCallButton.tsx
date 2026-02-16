@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { Phone, PhoneOff, Star } from "lucide-react";
 import { Mic, MicOff, Video, VideoOff } from "lucide-react";
 import getSocket from "../lib/socket";
+import { toast } from "react-toastify";
 
 interface Props {
   userId: string;
@@ -78,12 +79,11 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
     else if (data.type === "end_call" || data.type === 'hangup') {
       console.log("Patient: Call ended by doctor");
       setIncoming(false);
-      setOpen(false); // Triggers cleanup via useEffect
-      // Do NOT clear fromId/appointmentId here so we can use them for rating
+      setOpen(false);
       pendingOfferRef.current = null;
       pendingCandidatesRef.current = [];
     }
-  }, [fromId]); // Depend on fromId to correctly buffer candidates for the specific caller
+  }, [fromId]);
 
   useEffect(() => {
     console.log("PatientVideoCallButton mounted. userId:", userId);
@@ -275,28 +275,55 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
   };
 
   const submitRating = async () => {
-    console.log("Değerlendirme gönderildi:", { rating, comment, doctorId: fromId, appointmentId });
+    const validDoctorId = fromId;
+    const validAppointmentId = appointmentId;
 
-    if (!fromId || !appointmentId) {
-      console.error("Missing doctorId or appointmentId");
+    console.log("Değerlendirme gönderiliyor...", { rating, comment, doctorId: validDoctorId, appointmentId: validAppointmentId });
+
+    if (!validDoctorId || !validAppointmentId) {
+      console.error("Missing doctorId or appointmentId. Cannot submit rating.");
+      return;
     }
 
     try {
-      const token = JSON.parse(localStorage.getItem('user') || '{}').token;
-      await fetch(`${import.meta.env.VITE_API_URL}/api/rate-doctor`, {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+
+      if (!token) {
+        console.error("No token found for rating submission");
+        return;
+      }
+
+      const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '';
+      const url = `${baseUrl}/api/rate-doctor`;
+
+      console.log("Submitting rating to:", url);
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          doctorId: Number(fromId),
+          doctorId: Number(validDoctorId),
           rating,
           comment,
-          appointmentId: Number(appointmentId)
+          appointmentId: Number(validAppointmentId)
         })
       });
-      // Success handling
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Rating submission failed:", response.status, errorData);
+        toast.error("Değerlendirme gönderilemedi.");
+        throw new Error(`Rating submission failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Rating submitted successfully:", data);
+      toast.success("Değerlendirme başarıyla gönderildi.");
+
     } catch (error) {
       console.error("Failed to submit rating", error);
     }
