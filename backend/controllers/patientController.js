@@ -711,3 +711,31 @@ exports.getMedicalResultDetail = async (req, res) => {
     });
   }
 };
+exports.addReview = async (req, res) => {
+  try {
+    const { doctorId, rating, comment, appointmentId } = req.body;
+    const patientId = req.user.user_id; // Assumes authenticateToken middleware is used
+
+    if (!doctorId || !rating || !appointmentId) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    const review = await DoctorReviewModel.createReview(doctorId, patientId, rating, comment, appointmentId);
+
+    // Get updated stats to send back (optional but good for UI)
+    const stats = await DoctorReviewModel.getDoctorStats(doctorId);
+
+    res.status(201).json({ 
+      message: 'Review added successfully', 
+      review,
+      stats 
+    });
+  } catch (error) {
+    console.error('Error adding review:', error);
+    res.status(500).json({ message: 'Error adding review', error: error.message });
+  }
+};

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { Phone, PhoneOff } from "lucide-react";
+import { Phone, PhoneOff, Star } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff } from "lucide-react";
 import getSocket from "../lib/socket";
 
 interface Props {
@@ -9,8 +10,16 @@ interface Props {
 }
 
 const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
   const [incoming, setIncoming] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [showRatingExitConfirm, setShowRatingExitConfirm] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
   const [fromId, setFromId] = useState<string | null>(null);
+  const [appointmentId, setAppointmentId] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>("Bekleniyor...");
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -39,6 +48,9 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
       console.log("Patient: Received offer from doctor:", from);
       pendingOfferRef.current = data.offer;
       setFromId(from);
+      if (data.appointmentId) {
+        setAppointmentId(data.appointmentId);
+      }
       setIncoming(true);
       pendingCandidatesRef.current = []; // Reset candidates for new call
     }
@@ -95,10 +107,6 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
     };
   }, [userId, handleSignal, socket]);
 
-
-  // --- Media & Peer Connection Logic ---
-
-  // Handle Remote Stream Display
   useEffect(() => {
     if (remoteStream && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
@@ -110,6 +118,8 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
     if (!pendingOfferRef.current || !fromId) return;
 
     setIncoming(false);
+    setMicOn(true);
+    setCamOn(true);
     setOpen(true);
     setConnectionStatus("Bağlanıyor...");
 
@@ -146,7 +156,7 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.muted = true; // Local video must be muted
+        videoRef.current.muted = true;
       }
 
       stream.getTracks().forEach(track => peer.addTrack(track, stream));
@@ -208,6 +218,85 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
       console.error("Patient: Error accepting call:", err);
       setOpen(false);
     }
+  };
+  const toggleMic = () => {
+    if (streamRef.current) {
+      streamRef.current.getAudioTracks().forEach((track) => {
+        track.enabled = !micOn;
+      });
+      setMicOn(!micOn);
+    }
+  };
+  const toggleCam = () => {
+    if (streamRef.current) {
+      streamRef.current.getVideoTracks().forEach((track) => {
+        track.enabled = !camOn;
+      });
+      setCamOn(!camOn);
+    }
+  };
+  const handleExit = () => {
+    setShowExitConfirm(true);
+  };
+
+  const confirmExit = () => {
+    setShowExitConfirm(false);
+    setOpen(false);
+    setShowRating(true);
+  };
+
+  const cancelExit = () => {
+    setShowExitConfirm(false);
+  };
+
+  const handleRatingExit = () => {
+    setShowRatingExitConfirm(true);
+  };
+
+  const confirmRatingExit = () => {
+    setShowRatingExitConfirm(false);
+    setShowRating(false);
+    setRating(0);
+    setComment("");
+  };
+
+  const cancelRatingExit = () => {
+    setShowRatingExitConfirm(false);
+  };
+
+  const submitRating = async () => {
+    console.log("Değerlendirme gönderildi:", { rating, comment, doctorId: fromId, appointmentId });
+
+    if (!fromId || !appointmentId) {
+      console.error("Missing doctorId or appointmentId");
+      // Fallback or show error? For now just log.
+      // It's possible the user refreshes or something.
+    }
+
+    try {
+      const token = JSON.parse(localStorage.getItem('user') || '{}').token;
+      await fetch(`${import.meta.env.VITE_API_URL}/api/rate-doctor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          doctorId: fromId,
+          rating,
+          comment,
+          appointmentId
+        })
+      });
+      // Success handling
+    } catch (error) {
+      console.error("Failed to submit rating", error);
+    }
+
+
+    setShowRating(false);
+    setRating(0);
+    setComment("");
   };
 
 
@@ -304,12 +393,138 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
               </span>
             </div>
           </div>
-
-          <div className="flex justify-center mt-6">
-            <Button onClick={() => setOpen(false)} variant="destructive" size="lg" className="rounded-full px-8 h-14 flex gap-2 font-bold shadow-md">
+          <div className="flex gap-6 justify-center mt-6">
+            <Button onClick={toggleMic} variant={micOn ? "secondary" : "destructive"} size="lg" className="rounded-full w-14 h-14 shadow-md">
+              {micOn ? <Mic /> : <MicOff />}
+            </Button>
+            <Button onClick={toggleCam} variant={camOn ? "secondary" : "destructive"} size="lg" className="rounded-full w-14 h-14 shadow-md">
+              {camOn ? <Video /> : <VideoOff />}
+            </Button>
+            <Button onClick={handleExit} variant="destructive" size="lg" className="rounded-full px-8 h-14 flex gap-2 font-bold shadow-md">
               <PhoneOff /> Görüşmeyi Sonlandır
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Çıkış Onayı</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Görüşmeden çıkış yapacaksınız. Onaylıyor musunuz?
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={cancelExit} className="border-2 border-gray-300 shadow-sm">
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={confirmExit} className="border-2 border-gray-300 shadow-sm">
+              Evet, Çıkış Yap
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showRating} onOpenChange={() => { }}>
+        <DialogContent
+          className="max-w-md [&>button]:hidden"
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>MedLine Değerlendirme</DialogTitle>
+            <DialogDescription>
+              Bizi değerlendirin ve yorumunuzu paylaşın.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+
+            {/* Yıldız Değerlendirmesi */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Değerlendirme
+              </label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className="text-2xl hover:scale-110 transition-transform"
+                  >
+                    <Star
+                      className={`w-6 h-6 ${star <= rating
+                        ? "text-black fill-current"
+                        : "text-gray-300"
+                        }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {rating === 0 && "Değerlendirme seçin"}
+                {rating === 1 && "Çok Kötü"}
+                {rating === 2 && "Kötü"}
+                {rating === 3 && "Orta"}
+                {rating === 4 && "İyi"}
+                {rating === 5 && "Çok İyi"}
+              </p>
+            </div>
+
+            {/* Yorum Alanı */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Yorum
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="MedLine hakkında yorumunuzu yazın..."
+                className="w-full p-3 border border-black rounded-md resize-none focus:outline-none focus:ring-0 focus:border-black"
+                rows={3}
+                maxLength={500}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {comment.length}/500 karakter
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleRatingExit}
+              className="border-2 border-gray-300 shadow-sm"
+            >
+              İptal
+            </Button>
+            <Button
+              onClick={submitRating}
+              disabled={rating === 0}
+              className="border-2 border-gray-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Değerlendirmeyi Gönder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showRatingExitConfirm} onOpenChange={setShowRatingExitConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Çıkış Onayı</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Değerlendirme sayfasından çıkış yapacaksınız. Onaylıyor musunuz?
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={cancelRatingExit} className="border-2 border-gray-300 shadow-sm">
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={confirmRatingExit} className="border-2 border-gray-300 shadow-sm">
+              Evet, Çıkış Yap
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

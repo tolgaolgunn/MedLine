@@ -11,6 +11,7 @@
     const notificationRoutes = require('./routes/notificationRoute');
     const adminRoutes = require('./routes/adminRoute');
     const aiRoutes = require('./routes/aiRoute');
+const { appendErrors } = require('react-hook-form');
     const app = express();
 
     const allowedOrigins = [
@@ -125,8 +126,13 @@ cron.schedule('*/10 * * * *', () => {
 
             // Forward signaling messages (doctor <-> patient)
         socket.on('signal', ({ to, data }) => {
-            console.log(`Signal from ${socket.id} to ${to} type:${data.type}`);
-            io.to(String(to)).emit('signal', { from: socket.id, data }); // Ensure 'to' is string
+            console.log(`Signal from ${socket.id} (User: ${socket.userId}) to ${to} type:${data.type}`);
+            // "from" field now carries the DB ID (socket.userId) if available, otherwise fallback to socket.id or handle error
+            // However, existing frontend might expect socket.id or just an ID. 
+            // The constraint is: The Receiver needs to know "Who called me" efficiently.
+            // For the rating system, the Patient needs the Doctor's DB ID. 
+            // When Doctor calls Patient: socket.userId is Doctor's DB ID.
+            io.to(String(to)).emit('signal', { from: socket.userId || socket.id, data }); 
         });
 
         // For direct messaging: join a room by userId
@@ -136,6 +142,27 @@ cron.schedule('*/10 * * * *', () => {
             socket.userId = id;
             console.log(`Socket ${socket.id} joined room ${id}`);
         });    
+
+        socket.on('rateDoctor',async ({ doctorId, rating }) => {
+          if(rating<1 || rating>5) return;
+            
+          const allowed =await canRateDoctor(appointmentId,doctorId,socket.userId);
+          if(!allowed) return;
+           await saveDoctorRating({ doctorId, rating, appointmentId });
+            io.to(String(doctorId)).emit('doctorRated', {
+            appointmentId,
+            rating
+            });
+        });
+
+        socket.on('ratePatient', ({ patientId, rating }) => {
+            console.log(`Patient ${patientId} rated with ${rating}`);
+            io.to(String(patientId)).emit('patientRated', { patientId, rating });
+        });
+        socket.on('send-message', ({sender,roomId,message})=>{
+            socket.join(String(roomId));
+            io.to(String(roomId)).emit('receive-message', { sender, message,time:new Date() });
+        })
 
             socket.on('disconnect', () => {
                 console.log('Socket disconnected:', socket.id);
