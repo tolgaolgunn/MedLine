@@ -1,8 +1,7 @@
 const jwt = require('jsonwebtoken');
 
-// Token authentication middleware
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'] || req.cookies.token || req.headers["Authorization"];
+  const authHeader = req.headers['authorization'] || (req.cookies && req.cookies.token) || req.headers["Authorization"];
   if(!authHeader){
     return res.status(401).json({
       success: false,
@@ -37,7 +36,6 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
-// Role-based authorization middleware
 const isAdmin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
@@ -50,7 +48,6 @@ const isAdmin = (req, res, next) => {
 };
 
 
-// Doctor authorization middleware
 const isDoctor = (req, res, next) => {
   if (req.user && req.user.role === 'doctor') {
     next();
