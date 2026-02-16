@@ -11,7 +11,7 @@ router.post('/appointments', patientController.createAppointment);
 router.get('/appointments/:userId', patientController.getAppointmentsByUser);
 router.get('/doctor-appointments/:doctor_id/:date', patientController.getDoctorAppointmentsByDate);
 router.get('/patient-appointments/:patient_id/:date', patientController.getPatientAppointmentsByDate);
-router.delete('/appointments/:patientId/:appointmentId', patientController.deleteAppointment);
+router.delete('/appointments/:patientId/:appointmentId', patientController.deleteAppointment);  
 
 // Prescription routes
 router.get('/patient/prescriptions/:patientId', patientController.getMyPrescriptions);

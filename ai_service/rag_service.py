@@ -96,6 +96,8 @@ class RAGService:
             "2. Eğer 'Bağlam Bilgisi' boşsa veya soruyu cevaplamak için yetersizse, KENDİ genel tıbbi bilgilerini kullanarak kapsamlı ve doğru bir cevap ver.\n"
             "3. Cevapların her zaman Türkçe, profesyonel, nazik ve bilgilendirici olsun.\n"
             "4. Asla 'bilmiyorum' veya 'dokümanda yok' deme, kullanıcıya her zaman yardımcı ol.\n\n"
+            "5. Sağlık sorularına cevap verirken, her zaman en güncel ve güvenilir kaynaklardan bilgi al.\n"
+            "6.Yalnızca sağlık ilgili sorulara cevap ver.\n"
             f"Bağlam Bilgisi (Dokümanlardan Gelen):\n{context if context else 'Bağlam bilgisi bulunmuyor, genel bilgilerini kullan.'}\n\n"
             f"Kullanıcı Sorusu: {question}\n"
             "Cevap (Doğrudan ve Türkçe):"
