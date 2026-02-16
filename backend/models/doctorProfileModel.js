@@ -36,9 +36,12 @@ const getDoctorProfileByUserId = async (user_id) => {
       d.hospital_name,
       d.approved_by_admin,
       d.created_at as profile_created_at,
-      d.updated_at as profile_updated_at
+      d.updated_at as profile_updated_at,
+      COALESCE(drv.total_ratings, 0) as total_ratings,
+      COALESCE(drv.average_rating, 0) as average_rating
     FROM users u
     JOIN doctor_profiles d ON u.user_id = d.user_id
+    LEFT JOIN doctor_ratings_view drv ON u.user_id = drv.doctor_id
     WHERE u.user_id = $1 AND u.role = 'doctor'`,
     [user_id]
   );

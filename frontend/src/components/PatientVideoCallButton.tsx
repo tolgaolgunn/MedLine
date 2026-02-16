@@ -269,23 +269,21 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
 
     if (!fromId || !appointmentId) {
       console.error("Missing doctorId or appointmentId");
-      // Fallback or show error? For now just log.
-      // It's possible the user refreshes or something.
     }
 
     try {
       const token = JSON.parse(localStorage.getItem('user') || '{}').token;
-      await fetch(`${import.meta.env.VITE_API_URL}/api/rate-doctor`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/rate-doctor`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          doctorId: fromId,
+          doctorId: Number(fromId),
           rating,
           comment,
-          appointmentId
+          appointmentId: Number(appointmentId)
         })
       });
       // Success handling
