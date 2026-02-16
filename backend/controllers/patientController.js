@@ -718,6 +718,7 @@ exports.getMedicalResultDetail = async (req, res) => {
 exports.addReview = async (req, res) => {
   try {
     const { doctorId, rating, comment, appointmentId } = req.body;
+    console.log("addReview Request Body:", req.body); // Debug log
     const patientId = req.user.user_id;
 
     if (!doctorId || !rating || !appointmentId) {
