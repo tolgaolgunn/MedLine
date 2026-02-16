@@ -192,9 +192,8 @@ const PrescriptionManagement: React.FC = () => {
   const filteredPrescriptions = useMemo(() => {
     return prescriptions.filter(prescription => {
       const matchesSearch = prescription.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
-      // Filter logic: 'completed' filter should show both 'completed' and 'used' status
-      // Backend maps 'used' to 'completed', but we also check for 'used' in case
+        prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (prescription.prescriptionCode && prescription.prescriptionCode.toLowerCase().includes(searchTerm.toLowerCase()));
       let matchesStatus = true;
       if (filterStatus !== 'all') {
         if (filterStatus === 'completed') {
@@ -208,7 +207,7 @@ const PrescriptionManagement: React.FC = () => {
   }, [prescriptions, searchTerm, filterStatus]);
 
   const handleAddPrescription = async (newPrescription: Omit<Prescription, 'id'>) => {
-    // Prevent multiple submissions
+
     if (isAddingPrescription) {
       return;
     }
