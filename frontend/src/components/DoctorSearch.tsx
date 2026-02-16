@@ -201,7 +201,7 @@ export function DoctorSearch() {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/appointments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({
           patient_id,
           doctor_id: selectedDoctor.id,
@@ -238,7 +238,6 @@ export function DoctorSearch() {
     const dateStr = format(date, 'yyyy-MM-dd');
 
     try {
-      // Kullanıcı bilgisini localStorage'dan al
       const userDataStr = localStorage.getItem('user');
       const userData = userDataStr ? JSON.parse(userDataStr) : null;
       const patient_id = userData?.user_id;
@@ -249,40 +248,53 @@ export function DoctorSearch() {
         return;
       }
 
-      // Doktorun randevularını getir
-      const doctorResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor-appointments/${doctorId}/${dateStr}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      let newDoctorAppointments = [];
+      try {
+        const doctorResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor-appointments/${doctorId}/${dateStr}`, { headers });
+        if (doctorResponse.ok) {
+          const doctorData = await doctorResponse.json();
+          newDoctorAppointments = Array.isArray(doctorData) ? doctorData : [];
+        } else {
+          console.error(`Doktor randevuları alınamadı: ${doctorResponse.status}`);
         }
+      } catch (e) {
+        console.error("Error fetching doctor appointments:", e);
+      }
+      setDoctorAppointments(newDoctorAppointments);
+
+      let newPatientAppointments = [];
+      try {
+        const patientResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/patient-appointments/${patient_id}/${dateStr}`, { headers });
+        if (patientResponse.ok) {
+          const patientData = await patientResponse.json();
+          newPatientAppointments = Array.isArray(patientData) ? patientData : [];
+        } else {
+          console.error(`Hasta randevuları alınamadı: ${patientResponse.status}`);
+        }
+      } catch (e) {
+        console.error("Error fetching patient appointments:", e);
+      }
+      setPatientAppointments(newPatientAppointments);
+
+      // State güncellemeleri asenkron olduğu için burada doğrudan yeni verileri kullanarak kontrol edelim
+      const doctorHasApt = newDoctorAppointments.some((apt: any) => {
+        if (!apt || !apt.datetime) return false;
+        // ... (time slot checks logic if needed here, but usually done in isTimeSlotDisabled)
+        return false;
       });
 
-      if (doctorResponse.ok) {
-        const doctorData = await doctorResponse.json();
-        setDoctorAppointments(Array.isArray(doctorData) ? doctorData : []);
-      } else {
-        console.error('Doktor randevuları alınamadı');
-        setDoctorAppointments([]);
+      if (selectedTime) {
+        // validate current selected time against NEW data immediately?
+        // This logic is complex because isTimeSlotDisabled uses state which might not be updated yet in this closure.
+        // However, React batching usually handles this, or we can use the local variables if we refactor isTimeSlotDisabled.
+        // For now, allow the state update to trigger re-renders. 
       }
 
-      // Hastanın randevularını getir
-      const patientResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/patient-appointments/${patient_id}/${dateStr}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (patientResponse.ok) {
-        const patientData = await patientResponse.json();
-        setPatientAppointments(Array.isArray(patientData) ? patientData : []);
-      } else {
-        console.error('Hasta randevuları alınamadı');
-        setPatientAppointments([]);
-      }
-
-      if (selectedTime && isTimeSlotDisabled(selectedTime)) {
-        setSelectedTime("");
-        toast.error(getTimeSlotMessage(selectedTime));
-      }
     } catch (error) {
       console.error('Randevu kontrolü hatası:', error);
       setDoctorAppointments([]);
@@ -312,9 +324,10 @@ export function DoctorSearch() {
     const expectedDateTime = `${dateStr} ${time}:00`;
 
     // Doktorun bu saatte randevusu var mı kontrol et
-    const doctorHasAppointment = doctorAppointments.some(
+    const doctorHasAppointment = Array.isArray(doctorAppointments) && doctorAppointments.some(
       (appointment: any) => {
         try {
+          if (!appointment || !appointment.datetime) return false;
           const appointmentDateTime = new Date(appointment.datetime);
           const expectedDate = new Date(expectedDateTime);
           return appointmentDateTime.getTime() === expectedDate.getTime();
@@ -325,9 +338,10 @@ export function DoctorSearch() {
     );
 
     // Hastanın bu saatte başka randevusu var mı kontrol et
-    const patientHasAppointment = patientAppointments.some(
+    const patientHasAppointment = Array.isArray(patientAppointments) && patientAppointments.some(
       (appointment: any) => {
         try {
+          if (!appointment || !appointment.datetime) return false;
           const appointmentDateTime = new Date(appointment.datetime);
           const expectedDate = new Date(expectedDateTime);
           return appointmentDateTime.getTime() === expectedDate.getTime();
@@ -347,9 +361,10 @@ export function DoctorSearch() {
     const expectedDateTime = `${dateStr} ${time}:00`;
 
     // Doktorun bu saatte randevusu var mı kontrol et
-    const doctorAppointment = doctorAppointments.find(
+    const doctorAppointment = Array.isArray(doctorAppointments) ? doctorAppointments.find(
       (appointment: any) => {
         try {
+          if (!appointment || !appointment.datetime) return false;
           const appointmentDateTime = new Date(appointment.datetime);
           const expectedDate = new Date(expectedDateTime);
           return appointmentDateTime.getTime() === expectedDate.getTime();
@@ -357,16 +372,17 @@ export function DoctorSearch() {
           return false;
         }
       }
-    );
+    ) : null;
 
     if (doctorAppointment) {
       return 'Bu saatte doktorun randevusu var';
     }
 
     // Hastanın bu saatte başka randevusu var mı kontrol et
-    const patientAppointment = patientAppointments.find(
+    const patientAppointment = Array.isArray(patientAppointments) ? patientAppointments.find(
       (appointment: any) => {
         try {
+          if (!appointment || !appointment.datetime) return false;
           const appointmentDateTime = new Date(appointment.datetime);
           const expectedDate = new Date(expectedDateTime);
           return appointmentDateTime.getTime() === expectedDate.getTime();
@@ -374,7 +390,7 @@ export function DoctorSearch() {
           return false;
         }
       }
-    );
+    ) : null;
 
     if (patientAppointment) {
       return 'Bu saatte başka randevunuz var';

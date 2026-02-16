@@ -181,20 +181,34 @@ export function Dashboard() {
         'Authorization': `Bearer ${token}`
       };
 
-      const [prescriptionsRes, appointmentsRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/api/patient/prescriptions/active/count/${userId}`, { headers }),
-        fetch(`${import.meta.env.VITE_API_URL}/api/patient/appointments/completed/count/${userId}`, { headers })
-      ]);
-
-      if (prescriptionsRes.ok) {
-        const prescriptionsData = await prescriptionsRes.json();
-        setActivePrescriptionCount(prescriptionsData.count || 0);
+      try {
+        const prescriptionsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/patient/prescriptions/active/count/${userId}`, { headers });
+        if (prescriptionsRes.ok) {
+          const prescriptionsData = await prescriptionsRes.json();
+          setActivePrescriptionCount(prescriptionsData.count || 0);
+        } else {
+          console.error('Prescriptions count fetch failed:', prescriptionsRes.status);
+          setActivePrescriptionCount(0);
+        }
+      } catch (e) {
+        console.error("Error fetching prescriptions count:", e);
+        setActivePrescriptionCount(0);
       }
 
-      if (appointmentsRes.ok) {
-        const appointmentsData = await appointmentsRes.json();
-        setCompletedAppointmentCount(appointmentsData.count || 0);
+      try {
+        const appointmentsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/patient/appointments/completed/count/${userId}`, { headers });
+        if (appointmentsRes.ok) {
+          const appointmentsData = await appointmentsRes.json();
+          setCompletedAppointmentCount(appointmentsData.count || 0);
+        } else {
+          console.error('Completed appointments count fetch failed:', appointmentsRes.status);
+          setCompletedAppointmentCount(0);
+        }
+      } catch (e) {
+        console.error("Error fetching completed appointments count:", e);
+        setCompletedAppointmentCount(0);
       }
+
     } catch (error) {
       console.error("İstatistikler yüklenirken hata:", error);
     }

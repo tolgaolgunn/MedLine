@@ -477,7 +477,7 @@ const Appointments: React.FC = () => {
 
       {/* Filtre Modal */}
       <Dialog open={isFilterModalOpen} onOpenChange={handleCloseFilterModal}>
-        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Filtreler</DialogTitle>
             <DialogDescription className="hidden">
@@ -574,7 +574,7 @@ const Appointments: React.FC = () => {
       {/* Randevu Detay Modal */}
       {showDetail && selectedAppointment && (
         <Dialog open={showDetail} onOpenChange={setShowDetail}>
-          <DialogContent className="max-w-2xl" aria-describedby={undefined}>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Randevu Detayı</DialogTitle>
               <DialogDescription className="hidden">
@@ -664,7 +664,7 @@ const Appointments: React.FC = () => {
 
       {/* Randevu İptal Onay Modal */}
       <Dialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
-        <DialogContent className="max-w-sm" aria-describedby={undefined}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Randevu İptali</DialogTitle>
             <DialogDescription className="hidden">
@@ -703,7 +703,7 @@ const Appointments: React.FC = () => {
           setShowExitConfirm(false);
         }
       }}>
-        <DialogContent className="max-w-sm" aria-describedby={undefined}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Çıkış Onayı</DialogTitle>
             <DialogDescription className="hidden">
