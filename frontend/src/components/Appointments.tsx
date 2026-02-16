@@ -477,9 +477,12 @@ const Appointments: React.FC = () => {
 
       {/* Filtre Modal */}
       <Dialog open={isFilterModalOpen} onOpenChange={handleCloseFilterModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Filtreler</DialogTitle>
+            <DialogDescription className="hidden">
+              Randevu filtreleme seçenekleri
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             {/* Tarih Aralığı Filtreleri */}
@@ -571,9 +574,12 @@ const Appointments: React.FC = () => {
       {/* Randevu Detay Modal */}
       {showDetail && selectedAppointment && (
         <Dialog open={showDetail} onOpenChange={setShowDetail}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>Randevu Detayı</DialogTitle>
+              <DialogDescription className="hidden">
+                Randevu detayları
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               {/* Doktor Bilgileri */}
@@ -658,9 +664,12 @@ const Appointments: React.FC = () => {
 
       {/* Randevu İptal Onay Modal */}
       <Dialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Randevu İptali</DialogTitle>
+            <DialogDescription className="hidden">
+              Randevu iptal onayı
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-600">
@@ -694,9 +703,12 @@ const Appointments: React.FC = () => {
           setShowExitConfirm(false);
         }
       }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Çıkış Onayı</DialogTitle>
+            <DialogDescription className="hidden">
+              Kaydedilmemiş değişiklikler varken çıkış onayı
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-600">
