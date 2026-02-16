@@ -34,5 +34,6 @@ router.delete('/feedback/:feedbackId', patientController.deleteFeedback);
 
 // Doctor Rating
 router.post('/rate-doctor', doctorReviewController.addReview);
+router.get('/doctor/:doctorId/reviews', doctorReviewController.getDoctorReviews);
 
 module.exports = router;

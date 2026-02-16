@@ -1,27 +1,5 @@
 const db = require('../config/db');
 
-const createView= async()=>{
-  await db.query(`
-    CREATE OR REPLACE VIEW doctor_ratings_view AS
-    SELECT 
-      r.rating_id,
-      r.doctor_id,
-      r.patient_id,
-      r.rating,
-      r.comment,
-      r.created_at,
-      u.full_name AS patient_name,
-      u.email AS patient_email,
-      u.phone_number AS patient_phone,
-      d.full_name AS doctor_name,
-      d.email AS doctor_email,
-      d.phone_number AS doctor_phone
-    FROM doctor_ratings r
-    JOIN users u ON r.patient_id = u.user_id
-    JOIN users d ON r.doctor_id = d.user_id
-  `);
-}
-
 const getDoctorStats= async(doctorId)=>{
   const result = await db.query(`
     SELECT 
@@ -44,7 +22,6 @@ const createReview = async (doctorId, patientId, rating, comment, appointmentId)
 };
 
 module.exports = {
-  createView,
   getDoctorStats,
   createReview
 };
