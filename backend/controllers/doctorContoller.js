@@ -324,7 +324,7 @@ exports.updateAppointmentStatus = async (req, res) => {
 exports.getAppointmentsByDoctor = async (req, res) => {
   try {
     const { doctorId } = req.params;
-    console.log('Fetching appointments for doctor:', doctorId);
+  
     
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -356,7 +356,6 @@ exports.getAppointmentsByDoctor = async (req, res) => {
       [doctorId, today.toISOString()]
     );
     
-    console.log('Raw SQL result:', JSON.stringify(result.rows, null, 2));
 
     // Format the response data - yaş değerini Math.floor ile güvence altına al
     const formattedAppointments = result.rows.map(appointment => {

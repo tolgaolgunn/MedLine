@@ -121,8 +121,8 @@ const PrescriptionManagement: React.FC = () => {
 
         const fixedPrescriptions = fetchedPrescriptions.map(prescription => ({
           ...prescription,
-          doctorName: prescription.doctorName && prescription.doctorName.trim() !== '' 
-            ? prescription.doctorName 
+          doctorName: prescription.doctorName && prescription.doctorName.trim() !== ''
+            ? prescription.doctorName
             : currentDoctorName,
           // Ensure status is set correctly (backend maps 'used' to 'completed')
           status: prescription.status || 'active',
@@ -215,7 +215,7 @@ const PrescriptionManagement: React.FC = () => {
 
     try {
       setIsAddingPrescription(true);
-      
+
       if (!newPrescription.patientId || !newPrescription.patientName.trim()) {
         toast.error('Lütfen geçerli bir hasta seçin');
         setIsAddingPrescription(false);
@@ -228,8 +228,8 @@ const PrescriptionManagement: React.FC = () => {
 
       // Get usageDurationDays from newPrescription, default to '30' if not provided
       const usageDays = (newPrescription as any).usageDurationDays;
-      const usageDurationDaysValue = (usageDays !== undefined && usageDays !== null && usageDays !== '') 
-        ? String(usageDays) 
+      const usageDurationDaysValue = (usageDays !== undefined && usageDays !== null && usageDays !== '')
+        ? String(usageDays)
         : '30';
 
       const prescriptionData = {
@@ -294,14 +294,14 @@ const PrescriptionManagement: React.FC = () => {
 
       // Get usageDurationDays from updatedPrescription, default to '30' if not provided
       const usageDays = updatedPrescription.usageDurationDays;
-      const usageDurationDaysValue = (usageDays !== undefined && usageDays !== null && usageDays !== '') 
-        ? String(usageDays) 
+      const usageDurationDaysValue = (usageDays !== undefined && usageDays !== null && usageDays !== '')
+        ? String(usageDays)
         : '30';
 
       // Format the prescription data properly
       // Ensure status is valid - map 'used' to 'completed' if needed
       const statusToSend = updatedPrescription.status === 'used' ? 'completed' : updatedPrescription.status;
-      
+
       const prescriptionData = {
         id: updatedPrescription.id,
         patientId: String(updatedPrescription.patientId),
@@ -370,7 +370,7 @@ const PrescriptionManagement: React.FC = () => {
     } catch (err) {
       const error = err as any;
       console.error('Error updating prescription:', error);
-      
+
       // Check if it's an axios error with response data
       if (error.response) {
         const errorMessage = error.response.data?.message || error.response.data?.error || 'Bilinmeyen hata';
@@ -943,10 +943,10 @@ const PrescriptionManagement: React.FC = () => {
     const hasChanges = useMemo(() => {
       // Get original usage days for comparison (use usageDurationDays if available, otherwise calculate)
       const originalUsageDays = prescription.usageDurationDays || calculateUsageDays(prescription.validUntilDate, prescription.date);
-      
+
       // Map prescription status for comparison (used -> completed)
       const originalStatus = prescription.status === 'used' ? 'completed' : prescription.status;
-      
+
       return (
         formData.patientId !== String(prescription.patientId || '') ||
         formData.patientName !== (prescription.patientName || '') ||
@@ -1277,8 +1277,8 @@ const PrescriptionManagement: React.FC = () => {
         />
         <Dialog open={isAddPrescriptionOpen} onOpenChange={setIsAddPrescriptionOpen}>
           <DialogTrigger asChild>
-            <Button 
-              onClick={() => setIsAddPrescriptionOpen(true)} 
+            <Button
+              onClick={() => setIsAddPrescriptionOpen(true)}
               disabled={isAddingPrescription}
               className="w-full sm:w-auto text-xs sm:text-sm"
             >
@@ -1401,8 +1401,8 @@ const PrescriptionManagement: React.FC = () => {
                   </div>
                   <Badge className={`${getStatusColor(prescription.status)} text-xs whitespace-nowrap`}>
                     {prescription.status === 'active' ? 'Aktif' :
-                      prescription.status === 'completed' || (prescription.status as string) === 'used' ? 'Tamamlandı' : 
-                      prescription.status === 'cancelled' ? 'İptal' : 'Bilinmeyen'}
+                      prescription.status === 'completed' || (prescription.status as string) === 'used' ? 'Kullanıldı' :
+                        prescription.status === 'cancelled' ? 'İptal' : 'Bilinmeyen'}
                   </Badge>
                 </div>
               </CardHeader>

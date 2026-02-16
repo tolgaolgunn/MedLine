@@ -101,7 +101,7 @@ export function DoctorSearch() {
           name: doc.full_name,
           specialty: doc.specialty,
           experience: (doc.experience_years || 0) + " yıl",
-          rating: Number(doc.average_rating) || 0,
+          rating: Number(Number(doc.average_rating).toFixed(1)) || 0,
           reviewCount: Number(doc.total_ratings) || 0,
           location: `${doc.city || ""}, ${doc.district || ""}`.replace(/^[,\s]+|[,\s]+$/g, ""),
           hospitalName: doc.hospital_name || '',
