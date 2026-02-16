@@ -286,14 +286,12 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
     }
 
     try {
-      const userStr = localStorage.getItem('user');
-      const token = userStr ? JSON.parse(userStr).token : null;
+      const token = localStorage.getItem('token');
 
       if (!token) {
         console.error("No token found for rating submission");
         return;
       }
-
       const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '';
       const url = `${baseUrl}/api/rate-doctor`;
 
