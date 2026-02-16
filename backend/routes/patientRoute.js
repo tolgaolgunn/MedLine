@@ -4,7 +4,7 @@ const patientController = require('../controllers/patientController');
 const doctorReviewController = require('../controllers/patientController');
 const { authenticateToken } = require('../middleware/auth');
 
-router.use(authenticateToken); // Ensure all patient routes are protected or be selective
+router.use(authenticateToken); 
 
 // Appointment routes
 router.post('/appointments', patientController.createAppointment);

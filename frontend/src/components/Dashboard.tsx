@@ -10,7 +10,6 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogDescription,
 } from './ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
@@ -124,45 +123,28 @@ export function Dashboard() {
     setLoadingAppointments(true);
     try {
       const userStr = localStorage.getItem("user");
-      const token = localStorage.getItem("token");
-      if (!userStr || !token) return;
+      if (!userStr) return;
       const user = JSON.parse(userStr);
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/appointments/${user.user_id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          console.error("Yetkilendirme hatası: Token geçersiz veya süresi dolmuş.");
-          // Opsiyonel: Kullanıcıyı login sayfasına yönlendirebilirsiniz
-        }
-        return;
-      }
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/appointments/${user.user_id}`);
+      if (!res.ok) return;
 
       const data = await res.json();
       console.log("API'den gelen veri:", data);
 
-      if (Array.isArray(data)) {
-        const now = new Date();
-        const upcoming = data
-          .filter((appointment: any) => {
-            if (!appointment.datetime) return false;
-            if (appointment.status === 'cancelled') return false;
-            return new Date(appointment.datetime) > now;
-          })
-          .sort((a: any, b: any) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
-          .slice(0, 5);
+      const now = new Date();
+      const upcoming = data
+        .filter((appointment: any) => {
+          if (!appointment.datetime) return false;
+          if (appointment.status === 'cancelled') return false;
+          return new Date(appointment.datetime) > now;
+        })
+        .sort((a: any, b: any) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+        .slice(0, 5);
 
-        setUpcomingAppointments(upcoming);
-      } else {
-        setUpcomingAppointments([]);
-      }
+      setUpcomingAppointments(upcoming);
     } catch (error) {
       console.error("Randevular yüklenirken hata:", error);
-      setUpcomingAppointments([]);
     } finally {
       setLoadingAppointments(false);
     }
@@ -172,43 +154,24 @@ export function Dashboard() {
   const fetchPatientStatistics = async () => {
     try {
       const userStr = localStorage.getItem("user");
-      const token = localStorage.getItem("token");
-      if (!userStr || !token) return;
+      if (!userStr) return;
       const user = JSON.parse(userStr);
       const userId = user.user_id;
 
-      const headers = {
-        'Authorization': `Bearer ${token}`
-      };
+      const [prescriptionsRes, appointmentsRes] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL}/api/patient/patient/prescriptions/active/count/${userId}`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/patient/patient/appointments/completed/count/${userId}`)
+      ]);
 
-      try {
-        const prescriptionsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/patient/prescriptions/active/count/${userId}`, { headers });
-        if (prescriptionsRes.ok) {
-          const prescriptionsData = await prescriptionsRes.json();
-          setActivePrescriptionCount(prescriptionsData.count || 0);
-        } else {
-          console.error('Prescriptions count fetch failed:', prescriptionsRes.status);
-          setActivePrescriptionCount(0);
-        }
-      } catch (e) {
-        console.error("Error fetching prescriptions count:", e);
-        setActivePrescriptionCount(0);
+      if (prescriptionsRes.ok) {
+        const prescriptionsData = await prescriptionsRes.json();
+        setActivePrescriptionCount(prescriptionsData.count || 0);
       }
 
-      try {
-        const appointmentsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/patient/appointments/completed/count/${userId}`, { headers });
-        if (appointmentsRes.ok) {
-          const appointmentsData = await appointmentsRes.json();
-          setCompletedAppointmentCount(appointmentsData.count || 0);
-        } else {
-          console.error('Completed appointments count fetch failed:', appointmentsRes.status);
-          setCompletedAppointmentCount(0);
-        }
-      } catch (e) {
-        console.error("Error fetching completed appointments count:", e);
-        setCompletedAppointmentCount(0);
+      if (appointmentsRes.ok) {
+        const appointmentsData = await appointmentsRes.json();
+        setCompletedAppointmentCount(appointmentsData.count || 0);
       }
-
     } catch (error) {
       console.error("İstatistikler yüklenirken hata:", error);
     }
@@ -554,12 +517,9 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
 
         {showDetailModal && selectedAppointment && (
           <Dialog open={showDetailModal} onOpenChange={(open) => { if (!open) setShowDetailModal(false); }}>
-            <DialogContent className="max-w-md" aria-describedby={undefined}>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Randevu Detayı</DialogTitle>
-                <DialogDescription className="hidden">
-                  Yaklaşan randevu detayları
-                </DialogDescription>
               </DialogHeader>
               <div className="space-y-2">
                 <div><b>Doktor:</b> {selectedAppointment.doctor_name || 'Doktor'}</div>
@@ -614,12 +574,9 @@ function DashboardHome({ theme, upcomingAppointments, loadingAppointments, healt
             }
           }}>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto [&>button]:hidden"
-              onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} aria-describedby={undefined}>
+              onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>Geçmiş Aramalar</DialogTitle>
-                <DialogDescription className="hidden">
-                  Geçmiş arama kayıtları
-                </DialogDescription>
               </DialogHeader>
 
               {/* Filtre Butonları */}
