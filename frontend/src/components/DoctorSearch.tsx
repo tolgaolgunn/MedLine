@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from "./ui/dialog";
 import {
   Select,
@@ -123,7 +124,7 @@ export function DoctorSearch() {
     fetchDoctors();
   }, []);
 
-  // Tarih veya doktor değiştiğinde randevuları kontrol et
+
   useEffect(() => {
     if (selectedDate && selectedDoctor) {
       checkAppointments(selectedDate, selectedDoctor.id);
@@ -182,28 +183,19 @@ export function DoctorSearch() {
   const handleBookAppointment = async (): Promise<void> => {
     if (!selectedDoctor || !selectedDate || !selectedTime || !appointmentType) return;
 
-    // Seçilen saat disabled ise işlemi durdur
     if (isTimeSlotDisabled(selectedTime)) {
       toast.error(getTimeSlotMessage(selectedTime));
       return;
     }
-
-    // Kullanıcı bilgisini localStorage'dan al
     const userDataStr = localStorage.getItem('user');
     const userData = userDataStr ? JSON.parse(userDataStr) : null;
     const patient_id = userData?.user_id;
 
-    // Seçilen tarihi UTC olarak ayarla
     const dateObj = new Date(selectedDate);
-    // Saat ve dakikayı ayır
     const [hours, minutes] = selectedTime.split(':');
-    // Tarihe saat ve dakikayı ekle (yerel saat olarak)
     dateObj.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    // Timezone offset'i dakika cinsinden al
     const timezoneOffset = dateObj.getTimezoneOffset();
-    // Timezone farkını ekle
     dateObj.setMinutes(dateObj.getMinutes() - timezoneOffset);
-    // ISO string formatına çevir
     const datetime = dateObj.toISOString();
 
     try {
@@ -227,7 +219,6 @@ export function DoctorSearch() {
           clearSelections();
         }, 2000);
       } else {
-        // Hata mesajını al ve göster
         const errorData = await response.json();
         toast.error(errorData.message || 'Randevu kaydedilemedi!');
       }
@@ -251,22 +242,51 @@ export function DoctorSearch() {
       const userDataStr = localStorage.getItem('user');
       const userData = userDataStr ? JSON.parse(userDataStr) : null;
       const patient_id = userData?.user_id;
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        console.error('Token bulunamadı');
+        return;
+      }
 
       // Doktorun randevularını getir
-      const doctorResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor-appointments/${doctorId}/${dateStr}`);
-      const doctorData = await doctorResponse.json();
-      setDoctorAppointments(doctorData);
+      const doctorResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/doctor-appointments/${doctorId}/${dateStr}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (doctorResponse.ok) {
+        const doctorData = await doctorResponse.json();
+        setDoctorAppointments(Array.isArray(doctorData) ? doctorData : []);
+      } else {
+        console.error('Doktor randevuları alınamadı');
+        setDoctorAppointments([]);
+      }
 
       // Hastanın randevularını getir
-      const patientResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/patient-appointments/${patient_id}/${dateStr}`);
-      const patientData = await patientResponse.json();
-      setPatientAppointments(patientData);
+      const patientResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/patient-appointments/${patient_id}/${dateStr}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (patientResponse.ok) {
+        const patientData = await patientResponse.json();
+        setPatientAppointments(Array.isArray(patientData) ? patientData : []);
+      } else {
+        console.error('Hasta randevuları alınamadı');
+        setPatientAppointments([]);
+      }
+
       if (selectedTime && isTimeSlotDisabled(selectedTime)) {
         setSelectedTime("");
         toast.error(getTimeSlotMessage(selectedTime));
       }
     } catch (error) {
       console.error('Randevu kontrolü hatası:', error);
+      setDoctorAppointments([]);
+      setPatientAppointments([]);
     } finally {
       setLoadingAppointments(false);
     }
@@ -581,11 +601,14 @@ export function DoctorSearch() {
                       Randevu Al
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
                     <DialogHeader>
                       <DialogTitle>
                         Randevu Al - {doctor.name}
                       </DialogTitle>
+                      <DialogDescription className="hidden">
+                        Randevu alma formu
+                      </DialogDescription>
                     </DialogHeader>
 
                     {showSuccess ? (
