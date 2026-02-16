@@ -301,29 +301,22 @@ function calculateNextAvailable(appointments) {
   const startMonth = nowTR_TakingUTCComponents.getUTCMonth();
   const startDay = nowTR_TakingUTCComponents.getUTCDate();
 
-  // Check next 14 days
   for (let i = 0; i < 14; i++) {
-    // Determine the day in TR
     const trDateVector = new Date(Date.UTC(startYear, startMonth, startDay + i));
     const year = trDateVector.getUTCFullYear();
     const month = trDateVector.getUTCMonth(); // 0-indexed
     const day = trDateVector.getUTCDate();
     const dayOfWeek = trDateVector.getUTCDay();
 
-    // Skip weekends (Sunday=0, Saturday=6)
     if (dayOfWeek === 0 || dayOfWeek === 6) continue;
 
-    // Working hours 09:00 - 17:00 (TR Time)
     const startHour = 9;
     const endHour = 17; 
 
     for (let hour = startHour; hour < endHour; hour++) {
       for (let min of [0, 30]) {
-        // Calculate the actual UTC timestamp for this slot
-        // 09:00 TR = 06:00 UTC. So subtract 3 hours from the TR hour.
         const slotRealUTC = new Date(Date.UTC(year, month, day, hour - 3, min));
 
-        // If slot is in the past, skip
         if (slotRealUTC <= now) continue;
 
         // Check if slot is taken
