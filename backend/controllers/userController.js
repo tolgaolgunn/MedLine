@@ -317,12 +317,12 @@ function calculateNextAvailable(appointments) {
       for (let min of [0, 30]) {
         const slotRealUTC = new Date(Date.UTC(year, month, day, hour - 3, min));
 
-        if (slotRealUTC <= now) continue;
+        const slotDbCheckTime = new Date(Date.UTC(year, month, day, hour, min));
 
-        // Check if slot is taken
+        if (slotRealUTC <= now) continue;
         const isTaken = appointments.some(app => {
           const appDate = new Date(app.datetime);
-          return appDate.getTime() === slotRealUTC.getTime();
+          return appDate.getTime() === slotDbCheckTime.getTime();
         });
 
         if (!isTaken) {
