@@ -152,7 +152,7 @@ exports.getMyPrescriptions = async (req, res) => {
     }
 
     const query = `
-      SELECT 
+       SELECT 
         p.prescription_id,
         p.prescription_code,
         p.diagnosis,
@@ -160,7 +160,11 @@ exports.getMyPrescriptions = async (req, res) => {
         p.usage_instructions,
         p.next_visit_date,
         p.valid_until_date,
-        p.status as prescription_status,
+        CASE
+  WHEN p.valid_until_date < CURRENT_DATE THEN 'expired'
+  WHEN p.status IS NULL THEN 'active'
+  ELSE p.status
+END AS prescription_status,
         p.created_at as prescription_date,
         u.full_name as doctor_name,
         dp.specialty as doctor_specialty,
@@ -186,7 +190,7 @@ exports.getMyPrescriptions = async (req, res) => {
       LEFT JOIN doctor_profiles dp ON u.user_id = dp.user_id
       LEFT JOIN appointments a ON p.appointment_id = a.appointment_id
       LEFT JOIN prescription_items pi ON p.prescription_id = pi.prescription_id
-      WHERE p.patient_id = $1
+      WHERE p.patient_id = 2
         AND (p.status IS NULL OR p.status != 'cancelled')
       GROUP BY 
         p.prescription_id,
