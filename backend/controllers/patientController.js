@@ -188,7 +188,6 @@ exports.getMyPrescriptions = async (req, res) => {
       LEFT JOIN prescription_items pi ON p.prescription_id = pi.prescription_id
       WHERE p.patient_id = $1
         AND (p.status IS NULL OR p.status != 'cancelled')
-        AND (p.status IS NULL OR p.status != 'used')
       GROUP BY 
         p.prescription_id,
         p.prescription_code,
