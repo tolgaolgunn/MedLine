@@ -272,8 +272,73 @@ exports.resetPassword = async (req, res) => {
 exports.getAllDoctors = async (req, res) => {
   try {
     const doctors = await getAllDoctorsWithUser();
-    res.json(doctors);
+    
+    // Get all future appointments to check availability
+    const appointmentsResult = await db.query(
+      `SELECT doctor_id, datetime FROM appointments 
+       WHERE datetime >= CURRENT_TIMESTAMP 
+       AND status != 'cancelled'`
+    );
+    const allAppointments = appointmentsResult.rows;
+
+    const doctorsWithAvailability = doctors.map(doctor => {
+      const doctorAppointments = allAppointments.filter(app => app.doctor_id === doctor.user_id);
+      const nextAvailable = calculateNextAvailable(doctorAppointments);
+      return { ...doctor, next_available: nextAvailable };
+    });
+
+    res.json(doctorsWithAvailability);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+function calculateNextAvailable(appointments) {
+  const noteDate = (date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const now = new Date();
+  
+  // Check next 14 days
+  for (let i = 0; i < 14; i++) {
+    const currentDate = new Date(now);
+    currentDate.setDate(now.getDate() + i);
+    
+    // Skip weekends
+    const day = currentDate.getDay();
+    if (day === 0 || day === 6) continue;
+
+    // Working hours 09:00 - 17:00
+    const startHour = 9;
+    const endHour = 17;
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let min of [0, 30]) {
+        const slotDate = new Date(currentDate);
+        slotDate.setHours(hour, min, 0, 0);
+
+        // If slot is in the past, skip
+        if (slotDate <= now) continue;
+
+        // Check if slot is taken
+        const isTaken = appointments.some(app => {
+          const appDate = new Date(app.datetime);
+          return appDate.getTime() === slotDate.getTime();
+        });
+
+        if (!isTaken) {
+            // Format: "DD.MM.YYYY HH:mm"
+          const dayStr = String(slotDate.getDate()).padStart(2, '0');
+          const monthStr = String(slotDate.getMonth() + 1).padStart(2, '0');
+          const yearStr = slotDate.getFullYear();
+          const hourStr = String(slotDate.getHours()).padStart(2, '0');
+          const minStr = String(slotDate.getMinutes()).padStart(2, '0');
+          
+          return `${dayStr}.${monthStr}.${yearStr} ${hourStr}:${minStr}`;
+        }
+      }
+    }
+  }
+  return "Randevu Yok";
+}

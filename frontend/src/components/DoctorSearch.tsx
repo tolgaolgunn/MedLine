@@ -108,7 +108,7 @@ export function DoctorSearch() {
           image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face",
           onlineAvailable: true,
           officeAvailable: true,
-          nextAvailable: "Yakında",
+          nextAvailable: doc.next_available || "Yakında",
           price: "-",
         }));
         setDoctors(mapped);
