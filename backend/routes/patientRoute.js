@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const patientController = require('../controllers/patientController');
-const doctorReviewController = require('../controllers/doctorReviewController');
+const doctorReviewController = require('../controllers/patientController');
 const { authenticateToken } = require('../middleware/auth');
 
 router.use(authenticateToken); // Ensure all patient routes are protected or be selective
