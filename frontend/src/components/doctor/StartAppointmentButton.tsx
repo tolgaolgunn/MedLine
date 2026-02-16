@@ -217,7 +217,10 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
           type: "offer",
           offer: offer,
           appointmentId: current.appointment_id || current.id,
-          doctorId: JSON.parse(localStorage.getItem('user') || '{}').user_id // Add doctorId explicitly
+          doctorId: (() => {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            return u.user_id || u.id;
+          })()
         }
       });
 
