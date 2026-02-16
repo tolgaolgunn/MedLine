@@ -79,7 +79,7 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
       console.log("Patient: Call ended by doctor");
       setIncoming(false);
       setOpen(false); // Triggers cleanup via useEffect
-      setFromId(null);
+      // Do NOT clear fromId/appointmentId here so we can use them for rating
       pendingOfferRef.current = null;
       pendingCandidatesRef.current = [];
     }
@@ -265,6 +265,9 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
     setShowRating(false);
     setRating(0);
     setComment("");
+    // Cleanup call data
+    setFromId(null);
+    setAppointmentId(null);
   };
 
   const cancelRatingExit = () => {
@@ -280,7 +283,7 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
 
     try {
       const token = JSON.parse(localStorage.getItem('user') || '{}').token;
-      await fetch(`${import.meta.env.VITE_API_URL}/rate-doctor`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/rate-doctor`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
