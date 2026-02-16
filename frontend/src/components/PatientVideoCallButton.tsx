@@ -45,9 +45,16 @@ const PatientVideoCallButton: React.FC<Props> = ({ userId }) => {
     console.log("Patient received signal:", data.type, "from:", from);
 
     if (data.type === "offer") {
-      console.log("Patient: Received offer from doctor:", from);
+      console.log("Patient: Received offer from doctor:", from, "Data:", data);
       pendingOfferRef.current = data.offer;
-      setFromId(from);
+
+      // Prefer explicit doctorId if sent, otherwise fallback to 'from' (socket ID)
+      if (data.doctorId) {
+        setFromId(String(data.doctorId));
+      } else {
+        setFromId(from);
+      }
+
       if (data.appointmentId) {
         setAppointmentId(data.appointmentId);
       }
