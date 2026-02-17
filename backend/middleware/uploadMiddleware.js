@@ -13,12 +13,31 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
+        let originalName = file.originalname;
+        try {
+            originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+        } catch (e) {
+        }
+
+        const sanitize = (name) => {
+            return name.split('.')[0]
+                .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+                .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+                .replace(/ş/g, 's').replace(/Ş/g, 'S')
+                .replace(/ı/g, 'i').replace(/İ/g, 'I')
+                .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+                .replace(/ç/g, 'c').replace(/Ç/g, 'C')
+                .replace(/[^a-zA-Z0-9-_]/g, '_');
+        };
+
+        const safePublicId = sanitize(originalName) + '_' + Date.now();
+
         if (file.mimetype === 'application/pdf') {
             return {
                 folder: 'MedLine',
                 resource_type: 'raw',
                 format: 'pdf', 
-                public_id: file.originalname.split('.')[0] 
+                public_id: safePublicId 
             };
         }
         
@@ -26,6 +45,7 @@ const storage = new CloudinaryStorage({
             folder: 'MedLine',
             resource_type: 'image', 
             allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+            public_id: safePublicId
         };
     },
 });
