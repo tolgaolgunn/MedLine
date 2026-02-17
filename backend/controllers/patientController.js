@@ -190,7 +190,7 @@ END AS prescription_status,
       LEFT JOIN doctor_profiles dp ON u.user_id = dp.user_id
       LEFT JOIN appointments a ON p.appointment_id = a.appointment_id
       LEFT JOIN prescription_items pi ON p.prescription_id = pi.prescription_id
-      WHERE p.patient_id = 2
+      WHERE p.patient_id = $1
         AND (p.status IS NULL OR p.status != 'cancelled')
       GROUP BY 
         p.prescription_id,
