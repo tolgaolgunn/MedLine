@@ -546,7 +546,6 @@ exports.addMedicalResult = async (req, res) => {
   }
 };
 
-// Dosyalı tıbbi sonuç ekleme (PDF / görsel eklenmiş)
 exports.addMedicalResultWithFiles = async (req, res) => {
   const client = await db.connect();
 
@@ -583,32 +582,27 @@ exports.addMedicalResultWithFiles = async (req, res) => {
 
     const createdResult = resultInsert.rows[0];
 
-    // Dosyaları medical_result_files tablosuna kaydet
     const savedFiles = [];
     for (const file of files) {
-      const relativePath = `/uploads/${file.filename}`;
+      const fileUrl = file.path; 
+      
       const fileInsert = await client.query(
         `INSERT INTO medical_result_files (result_id, file_path, original_name, mime_type)
          VALUES ($1, $2, $3, $4)
          RETURNING file_id, file_path, original_name, mime_type, created_at`,
-        [createdResult.result_id, relativePath, file.originalname, file.mimetype]
+        [createdResult.result_id, fileUrl, file.originalname, file.mimetype]
       );
       savedFiles.push(fileInsert.rows[0]);
     }
 
     await client.query('COMMIT');
 
-    await client.query('COMMIT');
-
-    // Create notification message
     const notificationData = {
       userId: patientId,
       title: 'Yeni Tahlil Sonucu',
       message: `Doktorunuz yeni bir sonuç dosyası ekledi: ${title}`,
       type: 'result'
     };
-
-    // Save notification to database (we need to do this OUTSIDE the transaction or use a separate connection if we want it to persist even if the main transaction fails - but here we only want it if success, so it's fine. Wait, NotificationModel uses 'pool' directly, so it's outside this client's transaction. That's actually good here since we committed already.)
     
     let savedNotification;
     try {
@@ -617,7 +611,6 @@ exports.addMedicalResultWithFiles = async (req, res) => {
       console.error('Error saving notification:', notifError);
     }
 
-    // Send real-time notification to the patient
     if (req.io) {
       console.log(`Emitting result notification to patient room: ${patientId}`);
       req.io.to(String(patientId)).emit('notification', {
