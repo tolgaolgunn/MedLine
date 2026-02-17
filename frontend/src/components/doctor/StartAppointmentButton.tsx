@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../ui/dialog";
 import { Play, Mic, MicOff, Video, VideoOff, PhoneOff, Star } from "lucide-react";
 import getSocket from "../../lib/socket";
+import ChatComponent from "../ChatComponent";
 
 interface Appointment {
   appointmentId?: number;
@@ -368,53 +369,85 @@ const StartAppointmentButton: React.FC<StartAppointmentButtonProps> = ({
       </Button>
 
       <Dialog open={open} onOpenChange={() => { /* Prevent closing on click outside */ }}>
-        <DialogContent className="max-w-[95vw] md:max-w-4xl w-full p-6 [&>button]:hidden">
+        <DialogContent className="max-w-[95vw] md:max-w-6xl w-full p-6 [&>button]:hidden">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold border-b pb-2">Görüntülü Sohbet <span className="text-sm font-normal text-gray-500">({connectionStatus})</span></DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 w-full h-full min-h-[500px]">
-            {/* SİZ (Doktor) */}
-            <div className="relative w-full h-full bg-slate-100 rounded-2xl overflow-hidden border shadow-inner">
-              <video
-                ref={videoRef}
-                autoPlay playsInline muted
-                className="w-full h-full object-cover scale-x-[-1]"
-              />
-              <span className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1 rounded-md text-sm font-medium backdrop-blur-sm">
-                Siz
-              </span>
-            </div>
-
-            {/* HASTA */}
-            <div className="relative w-full h-full bg-black rounded-2xl overflow-hidden border-2 border-blue-500 shadow-lg">
-              {remoteStream ? (
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay playsInline
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-white/50 animate-pulse">
-                  Bağlantı bekleniyor...
+          <div className="flex flex-col md:flex-row gap-4 h-[600px]">
+            {/* Sol Taraf: Video Alanı */}
+            <div className="flex-1 flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
+                {/* SİZ (Doktor) */}
+                <div className="relative w-full h-full bg-slate-100 rounded-2xl overflow-hidden border shadow-inner">
+                  <video
+                    ref={videoRef}
+                    autoPlay playsInline muted
+                    className="w-full h-full object-cover scale-x-[-1]"
+                  />
+                  <span className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1 rounded-md text-sm font-medium backdrop-blur-sm">
+                    Siz
+                  </span>
                 </div>
-              )}
-              <span className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1 rounded-md text-sm font-medium backdrop-blur-sm">
-                Hasta
-              </span>
-            </div>
-          </div>
 
-          <div className="flex gap-6 justify-center mt-6">
-            <Button onClick={toggleMic} variant={micOn ? "secondary" : "destructive"} size="lg" className="rounded-full w-14 h-14 shadow-md">
-              {micOn ? <Mic /> : <MicOff />}
-            </Button>
-            <Button onClick={toggleCam} variant={camOn ? "secondary" : "destructive"} size="lg" className="rounded-full w-14 h-14 shadow-md">
-              {camOn ? <Video /> : <VideoOff />}
-            </Button>
-            <Button onClick={handleExit} variant="destructive" size="lg" className="rounded-full px-8 h-14 flex gap-2 font-bold shadow-md">
-              <PhoneOff /> Görüşmeyi Sonlandır
-            </Button>
+                {/* HASTA */}
+                <div className="relative w-full h-full bg-black rounded-2xl overflow-hidden border-2 border-blue-500 shadow-lg">
+                  {remoteStream ? (
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-white/50 animate-pulse">
+                      Bağlantı bekleniyor...
+                    </div>
+                  )}
+                  <span className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1 rounded-md text-sm font-medium backdrop-blur-sm">
+                    Hasta
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-6 justify-center mt-auto pb-2">
+                <Button onClick={toggleMic} variant={micOn ? "secondary" : "destructive"} size="lg" className="rounded-full w-14 h-14 shadow-md">
+                  {micOn ? <Mic /> : <MicOff />}
+                </Button>
+                <Button onClick={toggleCam} variant={camOn ? "secondary" : "destructive"} size="lg" className="rounded-full w-14 h-14 shadow-md">
+                  {camOn ? <Video /> : <VideoOff />}
+                </Button>
+                <Button onClick={handleExit} variant="destructive" size="lg" className="rounded-full px-8 h-14 flex gap-2 font-bold shadow-md">
+                  <PhoneOff /> Görüşmeyi Sonlandır
+                </Button>
+              </div>
+            </div>
+
+            {/* Sağ Taraf: Chat Alanı */}
+            <div className="w-full md:w-1/3 border-l pl-4 hidden md:block">
+              {/* appointmentId is available in the 'current' appointment logic, but let's confirm scope. 
+                    We need to access the appointment ID being used for the call.
+                    In startVideoCall, we find 'current'. We need to store that ID in state or use a ref if we want to pass it here.
+                    Looking at the existing code, 'startVideoCall' finds the appointment but doesn't seem to set a persistent 'currentAppointmentId' state that is easily accessible in render 
+                    EXCEPT: The component props has 'appointments' and 'isCurrentAppointment'.
+                    We can find the active appointment again here.
+                */}
+              {(() => {
+                const currentApp = appointments.find(isCurrentAppointment);
+                const appId = currentApp ? (currentApp.appointment_id || currentApp.id) : null;
+
+                if (appId) {
+                  return (
+                    <ChatComponent
+                      roomId={String(appId)}
+                      senderName="Doktor"
+                      socket={socket}
+                      className="h-full border-none shadow-none"
+                    />
+                  );
+                }
+                return null;
+              })()}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

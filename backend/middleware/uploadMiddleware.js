@@ -36,7 +36,7 @@ const storage = new CloudinaryStorage({
             return {
                 folder: 'MedLine',
                 resource_type: 'raw', 
-                public_id: safePublicId + '.pdf' 
+                public_id:safePublicId
             };
         }
         
