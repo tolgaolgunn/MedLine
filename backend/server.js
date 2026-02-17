@@ -124,14 +124,8 @@ cron.schedule('*/10 * * * *', () => {
         io.on('connection', (socket) => {
             console.log('Socket connected:', socket.id);
 
-            // Forward signaling messages (doctor <-> patient)
         socket.on('signal', ({ to, data }) => {
             console.log(`Signal from ${socket.id} (User: ${socket.userId}) to ${to} type:${data.type}`);
-            // "from" field now carries the DB ID (socket.userId) if available, otherwise fallback to socket.id or handle error
-            // However, existing frontend might expect socket.id or just an ID. 
-            // The constraint is: The Receiver needs to know "Who called me" efficiently.
-            // For the rating system, the Patient needs the Doctor's DB ID. 
-            // When Doctor calls Patient: socket.userId is Doctor's DB ID.
             io.to(String(to)).emit('signal', { from: socket.userId || socket.id, data }); 
         });
 
