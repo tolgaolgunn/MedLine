@@ -1021,6 +1021,8 @@ const PatientManagement: React.FC = () => {
                         onChange={(e) => setResultDetails(e.target.value)}
                         placeholder="Hastaya ait detaylı sonuç ve yorumlarınızı yazın..."
                         className="!border !border-gray-300 min-h-[140px] text-xs sm:text-sm"
+                        maxLength={5000}
+                        showCharCount={true}
                         required
                       />
                     </div>

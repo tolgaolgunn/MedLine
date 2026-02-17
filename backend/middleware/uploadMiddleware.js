@@ -12,10 +12,21 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-        folder: 'MedLine',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
-        resource_type: 'auto',
+    params: async (req, file) => {
+        if (file.mimetype === 'application/pdf') {
+            return {
+                folder: 'MedLine',
+                resource_type: 'raw',
+                format: 'pdf', 
+                public_id: file.originalname.split('.')[0] 
+            };
+        }
+        
+        return {
+            folder: 'MedLine',
+            resource_type: 'image', 
+            allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        };
     },
 });
 
