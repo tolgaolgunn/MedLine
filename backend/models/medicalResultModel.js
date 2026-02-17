@@ -51,6 +51,7 @@ const getResultsByPatientId = async (patientId) => {
     [patientId]
   );
 
+  console.log('Results fetched from DB:', JSON.stringify(result.rows, null, 2));
   return result.rows;
 };
 
