@@ -477,7 +477,6 @@ exports.getDoctorPatients = async (req, res) => {
   }
 };
 
-// Medical Results Management - Doktor için (sadece metin)
 exports.addMedicalResult = async (req, res) => {
   try {
     const doctorId = req.user?.user_id;

@@ -71,7 +71,14 @@ export function MedicalRecords() {
       try {
         setIsLoading(true);
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/patient/results/${currentPatientId}`
+          `${import.meta.env.VITE_API_URL}/api/patient/results/${currentPatientId}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
         );
 
         if (!response.ok) {
