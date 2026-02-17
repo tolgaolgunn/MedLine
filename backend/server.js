@@ -37,6 +37,7 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
     app.use(express.json()); 
    const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+   console.log("UPLOADS_DIR:"+UPLOADS_DIR);
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 
