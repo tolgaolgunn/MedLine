@@ -585,12 +585,19 @@ exports.addMedicalResultWithFiles = async (req, res) => {
     const savedFiles = [];
     for (const file of files) {
       const fileUrl = file.path; 
+
+      let originalName = file.originalname;
+      try {
+        originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+      } catch (e) {
+        console.log("Encoding fix error, using original:", e);
+      }
       
       const fileInsert = await client.query(
         `INSERT INTO medical_result_files (result_id, file_path, original_name, mime_type)
          VALUES ($1, $2, $3, $4)
          RETURNING file_id, file_path, original_name, mime_type, created_at`,
-        [createdResult.result_id, fileUrl, file.originalname, file.mimetype]
+        [createdResult.result_id, fileUrl, originalName, file.mimetype]
       );
       savedFiles.push(fileInsert.rows[0]);
     }

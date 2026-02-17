@@ -291,11 +291,17 @@ export function MedicalRecords() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {result.files.map((file) => {
                             const isImage = file.mime_type?.startsWith('image/');
-                            const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-                            const normalizedPath = file.file_path.replace(/\\/g, '/').startsWith('/')
-                              ? file.file_path.replace(/\\/g, '/')
-                              : `/${file.file_path.replace(/\\/g, '/')}`;
-                            const url = `${apiUrl}${normalizedPath}`;
+
+                            // Eğer file_path zaten http ile başlıyorsa (Cloudinary URL'i), direkt kullan
+                            // Değilse (eski lokal dosyalar), API_URL ekle
+                            let url = file.file_path;
+                            if (!url.startsWith('http')) {
+                              const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+                              const normalizedPath = file.file_path.replace(/\\/g, '/').startsWith('/')
+                                ? file.file_path.replace(/\\/g, '/')
+                                : `/${file.file_path.replace(/\\/g, '/')}`;
+                              url = `${apiUrl}${normalizedPath}`;
+                            }
 
                             return (
                               <a
@@ -384,18 +390,17 @@ export function MedicalRecords() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {selectedResult.files.map((file) => {
                       const isImage = file.mime_type.startsWith("image/");
-                      const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-                      // Replace backslashes with forward slashes and ensure leading slash
-                      const normalizedPath = file.file_path.replace(/\\/g, '/').startsWith('/')
-                        ? file.file_path.replace(/\\/g, '/')
-                        : `/${file.file_path.replace(/\\/g, '/')}`;
-
-                      const url = `${apiUrl}${normalizedPath}`;
+                      let url = file.file_path;
+                      if (!url.startsWith('http')) {
+                        const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+                        const normalizedPath = file.file_path.replace(/\\/g, '/').startsWith('/')
+                          ? file.file_path.replace(/\\/g, '/')
+                          : `/${file.file_path.replace(/\\/g, '/')}`;
+                        url = `${apiUrl}${normalizedPath}`;
+                      }
 
                       console.log('File URL Debug:', {
                         original: file.file_path,
-                        normalized: normalizedPath,
-                        apiUrl,
                         finalUrl: url
                       });
 
