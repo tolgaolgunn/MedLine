@@ -143,6 +143,13 @@ cron.schedule('*/10 * * * *', () => {
             console.log(`Socket ${socket.id} joined room ${id}`);
         });    
 
+        // Chat specific room joining
+        socket.on('join-room', (roomId) => {
+            const id = String(roomId);
+            socket.join(id);
+            console.log(`Socket ${socket.id} joined chat room ${id}`);
+        });
+
         socket.on('rateDoctor',async ({ doctorId, rating }) => {
           if(rating<1 || rating>5) return;
             
