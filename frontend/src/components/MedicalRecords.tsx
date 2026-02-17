@@ -303,6 +303,12 @@ export function MedicalRecords() {
                               url = `${apiUrl}${normalizedPath}`;
                             }
 
+                            console.log('List View File Debug:', {
+                              name: file.original_name,
+                              type: file.mime_type,
+                              url: url
+                            });
+
                             return (
                               <a
                                 key={file.file_id}

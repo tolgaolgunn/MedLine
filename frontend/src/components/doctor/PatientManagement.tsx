@@ -911,6 +911,12 @@ const PatientManagement: React.FC = () => {
                                     const url = file.file_path.startsWith('http')
                                       ? file.file_path
                                       : `${import.meta.env.VITE_API_URL}${file.file_path}`;
+
+                                    console.log('Doctor View File Debug:', {
+                                      name: file.original_name,
+                                      type: file.mime_type,
+                                      url: url
+                                    });
                                     return (
                                       <a
                                         key={file.file_id}

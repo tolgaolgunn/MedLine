@@ -582,6 +582,8 @@ exports.addMedicalResultWithFiles = async (req, res) => {
 
     const createdResult = resultInsert.rows[0];
 
+    console.log('Received files:', files);
+
     const savedFiles = [];
     for (const file of files) {
       const fileUrl = file.path; 
