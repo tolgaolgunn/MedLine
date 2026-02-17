@@ -36,7 +36,8 @@ const { appendErrors } = require('react-hook-form');
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
     app.use(express.json()); 
-    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+   const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 
     let io;
