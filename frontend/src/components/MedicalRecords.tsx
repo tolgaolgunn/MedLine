@@ -336,7 +336,20 @@ export function MedicalRecords() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {selectedResult.files.map((file) => {
                       const isImage = file.mime_type.startsWith("image/");
-                      const url = `${import.meta.env.VITE_API_URL}${file.file_path}`;
+                      const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+                      const normalizedPath = file.file_path.replace(/\\/g, '/').startsWith('/')
+                        ? file.file_path.replace(/\\/g, '/')
+                        : `/${file.file_path.replace(/\\/g, '/')}`;
+
+                      const url = `${apiUrl}${normalizedPath}`;
+
+                      console.log('File URL Debug:', {
+                        original: file.file_path,
+                        normalized: normalizedPath,
+                        apiUrl,
+                        finalUrl: url
+                      });
+
                       return (
                         <a
                           key={file.file_id}
