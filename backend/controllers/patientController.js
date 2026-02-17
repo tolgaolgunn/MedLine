@@ -90,7 +90,7 @@ exports.getAppointmentsByUser = async (req, res) => {
        JOIN users u ON a.doctor_id = u.user_id
        JOIN doctor_profiles d ON u.user_id = d.user_id
        WHERE a.patient_id = $1
-       ORDER BY a.datetime DESC`,
+       ORDER BY a.datetime ASC`,
       [userId]
     );
     res.json(result.rows);

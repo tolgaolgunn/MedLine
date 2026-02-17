@@ -256,7 +256,11 @@ const PatientManagement: React.FC = () => {
 
     // Tür filtresi
     if (resultFilterType !== 'all') {
-      filtered = filtered.filter((r: any) => r.record_type === resultFilterType);
+      console.log('Filtering by type:', resultFilterType);
+      filtered = filtered.filter((r: any) => {
+        const recordType = r.record_type ? r.record_type.trim() : '';
+        return recordType === resultFilterType;
+      });
     }
 
     // Sıralama
@@ -562,6 +566,7 @@ const PatientManagement: React.FC = () => {
       </div>
     );
   }
+
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
