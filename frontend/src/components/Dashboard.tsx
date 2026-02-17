@@ -126,7 +126,12 @@ export function Dashboard() {
       if (!userStr) return;
       const user = JSON.parse(userStr);
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/appointments/${user.user_id}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/appointments/${user.user_id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!res.ok) return;
 
       const data = await res.json();
@@ -158,9 +163,15 @@ export function Dashboard() {
       const user = JSON.parse(userStr);
       const userId = user.user_id;
 
+      const token = localStorage.getItem("token");
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
       const [prescriptionsRes, appointmentsRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/api/patient/patient/prescriptions/active/count/${userId}`),
-        fetch(`${import.meta.env.VITE_API_URL}/api/patient/patient/appointments/completed/count/${userId}`)
+        fetch(`${import.meta.env.VITE_API_URL}/api/patient/prescriptions/active/count/${userId}`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL}/api/patient/appointments/completed/count/${userId}`, { headers })
       ]);
 
       if (prescriptionsRes.ok) {
