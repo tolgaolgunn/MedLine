@@ -282,6 +282,55 @@ export function MedicalRecords() {
                       Detayları incele
                     </Button>
                   </CardHeader>
+                  {result.files && result.files.length > 0 && (
+                    <CardContent className="pt-0 pb-4 px-4 sm:px-5">
+                      <div className="pt-1 space-y-2">
+                        <span className="text-[10px] sm:text-[11px] text-gray-500 block">
+                          Ekli Belgeler:
+                        </span>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {result.files.map((file) => {
+                            const isImage = file.mime_type?.startsWith('image/');
+                            // Robust URL construction
+                            const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+                            const normalizedPath = file.file_path.replace(/\\/g, '/').startsWith('/')
+                              ? file.file_path.replace(/\\/g, '/')
+                              : `/${file.file_path.replace(/\\/g, '/')}`;
+                            const url = `${apiUrl}${normalizedPath}`;
+
+                            return (
+                              <a
+                                key={file.file_id}
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="border rounded-md p-1.5 flex flex-col gap-1 hover:bg-gray-50 group transition-colors"
+                                onClick={(e) => e.stopPropagation()} // Prevent card click
+                              >
+                                {isImage ? (
+                                  <div className="aspect-video w-full overflow-hidden rounded bg-gray-100">
+                                    <img
+                                      src={url}
+                                      alt={file.original_name}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                      loading="lazy"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="aspect-video w-full flex items-center justify-center bg-gray-50 text-[10px] sm:text-[11px] text-gray-600 rounded border border-dashed border-gray-200">
+                                    PDF
+                                  </div>
+                                )}
+                                <span className="text-[10px] sm:text-[11px] text-gray-700 truncate w-full block">
+                                  {file.original_name}
+                                </span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </CardContent>
+                  )}
                 </Card>
               ))}
             </div>
@@ -337,6 +386,7 @@ export function MedicalRecords() {
                     {selectedResult.files.map((file) => {
                       const isImage = file.mime_type.startsWith("image/");
                       const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+                      // Replace backslashes with forward slashes and ensure leading slash
                       const normalizedPath = file.file_path.replace(/\\/g, '/').startsWith('/')
                         ? file.file_path.replace(/\\/g, '/')
                         : `/${file.file_path.replace(/\\/g, '/')}`;
