@@ -72,12 +72,10 @@ export function Prescriptions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  // Token'ı localStorage'dan al
   const getAuthToken = () => {
     return localStorage.getItem('authToken');
   };
 
-  // API instance oluşturmayı güncelle
   const api = axios.create({
     baseURL: (import.meta.env.VITE_API_URL) + '/api',
     headers: {
@@ -86,7 +84,6 @@ export function Prescriptions() {
     }
   });
 
-  // Reçeteleri yükle fonksiyonunu güncelle
   const fetchPrescriptions = async () => {
     try {
       setLoading(true);
@@ -113,11 +110,8 @@ export function Prescriptions() {
         timeout: 10000 // 10 seconds timeout
       });
 
-      // Make the API call
       const response = await api.get(`/patient/prescriptions/${userData.user_id}`);
-      console.log('API Response:', response); // Debug için
 
-      // Check response structure
       if (response.data && response.data.success) {
         setPrescriptions(response.data.data || []);
       } else {
@@ -127,9 +121,7 @@ export function Prescriptions() {
     } catch (err: any) {
       console.error('Reçete yükleme hatası:', err);
 
-      // More detailed error handling
       if (err.response) {
-        // Server responded with error
         setError(err.response.data?.message || 'Sunucu hatası oluştu');
       } else if (err.request) {
         // Request made but no response
@@ -161,7 +153,11 @@ export function Prescriptions() {
         return;
       }
 
-      const response = await api.get(`/patient/prescriptions/${userId}/${prescriptionId}`);
+      const response = await api.get(`/patient/prescriptions/${userId}/${prescriptionId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
 
       if (response.data.success) {
         setSelected(response.data.data);
@@ -215,7 +211,6 @@ export function Prescriptions() {
 
         toast.success('Reçete kullanıldı olarak işaretlendi');
 
-        // Refetch prescriptions to ensure sync
         await fetchPrescriptions();
       } else {
         throw new Error(response.data.message || 'Reçete durumu güncellenemedi');
@@ -496,7 +491,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                       const diffTime = validUntilDate.getTime() - prescriptionDate.getTime();
                       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                       const isExpired = validUntilDate < new Date();
-                      
+
                       return (
                         <span className={isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}>
                           <span className="font-semibold">{diffDays} gün</span>
@@ -613,7 +608,7 @@ ${prescription.usage_instructions || 'Belirtilmemiş'}
                     const diffTime = validUntilDate.getTime() - prescriptionDate.getTime();
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                     const isExpired = validUntilDate < new Date();
-                    
+
                     return (
                       <p className={`mt-1 ${isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                         <span className="font-semibold">{diffDays} gün</span>
