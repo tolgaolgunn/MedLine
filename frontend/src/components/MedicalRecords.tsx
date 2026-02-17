@@ -304,7 +304,7 @@ export function MedicalRecords() {
                                 target="_blank"
                                 rel="noreferrer"
                                 className="border rounded-md p-1.5 flex flex-col gap-1 hover:bg-gray-50 group transition-colors"
-                                onClick={(e) => e.stopPropagation()} // Prevent card click
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 {isImage ? (
                                   <div className="aspect-video w-full overflow-hidden rounded bg-gray-100">

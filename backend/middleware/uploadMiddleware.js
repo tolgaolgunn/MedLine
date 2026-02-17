@@ -12,14 +12,12 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-        // Türkçe karakter sorunu için fix
         file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
 const fileFilter = (req, file, cb) => {
-    // Resimler (jpg, jpeg, png, webp) ve PDF dosyalarına izin ver
     const imageTypes = /jpeg|jpg|png|webp/;
     const ext = path.extname(file.originalname).toLowerCase();
 
