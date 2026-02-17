@@ -291,7 +291,6 @@ export function MedicalRecords() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {result.files.map((file) => {
                             const isImage = file.mime_type?.startsWith('image/');
-                            // Robust URL construction
                             const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
                             const normalizedPath = file.file_path.replace(/\\/g, '/').startsWith('/')
                               ? file.file_path.replace(/\\/g, '/')

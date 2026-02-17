@@ -36,11 +36,9 @@ const { appendErrors } = require('react-hook-form');
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
     app.use(express.json()); 
-    // Yüklenen dosyaları statik olarak servis et
-    app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
-    // Socket.io middleware to make io accessible in routes - MUST BE BEFORE ROUTES
     let io;
     app.use((req, res, next) => {
         req.io = io;
