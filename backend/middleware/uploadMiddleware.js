@@ -1,28 +1,30 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+require('dotenv').config();
 
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
+cloudinary.config({
+    cloud_name: process.env.CLOUD_NAME,
+    api_key: process.env.CLOUD_API_KEY,
+    api_secret: process.env.CLOUD_API_SECRET
 });
+
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'MedLine',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+        resource_type: 'auto',
+    },
+});
+
 const fileFilter = (req, file, cb) => {
     const imageTypes = /jpeg|jpg|png|webp/;
     const ext = path.extname(file.originalname).toLowerCase();
 
-    const isImage = imageTypes.test(ext) && imageTypes.test(file.mimetype);
-    const isPdf = ext === '.pdf' && file.mimetype === 'application/pdf';
+    const isImage = imageTypes.test(ext) || imageTypes.test(file.mimetype);
+    const isPdf = ext === '.pdf' || file.mimetype === 'application/pdf';
 
     if (isImage || isPdf) {
         return cb(null, true);
@@ -35,6 +37,6 @@ const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: { fileSize: 10 * 1024 * 1024 }
-});
+})  ;
 
 module.exports = { upload };
