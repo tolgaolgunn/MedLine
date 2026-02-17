@@ -908,7 +908,9 @@ const PatientManagement: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-2">
                                   {r.files.map((file: any) => {
                                     const isImage = file.mime_type?.startsWith('image/');
-                                    const url = `${import.meta.env.VITE_API_URL}${file.file_path}`;
+                                    const url = file.file_path.startsWith('http')
+                                      ? file.file_path
+                                      : `${import.meta.env.VITE_API_URL}${file.file_path}`;
                                     return (
                                       <a
                                         key={file.file_id}

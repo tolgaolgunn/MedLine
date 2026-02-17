@@ -135,7 +135,6 @@ cron.schedule('*/10 * * * *', () => {
             io.to(String(to)).emit('signal', { from: socket.userId || socket.id, data }); 
         });
 
-        // For direct messaging: join a room by userId
         socket.on('join', (userId) => {
             const id = String(userId); 
             socket.join(id);
@@ -143,7 +142,6 @@ cron.schedule('*/10 * * * *', () => {
             console.log(`Socket ${socket.id} joined room ${id}`);
         });    
 
-        // Chat specific room joining
         socket.on('join-room', (roomId) => {
             const id = String(roomId);
             socket.join(id);
