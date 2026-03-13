@@ -98,6 +98,7 @@ app.use('/uploads', express.static(UPLOADS_DIR));
             console.log("Server is starting...");
             console.log('Server is running on port ' + PORT);
             console.log('http://localhost:' + PORT);
+            console.log('example');
         });
         const cron = require('node-cron');
 
